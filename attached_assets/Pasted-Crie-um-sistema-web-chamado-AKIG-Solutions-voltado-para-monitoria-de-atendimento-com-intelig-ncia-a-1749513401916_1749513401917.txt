@@ -1,0 +1,81 @@
+Crie um sistema web chamado AKIG Solutions, voltado para monitoria de atendimento com inteligência artificial. O sistema deve seguir o modelo funcional e visual dos softwares da 2Clix e da CYF, com navegação simples, layout corporativo e dados organizados.
+
+🎯 Objetivo do sistema:
+Monitorar atendimentos com IA, aplicar avaliações personalizadas, acompanhar desempenho e engajar atendentes com ranking de gamificação.
+
+👤 Perfis de acesso
+Administrador da AKIG (único com acesso total):
+
+Pode alternar entre os perfis de Supervisor, Avaliador e Atendente para simular o uso do sistema.
+
+Pode cadastrar empresas, usuários, campanhas e editar qualquer dado.
+
+Vê todos os dados do sistema, de todas as empresas.
+
+Supervisor:
+
+Acompanha os relatórios, rankings e evoluções da equipe.
+
+Não edita avaliações nem cria monitorias. Consegue contestar avaliações
+
+Avaliador:
+
+Ouve o atendimento.
+
+Vê a transcrição automática.
+
+Preenche o formulário de avaliação.
+
+Envia o feedback ao atendente. Aprova ou reprova contestações.
+
+Atendente:
+
+Vê sua ficha de monitoria.
+
+Pode assinar a ficha para confirmar que leu.
+
+Acompanha sua evolução de notas e ranking.
+
+Usa moedas virtuais para trocar por brindes. Pode solicitar contestação.
+
+⚙️ Funcionalidades obrigatórias
+Transcrição com IA:
+
+Transcreve o áudio do atendimento automaticamente.
+
+Detecta silêncio, palavras críticas e tom de voz. Detecta quem é o atendente e quem é o cliente.
+
+Destaca trechos problemáticos na linha do tempo.
+
+Formulário de avaliação:
+
+Critérios personalizáveis (ex: empatia, clareza, processo).
+
+Campos de observações.
+
+Botão para atendente assinar após ler.
+
+Gamificação:
+
+Ranking dos melhores atendentes.
+
+Moedas virtuais por bom desempenho.
+
+Tela para trocar moedas por brindes.
+
+Relatórios:
+
+Relatório por período, campanha, atendente e avaliador.
+
+Indicadores como: ofensores, média geral, críticas recorrentes, fichas não assinadas.
+
+Exportação em PDF/Excel.
+
+🧩 Outras definições
+Interface apenas desktop (sem versão mobile).
+
+Layout limpo e profissional (parecido com os dashboards da 2Clix e CYF).
+
+Paleta de cores: azul escuro, branco e preto.
+
+Sistema multiempresa, mas só o admin da AKIG tem acesso à gestão. A logo da empresa está no link: https://ibb.co/MxhM6mPL
