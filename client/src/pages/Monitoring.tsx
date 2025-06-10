@@ -29,8 +29,11 @@ export default function Monitoring() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user can create new monitoring sessions
+  // Check if user can create new monitoring sessions - only evaluators and admins
   const canCreateMonitoring = user?.role === 'admin' || user?.role === 'evaluator';
+  
+  // Check if user can view all sessions or only their own
+  const canViewAllSessions = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator';
 
   const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],

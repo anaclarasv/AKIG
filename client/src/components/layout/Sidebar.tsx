@@ -14,7 +14,8 @@ import {
   Users, 
   LogOut,
   Settings,
-  Megaphone
+  Megaphone,
+  Gift
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -83,8 +84,9 @@ export default function Sidebar() {
       case 'agent':
         return [
           ...baseNavigation,
-          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
+          { name: 'Minhas Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
         ];
       default:
         return baseNavigation;

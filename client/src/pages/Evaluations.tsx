@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,11 @@ import type { Evaluation } from "@/types";
 
 export default function Evaluations() {
   const [activeTab, setActiveTab] = useState("all");
+  const { user } = useAuth();
 
+  // For agents, only fetch their own evaluations
   const { data: evaluations, isLoading } = useQuery<Evaluation[]>({
-    queryKey: ['/api/evaluations'],
+    queryKey: user?.role === 'agent' ? ['/api/evaluations', 'agent', user.id] : ['/api/evaluations'],
   });
 
   const getStatusIcon = (status: string) => {
