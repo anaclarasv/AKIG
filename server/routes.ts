@@ -7,6 +7,8 @@ import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { transcribeAudio, analyzeTranscription, transcribeAudioLocal } from "./openai";
+import { SecurityMiddleware } from "./security";
+import lgpdRoutes from "./lgpd-routes";
 import {
   insertCompanySchema,
   insertCampaignSchema,
@@ -60,11 +62,20 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Security middleware - LGPD compliance
+  app.use(SecurityMiddleware.configureHelmet());
+  app.use(SecurityMiddleware.createRateLimit());
+  app.use(SecurityMiddleware.sanitizeInput);
+  app.use(SecurityMiddleware.secureActivityLog);
+  
   // Serve uploaded files
   app.use('/uploads', express.static(uploadDir));
   
   // Auth middleware
   await setupAuth(app);
+
+  // LGPD compliance routes
+  app.use('/api/lgpd', lgpdRoutes);
 
   // Auth routes are handled in auth.ts
   

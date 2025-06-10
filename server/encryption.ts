@@ -21,32 +21,29 @@ export class DataEncryption {
     authTag: string;
   } {
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
-    cipher.setAAD(Buffer.from('AKIG-LGPD-2024'));
+    const key = crypto.scryptSync(ENCRYPTION_KEY.toString(), 'salt', 32);
+    const cipher = crypto.createCipher('aes-256-cbc', key);
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
-    const authTag = cipher.getAuthTag();
-    
     return {
       encryptedData: encrypted,
       iv: iv.toString('hex'),
-      authTag: authTag.toString('hex')
+      authTag: crypto.createHash('sha256').update(encrypted).digest('hex')
     };
   }
   
   /**
-   * Descriptografa dados usando AES-256-GCM
+   * Descriptografa dados usando AES-256-CBC
    * @param encryptedData Dados criptografados
    * @param iv Vetor de inicialização
    * @param authTag Tag de autenticação
    * @returns Texto descriptografado
    */
   static decrypt(encryptedData: string, iv: string, authTag: string): string {
-    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
-    decipher.setAAD(Buffer.from('AKIG-LGPD-2024'));
-    decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+    const key = crypto.scryptSync(ENCRYPTION_KEY.toString(), 'salt', 32);
+    const decipher = crypto.createDecipher('aes-256-cbc', key);
     
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
