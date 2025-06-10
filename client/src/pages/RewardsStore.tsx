@@ -47,7 +47,7 @@ export default function RewardsStore() {
   });
 
   const { data: userPurchases } = useQuery<RewardPurchase[]>({
-    queryKey: ['/api/user-reward-purchases'],
+    queryKey: ['/api/user/purchases'],
     enabled: !!user && user.role !== 'admin',
   });
 
@@ -117,10 +117,10 @@ export default function RewardsStore() {
 
   const purchaseMutation = useMutation({
     mutationFn: async (rewardId: number) => {
-      return await apiRequest('POST', '/api/purchase-reward', { rewardId });
+      return await apiRequest('POST', `/api/rewards/${rewardId}/purchase`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user-reward-purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/purchases'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       setIsPurchaseDialogOpen(false);
       toast({
