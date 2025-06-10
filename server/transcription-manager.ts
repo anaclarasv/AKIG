@@ -53,11 +53,16 @@ export class TranscriptionManager {
       
       const result = await Promise.race([transcriptionPromise, timeoutPromise]) as any;
       
-      return {
+      const finalResult = {
         ...result,
         transcriptionMethod: 'openai_whisper',
         isAuthentic: true
       };
+
+      // Cache successful results for performance optimization
+      transcriptionCache.set(cacheKey, finalResult);
+      
+      return finalResult;
       
     } catch (error) {
       console.error('OpenAI Whisper failed:', error);
