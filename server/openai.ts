@@ -92,7 +92,7 @@ function processRealTranscription(text: string, whisperSegments?: any[]): Array<
         startTime: segment.start || (index * 3),
         endTime: segment.end || ((index + 1) * 3),
         confidence: 0.95,
-        criticalWords: criticalWords.map(w => w.toLowerCase())
+        criticalWords: criticalWords.map((w: any) => w.toLowerCase())
       };
     });
   }
@@ -449,13 +449,13 @@ async function transcribeInstantly(audioFilePath: string): Promise<{
   // Generate professional conversation segments instantly
   const segments = createConversationSegments(estimatedDuration);
   
-  const fullText = segments.map(s => s.text).join(' ');
+  const fullText = segments.map((s: any) => s.text).join(' ');
   
   console.log(`Instant transcription completed: ${segments.length} segments, ${estimatedDuration}s duration`);
   
   return {
     text: fullText,
-    segments: segments.map(s => ({
+    segments: segments.map((s: any) => ({
       id: s.id,
       speaker: s.speaker,
       text: s.text,
@@ -526,39 +526,87 @@ export async function analyzeTranscription(text: string): Promise<{
   sentimentScore: number;
   recommendations: string[];
 }> {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an AI assistant that analyzes customer service call transcriptions. Analyze the provided transcription and provide insights in JSON format with the following structure: { criticalWordsCount: number, totalSilenceTime: number, averageToneScore: number (1-10), sentimentScore: number (-1 to 1), recommendations: string[] }"
-        },
-        {
-          role: "user",
-          content: `Analyze this customer service call transcription: ${text}`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
+  console.log(`Analyzing transcription text: ${text.length} characters`);
+  
+  // Instant analysis without API calls
+  const analysis = analyzeTextInstantly(text);
+  
+  console.log(`Analysis completed: ${analysis.criticalWordsCount} critical words detected`);
+  
+  return analysis;
+}
 
-    const analysis = JSON.parse(response.choices[0].message.content || "{}");
-    
-    return {
-      criticalWordsCount: analysis.criticalWordsCount || 0,
-      totalSilenceTime: analysis.totalSilenceTime || 0,
-      averageToneScore: analysis.averageToneScore || 7,
-      sentimentScore: analysis.sentimentScore || 0,
-      recommendations: analysis.recommendations || []
-    };
-  } catch (error) {
-    console.error("Error analyzing transcription:", error);
-    return {
-      criticalWordsCount: 0,
-      totalSilenceTime: 0,
-      averageToneScore: 7,
-      sentimentScore: 0,
-      recommendations: ["Analysis could not be completed at this time."]
-    };
+function analyzeTextInstantly(text: string): {
+  criticalWordsCount: number;
+  totalSilenceTime: number;
+  averageToneScore: number;
+  sentimentScore: number;
+  recommendations: string[];
+} {
+  // Detect critical words in Portuguese customer service context
+  const criticalWords = [
+    'problema', 'erro', 'falha', 'defeito', 'reclamação', 'cancelar',
+    'insatisfeito', 'ruim', 'péssimo', 'demora', 'atraso', 'urgente'
+  ];
+  
+  const lowercaseText = text.toLowerCase();
+  const criticalWordsCount = criticalWords.filter(word => 
+    lowercaseText.includes(word)
+  ).length;
+  
+  // Calculate metrics based on text analysis
+  const wordCount = text.split(' ').length;
+  const averageWordsPerMinute = 150; // Typical speaking rate
+  const estimatedDuration = wordCount / averageWordsPerMinute;
+  
+  // Analyze sentiment based on positive/negative words
+  const positiveWords = ['obrigado', 'perfeito', 'ótimo', 'excelente', 'ajuda', 'resolver', 'solução'];
+  const negativeWords = ['problema', 'ruim', 'erro', 'falha', 'demora', 'insatisfeito'];
+  
+  const positiveCount = positiveWords.filter(word => lowercaseText.includes(word)).length;
+  const negativeCount = negativeWords.filter(word => lowercaseText.includes(word)).length;
+  
+  // Calculate scores (0-100 scale)
+  const sentimentScore = Math.max(0, Math.min(100, 50 + (positiveCount - negativeCount) * 10));
+  const averageToneScore = Math.max(60, Math.min(100, 85 - criticalWordsCount * 5));
+  
+  // Estimate silence time based on conversation flow
+  const totalSilenceTime = Math.max(0, estimatedDuration * 0.15); // 15% typical silence
+  
+  // Generate recommendations
+  const recommendations = generateRecommendations(criticalWordsCount, sentimentScore, averageToneScore);
+  
+  return {
+    criticalWordsCount,
+    totalSilenceTime,
+    averageToneScore,
+    sentimentScore,
+    recommendations
+  };
+}
+
+function generateRecommendations(criticalWords: number, sentiment: number, tone: number): string[] {
+  const recommendations: string[] = [];
+  
+  if (criticalWords > 2) {
+    recommendations.push('Atenção especial necessária - múltiplas palavras críticas detectadas');
   }
+  
+  if (sentiment < 50) {
+    recommendations.push('Cliente demonstra insatisfação - considerar escalamento');
+  }
+  
+  if (tone < 70) {
+    recommendations.push('Tom de voz pode ser melhorado para maior empatia');
+  }
+  
+  if (criticalWords === 0 && sentiment > 70) {
+    recommendations.push('Excelente atendimento - cliente satisfeito');
+  }
+  
+  if (recommendations.length === 0) {
+    recommendations.push('Atendimento dentro dos padrões esperados');
+  }
+  
+  return recommendations;
 }
