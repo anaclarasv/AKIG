@@ -19,6 +19,7 @@ import Campaigns from "@/pages/Campaigns";
 import RewardsStore from "@/pages/RewardsStore";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 
 
@@ -51,15 +52,39 @@ function Router() {
         <main className="flex-1 overflow-y-auto">
           <Switch>
             <Route path="/" component={Dashboard} />
-            <Route path="/monitoring" component={Monitoring} />
+            <Route path="/monitoring">
+              <ProtectedRoute allowedRoles={['admin', 'supervisor', 'evaluator']}>
+                <Monitoring />
+              </ProtectedRoute>
+            </Route>
             <Route path="/evaluations" component={Evaluations} />
-            <Route path="/evaluation-criteria" component={EvaluationCriteria} />
+            <Route path="/evaluation-criteria">
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <EvaluationCriteria />
+              </ProtectedRoute>
+            </Route>
             <Route path="/ranking" component={Ranking} />
-            <Route path="/reports" component={Reports} />
-            <Route path="/campaigns" component={Campaigns} />
+            <Route path="/reports">
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <Reports />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/campaigns">
+              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                <Campaigns />
+              </ProtectedRoute>
+            </Route>
             <Route path="/rewards" component={RewardsStore} />
-            <Route path="/companies" component={Companies} />
-            <Route path="/users" component={Users} />
+            <Route path="/companies">
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Companies />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/users">
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Users />
+              </ProtectedRoute>
+            </Route>
             <Route component={NotFound} />
           </Switch>
         </main>
