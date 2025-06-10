@@ -92,7 +92,7 @@ function processRealTranscription(text: string, whisperSegments?: any[]): Array<
         startTime: segment.start || (index * 3),
         endTime: segment.end || ((index + 1) * 3),
         confidence: 0.95,
-        criticalWords: criticalWords.map((w: any) => w.toLowerCase())
+        criticalWords: criticalWords.map((w: string) => w.toLowerCase())
       };
     });
   }
@@ -112,7 +112,7 @@ function processRealTranscription(text: string, whisperSegments?: any[]): Array<
       startTime: index * avgDuration,
       endTime: (index + 1) * avgDuration,
       confidence: 0.9,
-      criticalWords: criticalWords.map(w => w.toLowerCase())
+      criticalWords: criticalWords.map((w: string) => w.toLowerCase())
     };
   });
 }
@@ -317,7 +317,7 @@ function generateContentAwareTranscription(audioAnalysis: any) {
       startTime: Math.round(startTime * 10) / 10,
       endTime: Math.round(endTime * 10) / 10,
       confidence: quality === 'high' ? 0.95 : 0.85,
-      criticalWords: criticalWords.map(w => w.toLowerCase())
+      criticalWords: criticalWords.map((w: string) => w.toLowerCase())
     };
   });
   
@@ -402,7 +402,7 @@ function generateTranscriptionFromAudio(duration: number, size: number, bitrate:
       startTime: Math.round(startTime * 10) / 10,
       endTime: Math.round(endTime * 10) / 10,
       confidence: isHighQuality ? 0.95 : isCompressed ? 0.75 : 0.85, // Quality-based confidence
-      criticalWords: criticalWords.map(w => w.toLowerCase())
+      criticalWords: criticalWords.map((w: string) => w.toLowerCase())
     };
   });
   
