@@ -6,6 +6,8 @@ import AIMonitoringPanel from "@/components/dashboard/AIMonitoringPanel";
 import RankingPanel from "@/components/dashboard/RankingPanel";
 import EvaluationForm from "@/components/dashboard/EvaluationForm";
 import ActivityTable from "@/components/dashboard/ActivityTable";
+import PerformanceChart from "@/components/dashboard/PerformanceChart";
+import ContestEvaluationPanel from "@/components/dashboard/ContestEvaluationPanel";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -49,6 +51,12 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* Performance Evolution Chart */}
+          <PerformanceChart agentId={user.id} />
+
+          {/* Contest Evaluation Section */}
+          <ContestEvaluationPanel agentId={user.id} />
 
           {/* Evaluation Section */}
           <div>

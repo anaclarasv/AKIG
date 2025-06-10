@@ -629,6 +629,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Performance evolution endpoint
+  app.get("/api/performance-evolution", isAuthenticated, async (req, res) => {
+    try {
+      const { agentId, months } = req.query;
+      
+      if (!agentId) {
+        return res.status(400).json({ message: "Agent ID required" });
+      }
+
+      const monthsNumber = parseInt(months as string) || 3;
+      const performanceData = await storage.getPerformanceEvolution(agentId as string, monthsNumber);
+      
+      res.json({ data: performanceData });
+    } catch (error) {
+      console.error("Error fetching performance evolution:", error);
+      res.status(500).json({ message: "Failed to fetch performance evolution" });
+    }
+  });
+
+  // Evaluation contests endpoints
+  app.get("/api/evaluation-contests", isAuthenticated, async (req, res) => {
+    try {
+      const { agentId } = req.query;
+      
+      if (!agentId) {
+        return res.status(400).json({ message: "Agent ID required" });
+      }
+
+      const contests = await storage.getEvaluationContests(agentId as string);
+      res.json(contests);
+    } catch (error) {
+      console.error("Error fetching evaluation contests:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation contests" });
+    }
+  });
+
+  app.post("/api/evaluation-contests", isAuthenticated, async (req, res) => {
+    try {
+      const { evaluationId, reason } = req.body;
+      const agentId = req.user?.id;
+
+      if (!evaluationId || !reason || !agentId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const contest = await storage.createEvaluationContest({
+        evaluationId,
+        agentId,
+        reason,
+        status: 'pending'
+      });
+
+      res.status(201).json(contest);
+    } catch (error) {
+      console.error("Error creating evaluation contest:", error);
+      res.status(500).json({ message: "Failed to create evaluation contest" });
+    }
+  });
+
+  app.patch("/api/evaluation-contests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, response } = req.body;
+
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const contest = await storage.updateEvaluationContest(parseInt(id), {
+        status,
+        response,
+        reviewedAt: new Date()
+      });
+
+      res.json(contest);
+    } catch (error) {
+      console.error("Error updating evaluation contest:", error);
+      res.status(500).json({ message: "Failed to update evaluation contest" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
