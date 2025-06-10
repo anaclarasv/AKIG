@@ -27,14 +27,34 @@ export default function Dashboard() {
       <div className="p-6">
         <Header 
           title="Painel do Atendente"
-          subtitle="Suas avaliações e desempenho"
+          subtitle={`Bem-vindo, ${user.firstName}! Acompanhe seu desempenho e avaliações`}
         />
 
-        <div className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <RankingPanel />
+        <div className="mt-6 space-y-8">
+          {/* Personal Performance Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <RankingPanel />
+            </div>
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-2">Suas Moedas Virtuais</h3>
+                <p className="text-3xl font-bold text-blue-600">{user.virtualCoins || 0}</p>
+                <p className="text-sm text-blue-700 mt-1">Acumuladas no total</p>
+              </div>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
+                <h3 className="font-semibold text-green-900 mb-2">Status</h3>
+                <p className="text-lg font-semibold text-green-600">Ativo</p>
+                <p className="text-sm text-green-700 mt-1">Pronto para avaliações</p>
+              </div>
+            </div>
           </div>
-          <EvaluationForm />
+
+          {/* Evaluation Section */}
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-4">Formulário de Avaliação</h2>
+            <EvaluationForm />
+          </div>
         </div>
       </div>
     );
