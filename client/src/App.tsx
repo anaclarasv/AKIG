@@ -59,33 +59,33 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/evaluations" component={Evaluations} />
-            <Route path="/evaluation-criteria">
+            <Route path="/evaluation-criteria" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                 <EvaluationCriteria />
               </ProtectedRoute>
-            </Route>
+            )} />
             <Route path="/ranking" component={Ranking} />
-            <Route path="/reports">
+            <Route path="/reports" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                 <Reports />
               </ProtectedRoute>
-            </Route>
-            <Route path="/campaigns">
+            )} />
+            <Route path="/campaigns" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                 <Campaigns />
               </ProtectedRoute>
-            </Route>
+            )} />
             <Route path="/rewards" component={RewardsStore} />
-            <Route path="/companies">
+            <Route path="/companies" component={() => (
               <ProtectedRoute allowedRoles={['admin']}>
                 <Companies />
               </ProtectedRoute>
-            </Route>
-            <Route path="/users">
+            )} />
+            <Route path="/users" component={() => (
               <ProtectedRoute allowedRoles={['admin']}>
                 <Users />
               </ProtectedRoute>
-            </Route>
+            )} />
             <Route path="/lgpd" component={LGPDCompliance} />
             <Route component={NotFound} />
           </Switch>
