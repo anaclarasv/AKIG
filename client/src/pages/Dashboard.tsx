@@ -15,8 +15,8 @@ export default function Dashboard() {
     setLocation("/monitoring");
   };
 
-  // Check if user can create monitoring sessions
-  const canCreateMonitoring = user?.role === 'admin' || user?.role === 'evaluator';
+  // Check if user can create monitoring sessions - only supervisors and evaluators, not agents
+  const canCreateMonitoring = (user?.role === 'supervisor' || user?.role === 'evaluator') && user?.role !== 'agent';
   
   // Check if user can view activities
   const canViewActivities = user?.role !== 'agent';
