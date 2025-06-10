@@ -20,8 +20,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId || undefined;
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
       const metrics = await storage.getDashboardMetrics(companyId);
       res.json(metrics);
     } catch (error) {
@@ -33,8 +33,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User ranking
   app.get('/api/ranking', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId || undefined;
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
       const ranking = await storage.getUserRanking(companyId);
       res.json(ranking);
     } catch (error) {
@@ -93,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/campaigns', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId || undefined;
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
       const campaigns = await storage.getCampaigns(companyId);
       res.json(campaigns);
     } catch (error) {
@@ -120,8 +120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monitoring sessions routes
   app.get('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
       const agentId = user?.role === 'agent' ? user.id : undefined;
       const sessions = await storage.getMonitoringSessions(companyId, agentId);
       res.json(sessions);
@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
