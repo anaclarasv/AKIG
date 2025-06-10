@@ -482,6 +482,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Instant transcription endpoint - works for any session regardless of status
+  app.post('/api/monitoring-sessions/:id/transcribe', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      console.log(`Starting instant transcription for session ${sessionId}`);
+
+      // Process transcription instantly using our local system
+      const audioPath = session.audioUrl;
+      if (!audioPath) {
+        return res.status(400).json({ message: "No audio file found for this session" });
+      }
+
+      // Use instant local transcription - no API delays or external dependencies
+      console.log('Processing with instant local transcription engine...');
+      const fullPath = audioPath.startsWith('/') ? audioPath.substring(1) : audioPath;
+      const transcriptionResult = await transcribeAudio(fullPath);
+      console.log('Instant transcription completed, analyzing content...');
+      const aiAnalysis = await analyzeTranscription(transcriptionResult.text);
+      console.log('Analysis completed instantly');
+
+      const transcriptionData = {
+        segments: transcriptionResult.segments || [],
+        totalDuration: transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 60
+      };
+
+      // Update session with new transcription
+      const updatedSession = await storage.updateMonitoringSession(sessionId, {
+        transcription: transcriptionData,
+        aiAnalysis,
+        status: 'completed'
+      });
+
+      console.log(`Instant transcription completed for session ${sessionId}`);
+      res.json(updatedSession);
+
+    } catch (error) {
+      console.error("Error in instant transcription:", error);
+      res.status(500).json({ message: "Failed to transcribe audio" });
+    }
+  });
+
   app.put('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);

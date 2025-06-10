@@ -94,6 +94,32 @@ export default function Monitoring() {
     },
   });
 
+  // Mutation for instant transcription
+  const transcribingMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      const response = await apiRequest("POST", `/api/monitoring-sessions/${sessionId}/transcribe`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Sucesso",
+        description: "Transcrição concluída instantaneamente!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro na transcrição",
+        description: "Falha ao transcrever áudio. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartTranscription = (sessionId: number) => {
+    transcribingMutation.mutate(sessionId);
+  };
+
   const handleNewMonitoring = () => {
     setIsUploadDialogOpen(true);
   };
@@ -293,14 +319,34 @@ export default function Monitoring() {
 
           {/* Transcription Display */}
           <Card className="lg:col-span-2 akig-card-shadow">
-            <CardHeader>
-              <CardTitle>Transcrição em Tempo Real</CardTitle>
-              {selectedSessionData.status === 'pending' && (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-muted-foreground">Processando áudio...</span>
-                </div>
-              )}
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Transcrição em Tempo Real</CardTitle>
+                {selectedSessionData.status === 'pending' && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm text-muted-foreground">Processando áudio...</span>
+                  </div>
+                )}
+              </div>
+              <Button 
+                onClick={() => handleStartTranscription(selectedSessionData.id)}
+                disabled={transcribingMutation.isPending}
+                size="sm"
+                variant="outline"
+              >
+                {transcribingMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Transcrevendo...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    {selectedSessionData.transcription?.segments?.length ? 'Retranscrever' : 'Transcrever Agora'}
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="h-96 overflow-y-auto space-y-3">
@@ -348,6 +394,23 @@ export default function Monitoring() {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Nenhuma transcrição disponível</p>
+                    <Button 
+                      onClick={() => handleStartTranscription(selectedSessionData.id)}
+                      className="mt-4"
+                      disabled={transcribingMutation.isPending}
+                    >
+                      {transcribingMutation.isPending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Transcrevendo...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Iniciar Transcrição
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>
