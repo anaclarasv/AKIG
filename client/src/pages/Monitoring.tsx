@@ -519,15 +519,18 @@ export default function Monitoring() {
                 <Input
                   id="audio"
                   type="file"
-                  accept="audio/*"
+                  accept=".mp3,.wav,.flac,.aac,.ogg,.webm,.m4a,.mp4,.amr,.3gp,.aiff,audio/*"
                   onChange={handleFileChange}
                   className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                 />
                 <Upload className="w-4 h-4 text-muted-foreground" />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Formatos suportados: MP3, WAV, FLAC, AAC, OGG, WEBM, M4A, AMR, AIFF (máx. 100MB)
+              </p>
               {audioFile && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Arquivo selecionado: {audioFile.name}
+                <p className="text-sm text-green-600 mt-1">
+                  ✓ Arquivo selecionado: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(1)}MB)
                 </p>
               )}
             </div>

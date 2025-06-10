@@ -24,13 +24,36 @@ if (!fs.existsSync(uploadDir)) {
 const upload = multer({
   dest: uploadDir,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: 100 * 1024 * 1024, // 100MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/')) {
+    const allowedTypes = [
+      'audio/mp3',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/wave',
+      'audio/x-wav',
+      'audio/flac',
+      'audio/x-flac',
+      'audio/aac',
+      'audio/ogg',
+      'audio/webm',
+      'audio/m4a',
+      'audio/mp4',
+      'audio/x-m4a',
+      'audio/amr',
+      'audio/3gpp',
+      'audio/aiff',
+      'audio/x-aiff'
+    ];
+    
+    const fileExtension = file.originalname.toLowerCase().split('.').pop();
+    const allowedExtensions = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'webm', 'm4a', 'mp4', 'amr', '3gp', 'aiff'];
+    
+    if (file.mimetype.startsWith('audio/') || allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExtension || '')) {
       cb(null, true);
     } else {
-      cb(new Error('Only audio files are allowed'));
+      cb(new Error('Formato de áudio não suportado. Formatos aceitos: MP3, WAV, FLAC, AAC, OGG, WEBM, M4A, AMR, AIFF'));
     }
   }
 });
@@ -332,9 +355,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      console.log('Request body:', req.body);
+      console.log('Request file:', req.file);
+
       const { agentId, campaignId } = req.body;
       if (!agentId || !campaignId) {
-        return res.status(400).json({ message: "Agent ID and Campaign ID are required" });
+        return res.status(400).json({ 
+          message: "Agent ID and Campaign ID are required",
+          received: { agentId, campaignId }
+        });
       }
 
       const audioFile = req.file;
