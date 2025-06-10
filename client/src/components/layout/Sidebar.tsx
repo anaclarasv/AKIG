@@ -18,7 +18,7 @@ import {
 export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
-  const [currentRole, setCurrentRole] = useState((user?.role as string) || 'agent');
+  const [currentRole, setCurrentRole] = useState(user?.role || 'agent');
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -36,7 +36,7 @@ export default function Sidebar() {
     { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
     { name: 'Ranking', href: '/ranking', icon: Trophy },
     { name: 'Relatórios', href: '/reports', icon: FileBarChart },
-    ...((user?.role as string) === 'admin' ? [
+    ...(user?.role === 'admin' ? [
       { name: 'Empresas', href: '/companies', icon: Building },
       { name: 'Usuários', href: '/users', icon: Users },
     ] : []),
@@ -65,7 +65,7 @@ export default function Sidebar() {
       </div>
 
       {/* Role Switcher (Admin only) */}
-      {(user?.role as string) === 'admin' && (
+      {user?.role === 'admin' && (
         <div className="p-4 border-b border-sidebar-border">
           <Select value={currentRole} onValueChange={handleRoleSwitch}>
             <SelectTrigger className="w-full bg-sidebar-accent text-sidebar-accent-foreground">
