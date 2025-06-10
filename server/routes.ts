@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
+import { transcribeAudio, analyzeTranscription } from "./openai";
 import {
   insertCompanySchema,
   insertCampaignSchema,
@@ -10,6 +14,26 @@ import {
   insertEvaluationCriteriaSchema,
   insertRewardSchema,
 } from "@shared/schema";
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const upload = multer({
+  dest: uploadDir,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -181,14 +205,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
+  app.post('/api/monitoring-sessions', isAuthenticated, upload.single('audio'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const validatedData = insertMonitoringSessionSchema.parse(req.body);
-      const session = await storage.createMonitoringSession(validatedData);
+
+      const { agentId, campaignId } = req.body;
+      if (!agentId || !campaignId) {
+        return res.status(400).json({ message: "Agent ID and Campaign ID are required" });
+      }
+
+      const audioFile = req.file;
+      if (!audioFile) {
+        return res.status(400).json({ message: "Audio file is required" });
+      }
+
+      // Create initial session
+      const sessionData = {
+        agentId,
+        campaignId: parseInt(campaignId),
+        status: 'pending' as const,
+        audioUrl: audioFile.path
+      };
+
+      const session = await storage.createMonitoringSession(sessionData);
+
+      // Process transcription in background
+      setImmediate(async () => {
+        try {
+          console.log('Starting transcription for session:', session.id);
+          const transcriptionResult = await transcribeAudio(audioFile.path);
+          
+          const transcriptionData = {
+            segments: transcriptionResult.segments || [],
+            totalDuration: transcriptionResult.segments?.reduce((acc, seg) => Math.max(acc, seg.endTime), 0) || 0
+          };
+
+          // Analyze transcription
+          const aiAnalysis = await analyzeTranscription(transcriptionResult.text);
+
+          // Update session with transcription and analysis
+          await storage.updateMonitoringSession(session.id, {
+            transcription: transcriptionData,
+            aiAnalysis,
+            status: 'completed'
+          });
+
+          console.log('Transcription completed for session:', session.id);
+        } catch (error) {
+          console.error('Error processing transcription:', error);
+          await storage.updateMonitoringSession(session.id, {
+            status: 'pending'
+          });
+        }
+      });
+
       res.status(201).json(session);
     } catch (error) {
       console.error("Error creating monitoring session:", error);
