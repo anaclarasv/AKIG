@@ -113,6 +113,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get agents by company (evaluators and supervisors)
+  app.get('/api/agents', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor', 'evaluator'].includes(currentUser?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const users = await storage.getAllUsers();
+      const agents = users.filter(user => 
+        user.role === 'agent' && 
+        user.isActive &&
+        (currentUser?.role === 'admin' || user.companyId === currentUser?.companyId)
+      );
+      
+      res.json(agents.map(agent => ({
+        id: agent.id,
+        firstName: agent.firstName,
+        lastName: agent.lastName,
+        email: agent.email,
+        companyId: agent.companyId
+      })));
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ message: "Failed to fetch agents" });
+    }
+  });
+
   // Update user (admin only)
   app.put('/api/users/:id', isAuthenticated, async (req: any, res) => {
     try {

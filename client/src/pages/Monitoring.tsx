@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Play, Pause, Volume2, Download, Upload, Plus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
 
 export default function Monitoring() {
@@ -55,6 +56,10 @@ export default function Monitoring() {
     queryKey: ['/api/campaigns'],
   });
 
+  const { data: agents } = useQuery<User[]>({
+    queryKey: ['/api/agents'],
+  });
+
   const uploadMutation = useMutation({
     mutationFn: async (data: FormData) => {
       return await apiRequest('POST', '/api/monitoring-sessions', data);
@@ -87,6 +92,27 @@ export default function Monitoring() {
 
   const handleNewMonitoring = () => {
     setIsUploadDialogOpen(true);
+  };
+
+  // Function to automatically select agent based on campaign
+  const handleCampaignChange = (campaignId: string) => {
+    setFormData({ ...formData, campaignId });
+    
+    // Find the selected campaign to get its company
+    const selectedCampaign = campaigns?.find(c => c.id.toString() === campaignId);
+    if (selectedCampaign && agents) {
+      // Find agents from the same company as the campaign
+      const companyAgents = agents.filter(agent => agent.companyId === selectedCampaign.companyId);
+      
+      // Automatically select the first available agent
+      if (companyAgents.length > 0) {
+        setFormData(prev => ({ 
+          ...prev, 
+          campaignId, 
+          agentId: companyAgents[0].id 
+        }));
+      }
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -433,18 +459,8 @@ export default function Monitoring() {
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="agent">Agente *</Label>
-              <Input
-                id="agent"
-                placeholder="ID do Agente"
-                value={formData.agentId}
-                onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
-              />
-            </div>
-            
-            <div>
               <Label htmlFor="campaign">Campanha *</Label>
-              <Select value={formData.campaignId} onValueChange={(value) => setFormData({ ...formData, campaignId: value })}>
+              <Select value={formData.campaignId} onValueChange={handleCampaignChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma campanha" />
                 </SelectTrigger>
@@ -461,6 +477,40 @@ export default function Monitoring() {
                   )}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="agent">Agente *</Label>
+              <Select value={formData.agentId} onValueChange={(value) => setFormData({ ...formData, agentId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Agente será selecionado automaticamente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    const selectedCampaign = campaigns?.find(c => c.id.toString() === formData.campaignId);
+                    const availableAgents = agents?.filter(agent => 
+                      selectedCampaign ? agent.companyId === selectedCampaign.companyId : true
+                    ) || [];
+                    
+                    return availableAgents.length > 0 ? (
+                      availableAgents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.firstName} {agent.lastName} ({agent.email})
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="placeholder" disabled>
+                        {formData.campaignId ? "Nenhum agente disponível para esta empresa" : "Selecione uma campanha primeiro"}
+                      </SelectItem>
+                    );
+                  })()}
+                </SelectContent>
+              </Select>
+              {formData.agentId && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Agente selecionado automaticamente baseado na empresa da campanha
+                </p>
+              )}
             </div>
             
             <div>
