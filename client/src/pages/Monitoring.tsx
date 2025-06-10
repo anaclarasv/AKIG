@@ -131,6 +131,10 @@ export default function Monitoring() {
   };
 
   const handleSubmit = () => {
+    console.log('handleSubmit called');
+    console.log('audioFile:', audioFile);
+    console.log('formData:', formData);
+    
     if (!audioFile || !formData.agentId || !formData.campaignId) {
       toast({
         title: "Erro",
@@ -144,6 +148,11 @@ export default function Monitoring() {
     uploadData.append('audio', audioFile);
     uploadData.append('agentId', formData.agentId);
     uploadData.append('campaignId', formData.campaignId);
+
+    console.log('FormData contents:');
+    console.log('- agentId:', uploadData.get('agentId'));
+    console.log('- campaignId:', uploadData.get('campaignId'));
+    console.log('- audio file:', uploadData.get('audio'));
 
     uploadMutation.mutate(uploadData);
   };
