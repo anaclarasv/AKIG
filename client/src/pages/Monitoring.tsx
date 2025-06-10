@@ -59,8 +59,8 @@ export default function Monitoring() {
     mutationFn: async (data: FormData) => {
       return await apiRequest('POST', '/api/monitoring-sessions', data);
     },
-    onSuccess: (response) => {
-      const newSession = response;
+    onSuccess: async (response) => {
+      const newSession = await response.json();
       queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       setIsUploadDialogOpen(false);
       setAudioFile(null);
@@ -154,6 +154,152 @@ export default function Monitoring() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Get selected session data
+  const selectedSessionData = sessions?.find(s => s.id === selectedSession);
+
+  // If a session is selected, show detailed view
+  if (selectedSession && selectedSessionData) {
+    return (
+      <div className="p-6">
+        <Header 
+          title={`Monitoria #${selectedSession}`}
+          subtitle={`Status: ${selectedSessionData.status === 'pending' ? 'Transcrição em andamento' : 'Concluída'}`}
+          action={{
+            label: "Voltar",
+            onClick: () => setSelectedSession(null)
+          }}
+        />
+        
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Audio Player and Controls */}
+          <Card className="lg:col-span-1 akig-card-shadow">
+            <CardHeader>
+              <CardTitle>Controles de Áudio</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {selectedSessionData.audioUrl && (
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={togglePlayback}
+                      className="w-10 h-10 p-0"
+                    >
+                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </Button>
+                    <Volume2 className="w-4 h-4 text-muted-foreground" />
+                    <Progress value={33} className="flex-1" />
+                  </div>
+                  <div className="text-center text-sm text-muted-foreground">
+                    {selectedSessionData.duration ? 
+                      `${Math.floor(selectedSessionData.duration / 60)}:${String(selectedSessionData.duration % 60).padStart(2, '0')}` 
+                      : 'Processando...'}
+                  </div>
+                </div>
+              )}
+              
+              {selectedSessionData.aiAnalysis && (
+                <div className="space-y-3">
+                  <h4 className="font-medium">Análise IA</h4>
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="p-2 bg-red-50 rounded">
+                      <p className="text-red-600 font-semibold text-sm">
+                        {selectedSessionData.aiAnalysis.criticalWordsCount}
+                      </p>
+                      <p className="text-xs text-red-700">Palavras Críticas</p>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded">
+                      <p className="text-amber-600 font-semibold text-sm">
+                        {Math.round(selectedSessionData.aiAnalysis.totalSilenceTime)}s
+                      </p>
+                      <p className="text-xs text-amber-700">Silêncio Total</p>
+                    </div>
+                    <div className="p-2 bg-blue-50 rounded">
+                      <p className="text-blue-600 font-semibold text-sm">
+                        {selectedSessionData.aiAnalysis.averageToneScore.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-blue-700">Tom Médio</p>
+                    </div>
+                    <div className="p-2 bg-green-50 rounded">
+                      <p className="text-green-600 font-semibold text-sm">
+                        {selectedSessionData.aiAnalysis.sentimentScore.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-green-700">Sentimento</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Transcription Display */}
+          <Card className="lg:col-span-2 akig-card-shadow">
+            <CardHeader>
+              <CardTitle>Transcrição em Tempo Real</CardTitle>
+              {selectedSessionData.status === 'pending' && (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-muted-foreground">Processando áudio...</span>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="h-96 overflow-y-auto space-y-3">
+                {selectedSessionData.transcription?.segments?.length ? (
+                  selectedSessionData.transcription.segments.map((segment, index) => (
+                    <div 
+                      key={segment.id || index} 
+                      className={`p-3 rounded-lg ${
+                        segment.speaker === 'agent' 
+                          ? 'bg-blue-50 border-l-4 border-blue-400' 
+                          : 'bg-gray-50 border-l-4 border-gray-400'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-xs font-medium ${
+                          segment.speaker === 'agent' ? 'text-blue-700' : 'text-gray-700'
+                        }`}>
+                          {segment.speaker === 'agent' ? 'Atendente' : 'Cliente'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {Math.floor(segment.startTime / 60)}:{String(Math.floor(segment.startTime % 60)).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <p className="text-sm">{segment.text}</p>
+                      {segment.criticalWords && segment.criticalWords.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {segment.criticalWords.map((word, i) => (
+                            <Badge key={i} variant="destructive" className="text-xs">
+                              {word}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : selectedSessionData.status === 'pending' ? (
+                  <div className="text-center py-8">
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                      <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+                    </div>
+                    <p className="text-muted-foreground mt-4">Aguardando transcrição...</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Nenhuma transcrição disponível</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
