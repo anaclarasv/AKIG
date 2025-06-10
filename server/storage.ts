@@ -8,6 +8,7 @@ import {
   rewards,
   rewardPurchases,
   evaluationContests,
+  notifications,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -109,6 +110,18 @@ export interface IStorage {
   getEvaluationContests(agentId: string): Promise<EvaluationContest[]>;
   createEvaluationContest(contest: InsertEvaluationContest): Promise<EvaluationContest>;
   updateEvaluationContest(id: number, contest: Partial<InsertEvaluationContest>): Promise<EvaluationContest>;
+
+  // Notification operations
+  getNotifications(userId: string): Promise<any[]>;
+  markNotificationAsRead(notificationId: number, userId: string): Promise<any>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+  createNotification(notification: any): Promise<any>;
+
+  // LGPD compliance operations
+  exportUserData(userId: string): Promise<any>;
+  deleteUserData(userId: string): Promise<void>;
+  getUserConsent(userId: string): Promise<any>;
+  updateUserConsent(userId: string, consent: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -646,6 +659,103 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return contest;
+  }
+
+  // Notification operations
+  async getNotifications(userId: string): Promise<any[]> {
+    const userNotifications = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+
+    return userNotifications;
+  }
+
+  async markNotificationAsRead(notificationId: number, userId: string): Promise<any> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, userId)
+      ))
+      .returning();
+
+    return notification;
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async createNotification(notificationData: any): Promise<any> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+
+    return notification;
+  }
+
+  // LGPD compliance operations - Práticas de proteção de dados
+  async exportUserData(userId: string): Promise<any> {
+    // Exporta todos os dados pessoais do usuário de forma segura
+    const userData = await db.select().from(users).where(eq(users.id, userId));
+    const userEvaluations = await db.select().from(evaluations).where(eq(evaluations.agentId, userId));
+    const userMonitorings = await db.select().from(monitoringSessions).where(eq(monitoringSessions.agentId, userId));
+    const userContests = await db.select().from(evaluationContests).where(eq(evaluationContests.agentId, userId));
+    const userNotifications = await db.select().from(notifications).where(eq(notifications.userId, userId));
+
+    return {
+      personalData: userData[0],
+      evaluations: userEvaluations,
+      monitoringSessions: userMonitorings,
+      contests: userContests,
+      notifications: userNotifications,
+      exportDate: new Date().toISOString(),
+      dataSubject: userId
+    };
+  }
+
+  async deleteUserData(userId: string): Promise<void> {
+    // Implementa o "direito ao esquecimento" da LGPD
+    // Remove dados em ordem para respeitar foreign keys
+    await db.delete(notifications).where(eq(notifications.userId, userId));
+    await db.delete(evaluationContests).where(eq(evaluationContests.agentId, userId));
+    await db.delete(evaluations).where(eq(evaluations.agentId, userId));
+    await db.delete(monitoringSessions).where(eq(monitoringSessions.agentId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async getUserConsent(userId: string): Promise<any> {
+    // Busca consentimentos registrados do usuário
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return {
+      userId,
+      consentDate: user?.createdAt,
+      dataProcessingConsent: true, // Implementar campo específico
+      marketingConsent: false, // Implementar campo específico
+      lastUpdated: user?.updatedAt
+    };
+  }
+
+  async updateUserConsent(userId: string, consent: any): Promise<any> {
+    // Atualiza consentimentos do usuário
+    const [user] = await db
+      .update(users)
+      .set({ 
+        updatedAt: new Date(),
+        // Adicionar campos específicos de consentimento conforme necessário
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return user;
   }
 }
 
