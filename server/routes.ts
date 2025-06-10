@@ -390,11 +390,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log('Starting transcription for session:', session.id);
           
-          // First simulate real-time progress
+          // Simulate faster progress
           const simulateProgress = async () => {
             const progressSteps = [25, 50, 75, 90, 100];
             for (const progress of progressSteps) {
-              await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second intervals
+              await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second intervals
               console.log(`Transcription progress: ${progress}%`);
             }
           };
