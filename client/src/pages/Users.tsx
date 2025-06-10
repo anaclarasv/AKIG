@@ -67,7 +67,7 @@ export default function Users() {
 
   // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: async (userData: typeof formData) => {
+    mutationFn: async (userData: any) => {
       const response = await apiRequest("POST", "/api/users", userData);
       return response.json();
     },
@@ -172,19 +172,13 @@ export default function Users() {
   };
 
   const handleSubmit = () => {
-    const userData = {
-      ...formData,
-      companyId: formData.companyId || null,
-      virtualCoins: typeof formData.virtualCoins === 'string' ? parseInt(formData.virtualCoins) || 0 : formData.virtualCoins
-    };
-    
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
-        data: userData
+        data: formData
       });
     } else {
-      createUserMutation.mutate(userData);
+      createUserMutation.mutate(formData);
     }
   };
 
