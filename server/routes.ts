@@ -507,8 +507,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use instant local transcription - no API delays or external dependencies
       console.log('Processing with instant local transcription engine...');
-      const fullPath = audioPath.startsWith('/') ? audioPath.substring(1) : audioPath;
-      const transcriptionResult = await transcribeAudio(fullPath);
+      
+      // Fix audio path resolution - handle absolute paths correctly
+      let resolvedPath;
+      
+      if (path.isAbsolute(audioPath)) {
+        // If it's already an absolute path, use it directly
+        resolvedPath = audioPath;
+      } else {
+        // If relative, join with current working directory
+        resolvedPath = path.join(process.cwd(), audioPath);
+      }
+      
+      console.log(`Original path: ${audioPath}`);
+      console.log(`Resolved path: ${resolvedPath}`);
+      
+      // Check if file exists
+      if (!fs.existsSync(resolvedPath)) {
+        console.error(`Audio file not found: ${resolvedPath}`);
+        return res.status(400).json({ message: "Audio file not found on server" });
+      }
+      
+      const transcriptionResult = await transcribeAudio(resolvedPath);
       console.log('Instant transcription completed, analyzing content...');
       const aiAnalysis = await analyzeTranscription(transcriptionResult.text);
       console.log('Analysis completed instantly');
