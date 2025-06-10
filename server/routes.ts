@@ -92,8 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Campaigns routes
   app.get('/api/campaigns', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.role === 'admin' ? undefined : user?.companyId || undefined;
       const campaigns = await storage.getCampaigns(companyId);
       res.json(campaigns);
     } catch (error) {

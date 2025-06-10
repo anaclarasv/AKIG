@@ -9,6 +9,7 @@ import {
   rewardPurchases,
   type User,
   type UpsertUser,
+  type InsertUser,
   type Company,
   type InsertCompany,
   type Campaign,

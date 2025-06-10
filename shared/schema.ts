@@ -132,6 +132,7 @@ export const rewardPurchases = pgTable("reward_purchases", {
 
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -173,7 +174,7 @@ export const insertRewardSchema = createInsertSchema(rewards).omit({
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
 export type Campaign = typeof campaigns.$inferSelect;
