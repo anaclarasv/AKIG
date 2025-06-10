@@ -35,7 +35,7 @@ export class RealWhisperTranscription {
       // Executar transcrição real com configuração simples
       const startTime = Date.now();
       
-      // Usar a API correta do node-whisper
+      // Usar a API correta do node-whisper sem opções para evitar erros
       const transcript = await nodeWhisper(audioFilePath);
       
       const endTime = Date.now();
@@ -58,12 +58,12 @@ export class RealWhisperTranscription {
       console.log('📝 Texto transcrito:', result.text.substring(0, 100) + '...');
       return result;
 
-    } catch (error) {
-      console.error('❌ Erro na transcrição Whisper:', error);
+    } catch (error: any) {
+      console.error('Erro na transcrição Whisper:', error);
       this.processingStatus.set(cacheKey, { 
         status: 'error', 
         progress: 0, 
-        error: error.message 
+        error: error?.message || 'Erro desconhecido na transcrição' 
       });
       throw error;
     }

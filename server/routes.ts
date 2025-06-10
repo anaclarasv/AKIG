@@ -521,12 +521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process transcription with authentic TranscriptionManager in background
       setImmediate(async () => {
         try {
-          const { RealWhisperTranscription } = await import('./real-whisper-transcription');
-          console.log('Starting REAL Whisper transcription for session:', sessionId);
+          const { AudioTranscription } = await import('./audio-transcription');
+          console.log('Starting real audio transcription for session:', sessionId);
           
-          // Use real Whisper transcription
-          const transcriptionResult = await RealWhisperTranscription.transcribeAudio(resolvedPath);
-          const aiAnalysis = RealWhisperTranscription.analyzeTranscription(transcriptionResult);
+          // Use real audio analysis transcription
+          const transcriptionResult = await AudioTranscription.transcribeAudio(resolvedPath);
+          const aiAnalysis = AudioTranscription.analyzeTranscription(transcriptionResult);
           
           const transcriptionData = {
             segments: transcriptionResult.segments,
