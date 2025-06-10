@@ -390,17 +390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log('Starting transcription for session:', session.id);
           
-          // Simulate faster progress
-          const simulateProgress = async () => {
-            const progressSteps = [25, 50, 75, 90, 100];
-            for (const progress of progressSteps) {
-              await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second intervals
-              console.log(`Transcription progress: ${progress}%`);
-            }
-          };
-          
-          // Start progress simulation
-          simulateProgress();
+          // Instant processing - no delays
+          console.log('Processing audio instantly...');
           
           let transcriptionResult;
           let aiAnalysis;
