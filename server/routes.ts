@@ -521,25 +521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process transcription with authentic TranscriptionManager in background
       setImmediate(async () => {
         try {
-          const { TranscriptionManager } = await import('./transcription-manager');
-          console.log('Starting authentic transcription for session:', sessionId);
+          const { RealWhisperTranscription } = await import('./real-whisper-transcription');
+          console.log('Starting REAL Whisper transcription for session:', sessionId);
           
-          // Use fast transcription with immediate backup
-          let transcriptionResult;
-          try {
-            transcriptionResult = await Promise.race([
-              TranscriptionManager.transcribeAudio(resolvedPath),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 5000) // 5 second timeout
-              )
-            ]);
-          } catch (error) {
-            console.log('Primary transcription failed, using fast backup...');
-            const stats = fs.statSync(resolvedPath);
-            transcriptionResult = await TranscriptionManager.fastTranscriptionBackup(resolvedPath, stats.size);
-          }
-          
-          const aiAnalysis = TranscriptionManager.analyzeTranscription(transcriptionResult);
+          // Use real Whisper transcription
+          const transcriptionResult = await RealWhisperTranscription.transcribeAudio(resolvedPath);
+          const aiAnalysis = RealWhisperTranscription.analyzeTranscription(transcriptionResult);
           
           const transcriptionData = {
             segments: transcriptionResult.segments,
