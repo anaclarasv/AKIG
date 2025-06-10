@@ -14,6 +14,7 @@ import Ranking from "@/pages/Ranking";
 import Reports from "@/pages/Reports";
 import Companies from "@/pages/Companies";
 import Users from "@/pages/Users";
+import EvaluationCriteria from "@/pages/EvaluationCriteria";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
@@ -50,6 +51,7 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/monitoring" component={Monitoring} />
             <Route path="/evaluations" component={Evaluations} />
+            <Route path="/evaluation-criteria" component={EvaluationCriteria} />
             <Route path="/ranking" component={Ranking} />
             <Route path="/reports" component={Reports} />
             <Route path="/companies" component={Companies} />

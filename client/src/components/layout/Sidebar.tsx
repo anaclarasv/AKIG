@@ -12,7 +12,8 @@ import {
   FileBarChart, 
   Building, 
   Users, 
-  LogOut 
+  LogOut,
+  Settings
 } from "lucide-react";
 
 export default function Sidebar() {

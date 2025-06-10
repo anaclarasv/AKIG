@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,12 @@ export default function Monitoring() {
     campaignId: "",
   });
 
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if user can create new monitoring sessions
+  const canCreateMonitoring = user?.role === 'admin' || user?.role === 'evaluator';
 
   const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],
@@ -137,10 +142,10 @@ export default function Monitoring() {
       <Header 
         title="Monitorias"
         subtitle="Sessões de monitoramento de atendimento"
-        action={{
+        action={canCreateMonitoring ? {
           label: "Nova Monitoria",
           onClick: handleNewMonitoring
-        }}
+        } : undefined}
       />
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -228,11 +233,16 @@ export default function Monitoring() {
                 Nenhuma monitoria encontrada
               </h3>
               <p className="text-muted-foreground mb-4">
-                Comece criando sua primeira sessão de monitoramento
+                {canCreateMonitoring 
+                  ? "Comece criando sua primeira sessão de monitoramento"
+                  : "Aguarde que uma monitoria seja criada"
+                }
               </p>
-              <Button onClick={handleNewMonitoring} className="akig-bg-primary hover:opacity-90">
-                Criar Nova Monitoria
-              </Button>
+              {canCreateMonitoring && (
+                <Button onClick={handleNewMonitoring} className="akig-bg-primary hover:opacity-90">
+                  Criar Nova Monitoria
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
