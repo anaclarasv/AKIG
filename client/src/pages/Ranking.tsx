@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Crown, Medal, Award, Coins, Gift, TrendingUp, Calendar } from "lucide-react";
+import { Crown, Medal, Award, Coins, Gift, TrendingUp, Calendar, Trophy } from "lucide-react";
 import type { RankingEntry, Reward } from "@/types";
 
 export default function Ranking() {

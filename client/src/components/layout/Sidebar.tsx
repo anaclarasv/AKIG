@@ -43,17 +43,49 @@ export default function Sidebar() {
     console.log(`Role switched to: ${role}`);
   };
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: BarChart3 },
-    { name: 'Monitorias', href: '/monitoring', icon: Headphones },
-    { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
-    { name: 'Ranking', href: '/ranking', icon: Trophy },
-    { name: 'Relatórios', href: '/reports', icon: FileBarChart },
-    ...(user?.role === 'admin' ? [
-      { name: 'Empresas', href: '/companies', icon: Building },
-      { name: 'Usuários', href: '/users', icon: Users },
-    ] : []),
-  ];
+  const getNavigationForRole = (role: string) => {
+    const baseNavigation = [
+      { name: 'Dashboard', href: '/', icon: BarChart3 },
+    ];
+
+    switch (role) {
+      case 'admin':
+        return [
+          ...baseNavigation,
+          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
+          { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Relatórios', href: '/reports', icon: FileBarChart },
+          { name: 'Empresas', href: '/companies', icon: Building },
+          { name: 'Usuários', href: '/users', icon: Users },
+        ];
+      case 'supervisor':
+        return [
+          ...baseNavigation,
+          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
+          { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Relatórios', href: '/reports', icon: FileBarChart },
+        ];
+      case 'evaluator':
+        return [
+          ...baseNavigation,
+          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
+          { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Ranking', href: '/ranking', icon: Trophy },
+        ];
+      case 'agent':
+        return [
+          ...baseNavigation,
+          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
+          { name: 'Ranking', href: '/ranking', icon: Trophy },
+        ];
+      default:
+        return baseNavigation;
+    }
+  };
+
+  const navigation = getNavigationForRole(currentRole);
 
   const roleNames = {
     admin: 'Admin AKIG',

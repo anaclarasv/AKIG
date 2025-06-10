@@ -1,23 +1,98 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Play, Pause, Volume2, Download } from "lucide-react";
-import type { MonitoringSession } from "@/types";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Play, Pause, Volume2, Download, Upload, Plus } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import type { MonitoringSession, Campaign } from "@/types";
 
 export default function Monitoring() {
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    agentId: "",
+    campaignId: "",
+  });
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],
   });
 
+  const { data: campaigns } = useQuery<Campaign[]>({
+    queryKey: ['/api/campaigns'],
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      return await apiRequest('POST', '/api/monitoring-sessions', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      setIsUploadDialogOpen(false);
+      setAudioFile(null);
+      setFormData({ agentId: "", campaignId: "" });
+      toast({
+        title: "Sucesso",
+        description: "Áudio enviado com sucesso! A transcrição será processada.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Falha ao enviar áudio. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleNewMonitoring = () => {
-    console.log("Creating new monitoring session...");
+    setIsUploadDialogOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('audio/')) {
+        setAudioFile(file);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione um arquivo de áudio válido.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!audioFile || !formData.agentId || !formData.campaignId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append('audio', audioFile);
+    uploadData.append('agentId', formData.agentId);
+    uploadData.append('campaignId', formData.campaignId);
+
+    uploadMutation.mutate(uploadData);
   };
 
   const togglePlayback = () => {
@@ -162,6 +237,83 @@ export default function Monitoring() {
           </CardContent>
         </Card>
       )}
+
+      {/* Upload Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Monitoria</DialogTitle>
+            <DialogDescription>
+              Faça upload de um arquivo de áudio para iniciar uma nova sessão de monitoramento.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="agent">Agente *</Label>
+              <Input
+                id="agent"
+                placeholder="ID do Agente"
+                value={formData.agentId}
+                onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="campaign">Campanha *</Label>
+              <Select value={formData.campaignId} onValueChange={(value) => setFormData({ ...formData, campaignId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns?.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id.toString()}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))}
+                  {(!campaigns || campaigns.length === 0) && (
+                    <SelectItem value="placeholder" disabled>
+                      Nenhuma campanha encontrada
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="audio">Arquivo de Áudio *</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="audio"
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileChange}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                />
+                <Upload className="w-4 h-4 text-muted-foreground" />
+              </div>
+              {audioFile && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Arquivo selecionado: {audioFile.name}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={uploadMutation.isPending}
+              className="akig-bg-primary hover:opacity-90"
+            >
+              {uploadMutation.isPending ? "Enviando..." : "Enviar Áudio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
