@@ -53,11 +53,11 @@ function Router() {
         <main className="flex-1 overflow-y-auto">
           <Switch>
             <Route path="/" component={Dashboard} />
-            <Route path="/monitoring">
+            <Route path="/monitoring" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor', 'evaluator']}>
                 <Monitoring />
               </ProtectedRoute>
-            </Route>
+            )} />
             <Route path="/evaluations" component={Evaluations} />
             <Route path="/evaluation-criteria">
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>

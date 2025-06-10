@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Play, Pause, Volume2, Download, Upload, Plus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
 import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
 
@@ -199,15 +200,6 @@ export default function Monitoring() {
 
   // Get selected session data with safe property access
   const selectedSessionData = sessions?.find(s => s.id === selectedSession);
-  
-  // Helper function to safely access aiAnalysis properties
-  const safeAnalysisValue = (session: any, property: string, defaultValue: any = 0) => {
-    try {
-      return session?.aiAnalysis?.[property] ?? defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  };
 
   // If a session is selected, show detailed view
   if (selectedSession && selectedSessionData) {
@@ -283,13 +275,13 @@ export default function Monitoring() {
                     </div>
                     <div className="p-2 bg-blue-50 rounded">
                       <p className="text-blue-600 font-semibold text-sm">
-                        {(safeAnalysisValue(selectedSessionData, 'averageToneScore') || 0).toFixed(1)}
+                        {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
                       </p>
                       <p className="text-xs text-blue-700">Tom Médio</p>
                     </div>
                     <div className="p-2 bg-green-50 rounded">
                       <p className="text-green-600 font-semibold text-sm">
-                        {(safeAnalysisValue(selectedSessionData, 'sentimentScore') || 0).toFixed(1)}
+                        {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
                       </p>
                       <p className="text-xs text-green-700">Sentimento</p>
                     </div>
@@ -414,7 +406,7 @@ export default function Monitoring() {
                     </div>
                     <div className="p-2 bg-blue-50 rounded">
                       <p className="text-blue-600 font-semibold text-sm">
-                        {(safeAnalysisValue(session, 'averageToneScore') || 0).toFixed(1)}
+                        {formatScore(safeAnalysisValue(session, 'averageToneScore'))}
                       </p>
                       <p className="text-xs text-blue-700">Tom</p>
                     </div>
