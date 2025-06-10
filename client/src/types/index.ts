@@ -121,9 +121,13 @@ export interface RankingEntry {
 
 export interface DashboardMetrics {
   todayMonitorings: number;
+  todayMonitoringsChange: number;
   averageScore: number;
+  averageScoreChange: number;
   pendingForms: number;
+  pendingFormsChange: number;
   activeAgents: number;
+  activeAgentsChange: number;
 }
 
 export interface ActivityEntry {

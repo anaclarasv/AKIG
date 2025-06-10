@@ -76,9 +76,13 @@ export interface IStorage {
   // Dashboard metrics
   getDashboardMetrics(companyId?: number): Promise<{
     todayMonitorings: number;
+    todayMonitoringsChange: number;
     averageScore: number;
+    averageScoreChange: number;
     pendingForms: number;
+    pendingFormsChange: number;
     activeAgents: number;
+    activeAgentsChange: number;
   }>;
   
   // Ranking operations
@@ -412,45 +416,106 @@ export class DatabaseStorage implements IStorage {
 
   async getDashboardMetrics(companyId?: number): Promise<{
     todayMonitorings: number;
+    todayMonitoringsChange: number;
     averageScore: number;
+    averageScoreChange: number;
     pendingForms: number;
+    pendingFormsChange: number;
     activeAgents: number;
+    activeAgentsChange: number;
   }> {
-    // Get today's date for filtering
+    // Get date ranges
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Count all monitoring sessions from today
+    // Get all data from database
     const allMonitorings = await db.select().from(monitoringSessions);
+    const allEvaluations = await db.select().from(evaluations);
+    const allUsers = await db.select().from(users);
+
+    // MONITORIAS HOJE vs ONTEM
     const todayMonitorings = allMonitorings.filter(session => {
       if (!session.createdAt) return false;
       const sessionDate = session.createdAt.toISOString().split('T')[0];
       return sessionDate === todayStr;
     }).length;
 
-    // Calculate average score from evaluations
-    const allEvaluations = await db.select().from(evaluations);
-    const validScores = allEvaluations
+    const yesterdayMonitorings = allMonitorings.filter(session => {
+      if (!session.createdAt) return false;
+      const sessionDate = session.createdAt.toISOString().split('T')[0];
+      return sessionDate === yesterdayStr;
+    }).length;
+
+    const todayMonitoringsChange = yesterdayMonitorings > 0 
+      ? Math.round(((todayMonitorings - yesterdayMonitorings) / yesterdayMonitorings) * 100)
+      : 0;
+
+    // NOTA MÉDIA - comparar últimos 7 dias vs 7 dias anteriores
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date(today);
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    const recentEvaluations = allEvaluations.filter(e => {
+      if (!e.createdAt) return false;
+      return e.createdAt >= sevenDaysAgo;
+    });
+
+    const previousWeekEvaluations = allEvaluations.filter(e => {
+      if (!e.createdAt) return false;
+      return e.createdAt >= fourteenDaysAgo && e.createdAt < sevenDaysAgo;
+    });
+
+    const recentValidScores = recentEvaluations
       .map(e => Number(e.finalScore))
       .filter(score => !isNaN(score) && score > 0);
-    const averageScore = validScores.length > 0 ? 
-      validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
+    const averageScore = recentValidScores.length > 0 ? 
+      recentValidScores.reduce((sum, score) => sum + score, 0) / recentValidScores.length : 0;
 
-    // Count pending forms (monitoring sessions without evaluations)
+    const previousValidScores = previousWeekEvaluations
+      .map(e => Number(e.finalScore))
+      .filter(score => !isNaN(score) && score > 0);
+    const previousAverageScore = previousValidScores.length > 0 ? 
+      previousValidScores.reduce((sum, score) => sum + score, 0) / previousValidScores.length : 0;
+
+    const averageScoreChange = previousAverageScore > 0 
+      ? Math.round(((averageScore - previousAverageScore) / previousAverageScore) * 100)
+      : 0;
+
+    // FICHAS PENDENTES - hoje vs ontem
     const evaluationSessionIds = allEvaluations.map(e => e.monitoringSessionId);
     const completedMonitorings = allMonitorings.filter(s => s.status === 'completed');
     const pendingForms = completedMonitorings.filter(s => !evaluationSessionIds.includes(s.id)).length;
 
-    // Count active agents
-    const allUsers = await db.select().from(users);
+    const yesterdayCompleted = allMonitorings.filter(s => {
+      if (!s.createdAt || s.status !== 'completed') return false;
+      const sessionDate = s.createdAt.toISOString().split('T')[0];
+      return sessionDate === yesterdayStr;
+    });
+    const yesterdayPending = yesterdayCompleted.filter(s => !evaluationSessionIds.includes(s.id)).length;
+
+    const pendingFormsChange = yesterdayPending > 0 
+      ? Math.round(((pendingForms - yesterdayPending) / yesterdayPending) * 100)
+      : 0;
+
+    // AGENTES ATIVOS - hoje vs semana passada
     const activeAgents = allUsers.filter(u => u.role === 'agent' && u.isActive).length;
+    const activeAgentsChange = 0; // Agentes ativos não mudam frequentemente, manter em 0
 
     return {
       todayMonitorings,
-      averageScore: Math.round(averageScore * 10) / 10, // Round to 1 decimal
+      todayMonitoringsChange,
+      averageScore: Math.round(averageScore * 10) / 10,
+      averageScoreChange,
       pendingForms,
+      pendingFormsChange,
       activeAgents,
+      activeAgentsChange,
     };
   }
 

@@ -22,6 +22,18 @@ export default function MetricsGrid() {
     );
   }
 
+  const formatTrend = (change: number) => {
+    if (change === 0) return "0%";
+    const sign = change > 0 ? "+" : "";
+    return `${sign}${change}%`;
+  };
+
+  const getTrendColor = (change: number) => {
+    if (change > 0) return "text-green-600";
+    if (change < 0) return "text-red-600";
+    return "text-gray-500";
+  };
+
   const metricCards = [
     {
       title: "Monitorias Hoje",
@@ -29,9 +41,9 @@ export default function MetricsGrid() {
       icon: Headphones,
       iconBg: "bg-blue-100",
       iconColor: "text-blue-600",
-      trend: "+12%",
+      trend: formatTrend(metrics?.todayMonitoringsChange || 0),
       trendLabel: "vs. ontem",
-      trendColor: "text-green-600"
+      trendColor: getTrendColor(metrics?.todayMonitoringsChange || 0)
     },
     {
       title: "Média Geral",
@@ -39,9 +51,9 @@ export default function MetricsGrid() {
       icon: Star,
       iconBg: "bg-green-100",
       iconColor: "text-green-600",
-      trend: "+0.3",
-      trendLabel: "vs. mês anterior",
-      trendColor: "text-green-600"
+      trend: formatTrend(metrics?.averageScoreChange || 0),
+      trendLabel: "vs. semana anterior",
+      trendColor: getTrendColor(metrics?.averageScoreChange || 0)
     },
     {
       title: "Fichas Pendentes",
@@ -49,9 +61,9 @@ export default function MetricsGrid() {
       icon: Clock,
       iconBg: "bg-amber-100",
       iconColor: "text-amber-600",
-      trend: "+2",
-      trendLabel: "desde ontem",
-      trendColor: "text-red-600"
+      trend: formatTrend(metrics?.pendingFormsChange || 0),
+      trendLabel: "vs. ontem",
+      trendColor: getTrendColor(metrics?.pendingFormsChange || 0)
     },
     {
       title: "Atendentes Ativos",
@@ -59,9 +71,9 @@ export default function MetricsGrid() {
       icon: Users,
       iconBg: "bg-purple-100",
       iconColor: "text-purple-600",
-      trend: "98%",
-      trendLabel: "online",
-      trendColor: "text-green-600"
+      trend: formatTrend(metrics?.activeAgentsChange || 0),
+      trendLabel: "total ativo",
+      trendColor: "text-gray-500"
     }
   ];
 
