@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Companies routes
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -60,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/companies/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/campaigns', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -165,8 +165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evaluations routes
   app.get('/api/evaluations', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const user = await storage.getUser(req.user.id);
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
       const agentId = user?.role === 'agent' ? user.id : undefined;
       const evaluations = await storage.getEvaluations(companyId, agentId);
       res.json(evaluations);
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/evaluations', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/evaluations/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       const evaluation = await storage.getEvaluation(parseInt(req.params.id));
       
       // Check permissions
@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evaluation criteria routes
   app.get('/api/evaluation-criteria', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/evaluation-criteria', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rewards routes
   app.get('/api/rewards', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/rewards', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -283,19 +283,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/rewards/:id/purchase', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       const rewardId = parseInt(req.params.id);
       const purchase = await storage.purchaseReward(user!.id, rewardId);
       res.status(201).json(purchase);
     } catch (error) {
-      console.error("Error purchasing reward:", error);
-      res.status(500).json({ message: error.message || "Failed to purchase reward" });
+      console.error("Error purchasing reward:", error as Error);
+      res.status(500).json({ message: (error as Error).message || "Failed to purchase reward" });
     }
   });
 
   app.get('/api/user/purchases', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const purchases = await storage.getUserRewardPurchases(userId);
       res.json(purchases);
     } catch (error) {
