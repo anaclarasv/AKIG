@@ -7,13 +7,7 @@ import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { transcribeAudio, analyzeTranscription, transcribeAudioLocal } from "./openai";
-import { 
-  startAsyncTranscription, 
-  getTranscriptionStatus, 
-  clearTranscriptionCache, 
-  analyzeTranscriptionLocal,
-  transcriptionEvents 
-} from "./whisper-transcription";
+import { analyzeTranscription } from "./openai";
 // import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
@@ -418,8 +412,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log('Starting local transcription...');
             
-            // Use optimized local transcription system
-            transcriptionResult = await transcribeAudioLocal(audioFile.path);
+            // Use real Whisper transcription system
+            const { transcribeAudioWithWhisper } = await import('./whisper-transcription');
+            transcriptionResult = await transcribeAudioWithWhisper(audioFile.path);
             aiAnalysis = analyzeTranscriptionLocal(transcriptionResult);
             
           } catch (error) {
