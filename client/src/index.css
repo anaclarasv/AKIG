@@ -1,0 +1,247 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 10%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 10%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 10%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(221, 83%, 53%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222, 84%, 10%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222, 84%, 10%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(221, 83%, 53%);
+  --radius: 0.5rem;
+  --chart-1: hsl(221, 83%, 53%);
+  --chart-2: hsl(212, 95%, 68%);
+  --chart-3: hsl(216, 92%, 60%);
+  --chart-4: hsl(210, 98%, 78%);
+  --chart-5: hsl(212, 97%, 87%);
+  --sidebar-background: hsl(221, 83%, 53%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(224, 76%, 48%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(224, 76%, 48%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(224, 76%, 48%);
+  --sidebar-ring: hsl(217, 91%, 60%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 4%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(221, 83%, 53%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(221, 83%, 53%);
+  --chart-1: hsl(221, 83%, 53%);
+  --chart-2: hsl(212, 95%, 68%);
+  --chart-3: hsl(216, 92%, 60%);
+  --chart-4: hsl(210, 98%, 78%);
+  --chart-5: hsl(212, 97%, 87%);
+  --sidebar-background: hsl(221, 83%, 53%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(224, 76%, 48%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(224, 76%, 48%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(224, 76%, 48%);
+  --sidebar-ring: hsl(217, 91%, 60%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom styles for AKIG Solutions */
+.akig-gradient {
+  background: linear-gradient(135deg, hsl(221, 83%, 53%) 0%, hsl(224, 76%, 48%) 100%);
+}
+
+.akig-card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.akig-card-shadow:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.akig-text-primary {
+  color: hsl(221, 83%, 53%);
+}
+
+.akig-bg-primary {
+  background-color: hsl(221, 83%, 53%);
+}
+
+.akig-border-primary {
+  border-color: hsl(221, 83%, 53%);
+}
+
+/* Timeline and monitoring styles */
+.timeline-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.timeline-marker.critical {
+  background-color: hsl(0, 84%, 60%);
+}
+
+.timeline-marker.warning {
+  background-color: hsl(43, 96%, 56%);
+}
+
+.timeline-marker.info {
+  background-color: hsl(221, 83%, 53%);
+}
+
+/* Evaluation score animation */
+.score-circle {
+  background: conic-gradient(
+    from 0deg,
+    hsl(120, 100%, 50%) 0deg,
+    hsl(120, 100%, 50%) calc(var(--score) * 3.6deg),
+    hsl(214, 32%, 91%) calc(var(--score) * 3.6deg),
+    hsl(214, 32%, 91%) 360deg
+  );
+  border-radius: 50%;
+  padding: 4px;
+}
+
+.score-circle-inner {
+  background: white;
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(214, 32%, 91%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(215, 16%, 47%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(221, 83%, 53%);
+}
+
+/* Ranking animation */
+.rank-card {
+  transition: all 0.3s ease;
+}
+
+.rank-card:hover {
+  transform: translateY(-2px);
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, hsl(43, 96%, 56%) 0%, hsl(38, 92%, 50%) 100%);
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, hsl(0, 0%, 75%) 0%, hsl(0, 0%, 64%) 100%);
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(22, 92%, 50%) 100%);
+}
+
+/* Signature pad styles */
+.signature-pad {
+  border: 2px dashed hsl(214, 32%, 91%);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.signature-pad:hover {
+  border-color: hsl(221, 83%, 53%);
+  background-color: hsl(221, 83%, 98%);
+}
+
+.signature-pad.signed {
+  border-color: hsl(142, 76%, 36%);
+  background-color: hsl(142, 76%, 96%);
+  border-style: solid;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(210, 40%, 98%) 0%,
+    hsl(214, 32%, 91%) 50%,
+    hsl(210, 40%, 98%) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none;
+  }
+}
