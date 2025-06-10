@@ -16,6 +16,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes are handled in auth.ts
+  
+  // Admin-only user creation
+  app.post('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can create users" });
+      }
+      
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Hash password (import hashPassword function)
+      const { scrypt, randomBytes } = await import("crypto");
+      const { promisify } = await import("util");
+      const scryptAsync = promisify(scrypt);
+      
+      const salt = randomBytes(16).toString("hex");
+      const buf = (await scryptAsync(req.body.password, salt, 64)) as Buffer;
+      const hashedPassword = `${buf.toString("hex")}.${salt}`;
+
+      const user = await storage.createUser({
+        ...req.body,
+        password: hashedPassword,
+        virtualCoins: 0,
+        isActive: true,
+      });
+
+      res.status(201).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        companyId: user.companyId,
+        virtualCoins: user.virtualCoins,
+        isActive: user.isActive,
+      });
+    } catch (error) {
+      console.error("Error creating user:", error as Error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
 
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req: any, res) => {

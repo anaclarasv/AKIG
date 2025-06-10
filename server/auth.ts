@@ -80,40 +80,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(req.body.password);
-      const user = await storage.createUser({
-        ...req.body,
-        password: hashedPassword,
-        virtualCoins: 0,
-        isActive: true,
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-          companyId: user.companyId,
-          virtualCoins: user.virtualCoins,
-          isActive: user.isActive,
-        });
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
-    }
-  });
+  // Public registration disabled - only admins can create users
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json({
