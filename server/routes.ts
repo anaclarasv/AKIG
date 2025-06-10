@@ -579,37 +579,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/monitoring-sessions/:id/transcription-status", isAuthenticated, async (req: any, res) => {
     try {
       const sessionId = parseInt(req.params.id);
-      const status = getTranscriptionStatus(sessionId);
+      const session = await storage.getMonitoringSession(sessionId);
       
-      if (status && status.status === "completed") {
-        // Update database with completed transcription
-        const aiAnalysis = analyzeTranscriptionLocal(status);
-        await storage.updateMonitoringSession(sessionId, {
-          transcription: {
-            segments: status.segments,
-            totalDuration: status.totalDuration
-          },
-          aiAnalysis,
-          status: "completed"
-        });
-        
-        // Clear cache after updating database
-        clearTranscriptionCache(sessionId);
-        
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      const status = {
+        sessionId,
+        hasTranscription: !!session.transcription,
+        hasAnalysis: !!session.aiAnalysis,
+        status: session.transcription ? 'completed' : 'pending'
+      };
+      
+      if (status.status === "completed") {
+        // Return existing completed transcription
         const updatedSession = await storage.getMonitoringSession(sessionId);
         res.json(updatedSession);
-      } else if (status) {
-        res.json({
-          status: status.status,
-          progress: status.progress || 0,
-          segments: status.segments
-        });
       } else {
-        // Check database status
-        const session = await storage.getMonitoringSession(sessionId);
         res.json({
-          status: session?.status || "pending",
-          progress: session?.status === "completed" ? 100 : 0
+          status: "pending",
+          progress: 0,
+          segments: []
         });
       }
     } catch (error) {

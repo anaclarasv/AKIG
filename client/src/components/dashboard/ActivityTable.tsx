@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Filter, Download, Eye, Edit, TriangleAlert } from "lucide-react";
 
 // Mock data - in real app this would come from API
@@ -51,6 +53,11 @@ const mockActivities = [
 
 export default function ActivityTable() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [contestModalOpen, setContestModalOpen] = useState(false);
+  const [contestReason, setContestReason] = useState("");
   const totalPages = 25; // Mock total pages
 
   const getStatusBadge = (status: string, score: number) => {
@@ -172,14 +179,41 @@ export default function ActivityTable() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-800"
+                        onClick={() => {
+                          console.log('Visualizar clicked for activity:', activity.id);
+                          setSelectedActivity(activity);
+                          setViewModalOpen(true);
+                        }}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          console.log('Editar clicked for activity:', activity.id);
+                          setSelectedActivity(activity);
+                          setEditModalOpen(true);
+                        }}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                       {activity.status === "signed" && (
-                        <Button variant="ghost" size="sm" className="text-amber-600 hover:text-amber-800">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-amber-600 hover:text-amber-800"
+                          onClick={() => {
+                            console.log('Contestação clicked for activity:', activity.id);
+                            setSelectedActivity(activity);
+                            setContestModalOpen(true);
+                          }}
+                        >
                           <TriangleAlert className="w-4 h-4" />
                         </Button>
                       )}
@@ -190,6 +224,80 @@ export default function ActivityTable() {
             </tbody>
           </table>
         </div>
+
+        {/* Modal Visualizar */}
+        <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Avaliação #{selectedActivity?.id}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Atendente</label>
+                  <p className="text-sm text-muted-foreground">{selectedActivity?.agentName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Campanha</label>
+                  <p className="text-sm text-muted-foreground">{selectedActivity?.campaignName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Avaliador</label>
+                  <p className="text-sm text-muted-foreground">{selectedActivity?.evaluatorName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Nota Final</label>
+                  <p className="text-sm text-muted-foreground">{selectedActivity?.score}</p>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Editar */}
+        <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Avaliação #{selectedActivity?.id}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Funcionalidade de edição será implementada aqui.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Contestação */}
+        <Dialog open={contestModalOpen} onOpenChange={setContestModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Contestar Avaliação #{selectedActivity?.id}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Motivo da Contestação</label>
+                <Textarea
+                  placeholder="Descreva o motivo da contestação..."
+                  value={contestReason}
+                  onChange={(e) => setContestReason(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setContestModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => {
+                  console.log('Contestação enviada:', contestReason);
+                  setContestModalOpen(false);
+                  setContestReason("");
+                }}>
+                  Enviar Contestação
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="px-6 py-3 border-t border-border bg-muted/50">
           <div className="flex items-center justify-between">
