@@ -25,7 +25,14 @@ export default function Header({
         </div>
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <Button variant="outline" size="icon">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => {
+                // Placeholder for notification functionality
+                console.log('Notifications clicked');
+              }}
+            >
               <Bell className="w-4 h-4" />
             </Button>
             <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive">

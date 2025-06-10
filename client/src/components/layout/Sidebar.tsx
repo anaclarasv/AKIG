@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,21 @@ export default function Sidebar() {
   const [location] = useLocation();
   const [currentRole, setCurrentRole] = useState(user?.role || 'agent');
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  // Sync currentRole with user role when user changes
+  useEffect(() => {
+    if (user?.role) {
+      setCurrentRole(user.role);
+    }
+  }, [user?.role]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      window.location.href = '/auth';
+    }
   };
 
   const handleRoleSwitch = (role: string) => {
@@ -110,7 +123,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center space-x-3 mb-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={user?.profileImageUrl} />
+            <AvatarImage src={user?.profileImageUrl ?? undefined} />
             <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </AvatarFallback>
