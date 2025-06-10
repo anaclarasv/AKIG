@@ -406,35 +406,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            transcriptionResult = await transcribeAudio(audioFile.path);
-            aiAnalysis = await analyzeTranscription(transcriptionResult.text);
-          } catch (error) {
-            console.log('OpenAI quota exceeded, using simulated transcription');
-            // Simulate realistic transcription data
+            console.log('Transcribing audio with OpenAI Whisper:', audioFile.path);
+            const whisperResult = await transcribeAudio(audioFile.path);
+            console.log('Whisper transcription result:', whisperResult);
+            
+            // Process Whisper result into segments with speaker detection
+            const sentences = whisperResult.text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const segments: Array<{
+              id: string;
+              speaker: 'agent' | 'client';
+              text: string;
+              startTime: number;
+              endTime: number;
+              confidence: number;
+              criticalWords: string[];
+            }> = [];
+            
+            let currentTime = 0;
+            
+            sentences.forEach((sentence, index) => {
+              const estimatedDuration = Math.max(2, sentence.length * 0.1); // Rough estimate: 0.1s per character
+              const startTime = currentTime;
+              const endTime = startTime + estimatedDuration;
+              
+              // Simple speaker alternation (could be improved with speaker diarization)
+              const speaker = index % 2 === 0 ? 'agent' : 'client';
+              
+              // Detect critical words in Portuguese
+              const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|bug|lento|demorado|péssimo|horrível)\b/gi;
+              const criticalWords = sentence.match(criticalWordPatterns) || [];
+              
+              segments.push({
+                id: (index + 1).toString(),
+                speaker,
+                text: sentence.trim(),
+                startTime: Math.round(startTime * 10) / 10,
+                endTime: Math.round(endTime * 10) / 10,
+                confidence: 0.85 + Math.random() * 0.15, // Random confidence 0.85-1.0
+                criticalWords: criticalWords.map(w => w.toLowerCase())
+              });
+              
+              currentTime = endTime + 0.5; // Add small pause between segments
+            });
+            
             transcriptionResult = {
-              text: "Olá, bom dia! Como posso ajudá-lo hoje? Cliente: Oi, estou com um problema na minha conta. Agente: Claro, vou verificar isso para você. Pode me informar seu CPF? Cliente: 123.456.789-00. Agente: Perfeito, encontrei sua conta. Vejo que há uma pendência. Vou resolver isso agora mesmo. Cliente: Obrigado pela atenção! Agente: De nada, é um prazer ajudar. Sua conta já está regularizada.",
-              segments: [
-                { id: '1', speaker: 'agent', text: 'Olá, bom dia! Como posso ajudá-lo hoje?', startTime: 0, endTime: 3, confidence: 0.95, criticalWords: [] },
-                { id: '2', speaker: 'client', text: 'Oi, estou com um problema na minha conta.', startTime: 3.5, endTime: 6, confidence: 0.92, criticalWords: ['problema'] },
-                { id: '3', speaker: 'agent', text: 'Claro, vou verificar isso para você. Pode me informar seu CPF?', startTime: 6.5, endTime: 10, confidence: 0.94, criticalWords: [] },
-                { id: '4', speaker: 'client', text: '123.456.789-00.', startTime: 10.5, endTime: 12, confidence: 0.98, criticalWords: [] },
-                { id: '5', speaker: 'agent', text: 'Perfeito, encontrei sua conta. Vejo que há uma pendência. Vou resolver isso agora mesmo.', startTime: 12.5, endTime: 17, confidence: 0.93, criticalWords: ['pendência'] },
-                { id: '6', speaker: 'client', text: 'Obrigado pela atenção!', startTime: 17.5, endTime: 19, confidence: 0.96, criticalWords: [] },
-                { id: '7', speaker: 'agent', text: 'De nada, é um prazer ajudar. Sua conta já está regularizada.', startTime: 19.5, endTime: 23, confidence: 0.94, criticalWords: [] }
-              ]
+              text: whisperResult.text,
+              segments
             };
             
-            aiAnalysis = {
-              criticalWordsCount: 2,
-              totalSilenceTime: 5.2,
-              averageToneScore: 8.5,
-              sentimentScore: 7.8,
-              recommendations: [
-                'Excelente atendimento com resolução rápida',
-                'Tom profissional mantido durante toda a conversa',
-                'Cliente demonstrou satisfação com o atendimento'
-              ]
-            };
+            console.log('Analyzing transcription with AI...');
+            aiAnalysis = await analyzeTranscription(whisperResult.text);
+            console.log('AI analysis result:', aiAnalysis);
+            
+          } catch (error) {
+            console.error('Error in OpenAI transcription:', error.message);
+            throw error; // Re-throw to show real error to user
           }
           
           const transcriptionData = {

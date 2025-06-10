@@ -52,7 +52,7 @@ export default function Monitoring() {
     queryKey: ['/api/monitoring-sessions'],
     refetchInterval: selectedSession ? 2000 : false, // Poll every 2 seconds when viewing a session
     staleTime: 0, // Always consider data stale
-    cacheTime: 0, // Don't cache data
+    gcTime: 0, // Don't cache data
   });
 
   const { data: campaigns } = useQuery<Campaign[]>({
