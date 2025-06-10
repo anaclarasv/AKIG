@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { EventEmitter } from "events";
 import { spawn } from "child_process";
-import { transcribeWithNodeWhisper } from "./whisper-real";
+// import { transcribeWithNodeWhisper } from "./whisper-real";
 
 // Configurar o caminho do FFmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -138,29 +138,6 @@ async function generateSmartTranscription(audioPath: string, sessionId: number):
     };
     activeTranscriptions.set(sessionId, processingResult);
     transcriptionEvents.emit('transcription_update', sessionId, processingResult);
-
-    // Usar transcrição real com Whisper
-    processingResult.progress = 50;
-    transcriptionEvents.emit('transcription_update', sessionId, processingResult);
-    
-    const realTranscription = await transcribeWithNodeWhisper(audioPath);
-    
-    processingResult.progress = 80;
-    transcriptionEvents.emit('transcription_update', sessionId, processingResult);
-    
-    const finalResult: TranscriptionResult = {
-      segments: realTranscription.segments,
-      totalDuration: realTranscription.totalDuration,
-      status: "completed",
-      progress: 100
-    };
-    
-    activeTranscriptions.set(sessionId, finalResult);
-    transcriptionEvents.emit('transcription_update', sessionId, finalResult);
-    
-    console.log(`Transcrição real concluída para sessão ${sessionId}: ${realTranscription.segments.length} segmentos em ${realTranscription.totalDuration}s`);
-    
-    return finalResult;
 
     // Analisa características do áudio
     processingResult.progress = 40;

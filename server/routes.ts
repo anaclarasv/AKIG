@@ -14,7 +14,7 @@ import {
   analyzeTranscriptionLocal,
   transcriptionEvents 
 } from "./whisper-transcription";
-import { transcribeWithNodeWhisper } from "./whisper-real";
+// import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
 import {
@@ -416,42 +416,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            console.log('Starting real audio transcription with local Whisper...');
+            console.log('Starting local transcription...');
             
-            // Use local node-whisper for real transcription
-            const whisperResult = await transcribeWithNodeWhisper(audioFile.path);
-            console.log(`Real transcription completed: ${whisperResult.segments.length} segments`);
-            
-            transcriptionResult = {
-              text: whisperResult.segments.map(s => s.text).join(' '),
-              segments: whisperResult.segments.map(segment => ({
-                id: segment.id,
-                speaker: segment.speaker,
-                text: segment.text,
-                startTime: segment.startTime,
-                endTime: segment.endTime,
-                confidence: segment.confidence,
-                criticalWords: []
-              }))
-            };
-            
-            // Analyze the REAL transcribed content
-            console.log('Analyzing real transcribed content with local AI...');
-            const fullText = whisperResult.segments.map(s => s.text).join(' ');
-            aiAnalysis = analyzeTranscriptionLocal({ 
-              segments: whisperResult.segments,
-              totalDuration: whisperResult.totalDuration 
-            });
-            console.log('Local AI analysis of real content completed');
+            // Use optimized local transcription system
+            transcriptionResult = await transcribeAudioLocal(audioFile.path);
+            aiAnalysis = analyzeTranscriptionLocal(transcriptionResult);
             
           } catch (error) {
-            console.error('Real Whisper transcription failed:', (error as any).message);
-            console.log('Falling back to local transcription system...');
-            
-            // Fallback to our optimized local system
-            const fallbackResult = await transcribeAudioLocal(audioFile.path);
-            transcriptionResult = fallbackResult;
-            aiAnalysis = analyzeTranscriptionLocal(fallbackResult);
+            console.error('Transcription failed:', (error as any).message);
+            throw new Error(`Transcription failed: ${(error as any).message}`);
           }
           
           const transcriptionData = {
