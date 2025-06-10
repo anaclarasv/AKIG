@@ -178,15 +178,27 @@ export default function Sidebar() {
             </p>
           </div>
         </div>
-        <Button 
-          onClick={handleLogout} 
-          variant="ghost" 
-          size="sm" 
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sair
-        </Button>
+        <div className="space-y-2">
+          <Link href="/lgpd" className={`
+            flex items-center space-x-2 p-2 rounded-lg transition-colors text-sm
+            ${location === '/lgpd' 
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+              : 'hover:bg-sidebar-accent/50'
+            }
+          `}>
+            <Shield className="w-4 h-4" />
+            <span>Proteção de Dados</span>
+          </Link>
+          <Button 
+            onClick={handleLogout} 
+            variant="ghost" 
+            size="sm" 
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair
+          </Button>
+        </div>
       </div>
     </div>
   );
