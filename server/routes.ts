@@ -518,36 +518,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Process transcription with authentic TranscriptionManager in background
-      setImmediate(async () => {
-        try {
-          const { transcribeAudioWithOpenAI } = await import('./openai-whisper');
-          console.log('Starting OpenAI Whisper transcription for session:', sessionId);
-          
-          // Use OpenAI Whisper for real transcription
-          const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
-          const { analyzeOpenAITranscription } = await import('./openai-whisper');
-          const aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
-          
-          const transcriptionData = {
-            segments: transcriptionResult.segments,
-            totalDuration: transcriptionResult.duration
-          };
+      // Execute OpenAI Whisper transcription immediately
+      try {
+        const { transcribeAudioWithOpenAI } = await import('./openai-whisper');
+        console.log('Starting OpenAI Whisper transcription for session:', sessionId);
+        
+        // Use OpenAI Whisper for real transcription - no fallbacks
+        const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
+        const { analyzeOpenAITranscription } = await import('./openai-whisper');
+        const aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
+        
+        const transcriptionData = {
+          segments: transcriptionResult.segments,
+          totalDuration: transcriptionResult.duration
+        };
 
-          await storage.updateMonitoringSession(sessionId, {
-            transcription: transcriptionData,
-            aiAnalysis,
-            status: 'completed'
-          });
+        await storage.updateMonitoringSession(sessionId, {
+          transcription: transcriptionData,
+          aiAnalysis,
+          status: 'completed'
+        });
 
-          console.log('Authentic transcription completed for session:', sessionId);
-        } catch (error) {
-          console.error('Real transcription error:', error);
-          await storage.updateMonitoringSession(sessionId, {
-            status: 'pending'
-          });
-        }
-      });
+        console.log('OpenAI Whisper transcription completed for session:', sessionId);
+      } catch (error) {
+        console.error('OpenAI Whisper transcription failed:', error);
+        await storage.updateMonitoringSession(sessionId, {
+          status: 'failed',
+          error: `Transcription failed: ${error.message}`
+        });
+        return res.status(500).json({ message: `Transcription failed: ${error.message}` });
+      }
 
       // Return immediately with processing status
       const updatedSession = await storage.getMonitoringSession(sessionId);
