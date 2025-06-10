@@ -24,8 +24,9 @@ import {
   type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, and, desc, count, avg, sql } from "drizzle-orm";
 
+// Interface for storage operations
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -130,11 +131,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCampaigns(companyId?: number): Promise<Campaign[]> {
-    const query = db.select().from(campaigns).where(eq(campaigns.isActive, true));
     if (companyId) {
-      return await query.where(eq(campaigns.companyId, companyId));
+      return await db.select().from(campaigns).where(and(
+        eq(campaigns.isActive, true),
+        eq(campaigns.companyId, companyId)
+      ));
     }
-    return await query;
+    return await db.select().from(campaigns).where(eq(campaigns.isActive, true));
   }
 
   async getCampaign(id: number): Promise<Campaign | undefined> {
@@ -157,19 +160,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMonitoringSessions(companyId?: number, agentId?: string): Promise<MonitoringSession[]> {
-    let query = db.select().from(monitoringSessions).orderBy(desc(monitoringSessions.createdAt));
-    
     if (companyId && agentId) {
-      query = query.innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
-        .where(and(eq(campaigns.companyId, companyId), eq(monitoringSessions.agentId, agentId)));
+      // Get sessions for specific company and agent
+      const sessionsWithCampaigns = await db
+        .select()
+        .from(monitoringSessions)
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+        .where(and(
+          eq(campaigns.companyId, companyId),
+          eq(monitoringSessions.agentId, agentId)
+        ))
+        .orderBy(desc(monitoringSessions.createdAt));
+      
+      return sessionsWithCampaigns.map(result => result.monitoring_sessions);
     } else if (companyId) {
-      query = query.innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
-        .where(eq(campaigns.companyId, companyId));
+      // Get sessions for specific company
+      const sessionsWithCampaigns = await db
+        .select()
+        .from(monitoringSessions)
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+        .where(eq(campaigns.companyId, companyId))
+        .orderBy(desc(monitoringSessions.createdAt));
+      
+      return sessionsWithCampaigns.map(result => result.monitoring_sessions);
     } else if (agentId) {
-      query = query.where(eq(monitoringSessions.agentId, agentId));
+      // Get sessions for specific agent
+      return await db.select().from(monitoringSessions)
+        .where(eq(monitoringSessions.agentId, agentId))
+        .orderBy(desc(monitoringSessions.createdAt));
     }
     
-    return await query;
+    // Get all sessions
+    return await db.select().from(monitoringSessions).orderBy(desc(monitoringSessions.createdAt));
   }
 
   async getMonitoringSession(id: number): Promise<MonitoringSession | undefined> {
@@ -192,22 +214,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvaluations(companyId?: number, agentId?: string): Promise<Evaluation[]> {
-    let query = db.select().from(evaluations).orderBy(desc(evaluations.createdAt));
-    
     if (companyId || agentId) {
-      query = query.innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id));
+      const evaluationsWithSessions = await db
+        .select()
+        .from(evaluations)
+        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+        .where(and(
+          companyId ? eq(campaigns.companyId, companyId) : undefined,
+          agentId ? eq(monitoringSessions.agentId, agentId) : undefined
+        ).filter(Boolean) as any);
       
-      if (companyId) {
-        query = query.innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
-          .where(eq(campaigns.companyId, companyId));
-      }
-      
-      if (agentId) {
-        query = query.where(eq(monitoringSessions.agentId, agentId));
-      }
+      return evaluationsWithSessions.map(result => result.evaluations);
     }
     
-    return await query;
+    return await db.select().from(evaluations);
   }
 
   async getEvaluation(id: number): Promise<Evaluation | undefined> {
@@ -230,8 +251,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvaluationCriteria(companyId: number): Promise<EvaluationCriteria[]> {
-    return await db.select().from(evaluationCriteria)
-      .where(and(eq(evaluationCriteria.companyId, companyId), eq(evaluationCriteria.isActive, true)));
+    return await db.select().from(evaluationCriteria).where(eq(evaluationCriteria.companyId, companyId));
   }
 
   async createEvaluationCriteria(criteria: InsertEvaluationCriteria): Promise<EvaluationCriteria> {
@@ -242,15 +262,14 @@ export class DatabaseStorage implements IStorage {
   async updateEvaluationCriteria(id: number, criteria: Partial<InsertEvaluationCriteria>): Promise<EvaluationCriteria> {
     const [updatedCriteria] = await db
       .update(evaluationCriteria)
-      .set(criteria)
+      .set({ ...criteria, updatedAt: new Date() })
       .where(eq(evaluationCriteria.id, id))
       .returning();
     return updatedCriteria;
   }
 
   async getRewards(companyId: number): Promise<Reward[]> {
-    return await db.select().from(rewards)
-      .where(and(eq(rewards.companyId, companyId), eq(rewards.isActive, true)));
+    return await db.select().from(rewards).where(eq(rewards.companyId, companyId));
   }
 
   async createReward(reward: InsertReward): Promise<Reward> {
@@ -259,34 +278,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserRewardPurchases(userId: string): Promise<RewardPurchase[]> {
-    return await db.select().from(rewardPurchases)
-      .where(eq(rewardPurchases.userId, userId))
-      .orderBy(desc(rewardPurchases.purchasedAt));
+    return await db.select().from(rewardPurchases).where(eq(rewardPurchases.userId, userId));
   }
 
   async purchaseReward(userId: string, rewardId: number): Promise<RewardPurchase> {
-    const [reward] = await db.select().from(rewards).where(eq(rewards.id, rewardId));
-    if (!reward) throw new Error("Reward not found");
-
+    // Get user and reward
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) throw new Error("User not found");
+    const [reward] = await db.select().from(rewards).where(eq(rewards.id, rewardId));
 
-    if (user.virtualCoins < reward.cost) {
-      throw new Error("Insufficient virtual coins");
+    if (!user || !reward) {
+      throw new Error('User or reward not found');
     }
 
-    // Deduct coins from user
-    await db.update(users)
-      .set({ virtualCoins: user.virtualCoins - reward.cost })
+    const userCoins = user.virtualCoins || 0;
+    if (userCoins < reward.cost) {
+      throw new Error('Insufficient virtual coins');
+    }
+
+    // Update user's virtual coins
+    await db
+      .update(users)
+      .set({ virtualCoins: userCoins - reward.cost })
       .where(eq(users.id, userId));
 
     // Create purchase record
-    const [purchase] = await db.insert(rewardPurchases)
-      .values({
-        userId,
-        rewardId,
-        cost: reward.cost,
-      })
+    const [purchase] = await db
+      .insert(rewardPurchases)
+      .values({ userId, rewardId })
       .returning();
 
     return purchase;
@@ -301,54 +319,72 @@ export class DatabaseStorage implements IStorage {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get today's monitoring count
-    let todayQuery = db.select({ count: sql<number>`count(*)` }).from(monitoringSessions)
-      .where(sql`DATE(${monitoringSessions.createdAt}) = CURRENT_DATE`);
+    // Today's monitoring sessions count
+    let todayQuery = db
+      .select({ count: count() })
+      .from(monitoringSessions);
 
     if (companyId) {
-      todayQuery = todayQuery.innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+      todayQuery = todayQuery
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(and(
-          sql`DATE(${monitoringSessions.createdAt}) = CURRENT_DATE`,
-          eq(campaigns.companyId, companyId)
+          eq(campaigns.companyId, companyId),
+          sql`${monitoringSessions.createdAt} >= ${today}`
         ));
+    } else {
+      todayQuery = todayQuery.where(sql`${monitoringSessions.createdAt} >= ${today}`);
     }
 
     const [todayResult] = await todayQuery;
 
-    // Get average score
-    let avgQuery = db.select({ avg: sql<number>`AVG(${evaluations.finalScore})` }).from(evaluations);
+    // Average score
+    let avgQuery = db
+      .select({ avg: avg(evaluations.finalScore) })
+      .from(evaluations)
+      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id));
+
     if (companyId) {
-      avgQuery = avgQuery.innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      avgQuery = avgQuery
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(eq(campaigns.companyId, companyId));
     }
 
     const [avgResult] = await avgQuery;
 
-    // Get pending forms count
-    let pendingQuery = db.select({ count: sql<number>`count(*)` }).from(evaluations)
-      .where(eq(evaluations.status, "pending"));
+    // Pending forms count
+    let pendingQuery = db
+      .select({ count: count() })
+      .from(evaluations)
+      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id));
 
     if (companyId) {
-      pendingQuery = pendingQuery.innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      pendingQuery = pendingQuery
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(and(
-          eq(evaluations.status, "pending"),
-          eq(campaigns.companyId, companyId)
+          eq(campaigns.companyId, companyId),
+          eq(evaluations.status, 'pending')
         ));
+    } else {
+      pendingQuery = pendingQuery.where(eq(evaluations.status, 'pending'));
     }
 
     const [pendingResult] = await pendingQuery;
 
-    // Get active agents count
-    let agentsQuery = db.select({ count: sql<number>`count(*)` }).from(users)
-      .where(and(eq(users.role, "agent"), eq(users.isActive, true)));
+    // Active agents count
+    let agentsQuery = db
+      .select({ count: count() })
+      .from(users);
 
     if (companyId) {
       agentsQuery = agentsQuery.where(and(
-        eq(users.role, "agent"),
+        eq(users.role, 'agent'),
         eq(users.isActive, true),
         eq(users.companyId, companyId)
+      ));
+    } else {
+      agentsQuery = agentsQuery.where(and(
+        eq(users.role, 'agent'),
+        eq(users.isActive, true)
       ));
     }
 
@@ -369,35 +405,34 @@ export class DatabaseStorage implements IStorage {
     averageScore: number;
     virtualCoins: number;
     rank: number;
-  }>>> {
-    let query = db.select({
-      userId: users.id,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      virtualCoins: users.virtualCoins,
-      averageScore: sql<number>`COALESCE(AVG(${evaluations.finalScore}), 0)`,
-    })
-    .from(users)
-    .leftJoin(monitoringSessions, eq(users.id, monitoringSessions.agentId))
-    .leftJoin(evaluations, eq(monitoringSessions.id, evaluations.monitoringSessionId))
-    .where(and(eq(users.role, "agent"), eq(users.isActive, true)));
-
-    if (companyId) {
-      query = query.where(and(
+  }>> {
+    const baseQuery = db
+      .select({
+        userId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        virtualCoins: users.virtualCoins,
+        averageScore: sql<number>`COALESCE(AVG(CAST(${evaluations.finalScore} AS DECIMAL)), 0)`,
+      })
+      .from(users)
+      .leftJoin(monitoringSessions, eq(users.id, monitoringSessions.agentId))
+      .leftJoin(evaluations, eq(monitoringSessions.id, evaluations.monitoringSessionId))
+      .where(and(
         eq(users.role, "agent"),
         eq(users.isActive, true),
-        eq(users.companyId, companyId)
-      ));
-    }
-
-    const results = await query
+        companyId ? eq(users.companyId, companyId) : undefined
+      ).filter(Boolean) as any)
       .groupBy(users.id, users.firstName, users.lastName, users.virtualCoins)
-      .orderBy(sql`AVG(${evaluations.finalScore}) DESC NULLS LAST`);
+      .orderBy(sql`COALESCE(AVG(CAST(${evaluations.finalScore} AS DECIMAL)), 0) DESC`);
+
+    const results = await baseQuery;
 
     return results.map((result, index) => ({
-      ...result,
+      userId: result.userId,
       firstName: result.firstName || "",
       lastName: result.lastName || "",
+      averageScore: result.averageScore,
+      virtualCoins: result.virtualCoins || 0,
       rank: index + 1,
     }));
   }

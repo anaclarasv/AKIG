@@ -31,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/metrics', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const companyId = user?.role === 'admin' ? undefined : user?.companyId || undefined;
       const metrics = await storage.getDashboardMetrics(companyId);
       res.json(metrics);
     } catch (error) {
