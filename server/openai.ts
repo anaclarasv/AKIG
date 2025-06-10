@@ -38,7 +38,7 @@ export async function transcribeAudioLocal(audioFilePath: string): Promise<{
     const segments = generateContentAwareTranscription(audioAnalysis);
     
     const result = {
-      text: segments.map(s => s.text).join(' '),
+      text: segments.map((s: any) => s.text).join(' '),
       segments,
       duration: audioAnalysis.duration
     };
