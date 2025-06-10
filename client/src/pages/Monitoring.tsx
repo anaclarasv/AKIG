@@ -59,14 +59,21 @@ export default function Monitoring() {
     mutationFn: async (data: FormData) => {
       return await apiRequest('POST', '/api/monitoring-sessions', data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const newSession = response;
       queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       setIsUploadDialogOpen(false);
       setAudioFile(null);
       setFormData({ agentId: "", campaignId: "" });
+      
+      // Automatically select the new session to show transcription progress
+      if (newSession?.id) {
+        setSelectedSession(newSession.id);
+      }
+      
       toast({
         title: "Sucesso",
-        description: "Áudio enviado com sucesso! A transcrição será processada.",
+        description: "Áudio enviado com sucesso! Transcrição em andamento...",
       });
     },
     onError: (error) => {
@@ -226,8 +233,13 @@ export default function Monitoring() {
                 )}
 
                 <div className="flex items-center space-x-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    Ver Detalhes
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => setSelectedSession(session.id)}
+                  >
+                    {session.status === 'pending' ? 'Acompanhar Transcrição' : 'Ver Detalhes'}
                   </Button>
                   <Button variant="outline" size="sm">
                     <Download className="w-4 h-4" />

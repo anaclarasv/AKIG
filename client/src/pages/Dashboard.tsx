@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import Header from "@/components/layout/Header";
 import MetricsGrid from "@/components/dashboard/MetricsGrid";
 import AIMonitoringPanel from "@/components/dashboard/AIMonitoringPanel";
@@ -8,10 +9,10 @@ import ActivityTable from "@/components/dashboard/ActivityTable";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   
   const handleNewMonitoring = () => {
-    console.log("Creating new monitoring session...");
-    // Navigate to monitoring creation page or open modal
+    setLocation("/monitoring");
   };
 
   // Check if user can create monitoring sessions
