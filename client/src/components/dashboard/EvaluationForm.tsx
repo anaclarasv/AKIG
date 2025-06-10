@@ -170,7 +170,7 @@ export default function EvaluationForm() {
                       onClick={handleRequestSignature}
                       className="mt-2 akig-bg-primary hover:opacity-90 text-sm"
                     >
-                      Solicitar Assinatura
+                      Assinar
                     </Button>
                   )}
                 </div>
