@@ -524,7 +524,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { TranscriptionManager } = await import('./transcription-manager');
           console.log('Starting authentic transcription for session:', sessionId);
           
-          const transcriptionResult = await TranscriptionManager.transcribeAudio(resolvedPath);
+          // Use fast transcription with timeout to avoid long waits
+          const transcriptionResult = await Promise.race([
+            TranscriptionManager.transcribeAudio(resolvedPath),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 10000) // 10 second timeout
+            )
+          ]);
           const aiAnalysis = TranscriptionManager.analyzeTranscription(transcriptionResult);
           
           const transcriptionData = {

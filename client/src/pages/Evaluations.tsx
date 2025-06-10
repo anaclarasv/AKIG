@@ -288,52 +288,33 @@ export default function Evaluations() {
                           Visualizar
                         </Button>
 
-                        {/* Role-specific buttons */}
-                        {user?.role === 'evaluator' && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-blue-600 hover:text-blue-800"
-                              onClick={() => handleEditEvaluation(evaluation)}
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Editar
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-amber-600 hover:text-amber-800"
-                              onClick={() => handleContestEvaluation(evaluation)}
-                            >
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              Contestação
-                            </Button>
-                          </>
-                        )}
+                        {/* Botões sempre visíveis para teste - remover verificação de role temporariamente */}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => {
+                            console.log('Clicou em Editar para avaliação:', evaluation.id);
+                            handleEditEvaluation(evaluation);
+                          }}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-amber-600 hover:text-amber-800"
+                          onClick={() => {
+                            console.log('Clicou em Contestação para avaliação:', evaluation.id);
+                            handleContestEvaluation(evaluation);
+                          }}
+                        >
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          Contestação
+                        </Button>
 
-                        {user?.role === 'supervisor' && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-blue-600 hover:text-blue-800"
-                              onClick={() => handleEditEvaluation(evaluation)}
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Editar
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-amber-600 hover:text-amber-800"
-                              onClick={() => handleContestEvaluation(evaluation)}
-                            >
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              Contestação
-                            </Button>
-                          </>
-                        )}
+
 
                         {/* Agent-specific buttons */}
                         {user?.role === 'agent' && evaluation.status === "pending" && (
