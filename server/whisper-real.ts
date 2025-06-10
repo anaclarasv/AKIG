@@ -22,36 +22,63 @@ export async function transcribeAudioReal(audioFilePath: string): Promise<{
   }
 
   try {
-    const nodeWhisper = require('node-whisper');
+    // Use child_process to call whisper binary directly for maximum compatibility
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
     
-    console.log('Executing node-whisper transcription...');
+    console.log('Executing whisper binary directly...');
     
-    const result = await nodeWhisper(audioFilePath, {
-      modelName: 'base',
-      language: 'pt',
-      whisperOptions: {
-        outputInText: true,
-        outputInJson: false,
-        translateToEnglish: false,
-        wordTimestamps: false,
-        temperature: 0.0
-      }
-    });
-
+    // Convert audio to wav format if needed
+    const tempWavPath = audioFilePath + '.wav';
+    try {
+      await execAsync(`ffmpeg -i "${audioFilePath}" -ar 16000 -ac 1 "${tempWavPath}" -y`);
+    } catch (ffmpegError) {
+      console.warn('FFmpeg conversion failed, using original file');
+    }
+    
+    const finalPath = fs.existsSync(tempWavPath) ? tempWavPath : audioFilePath;
+    
+    // Try multiple whisper execution methods
     let transcribedText = '';
+    let whisperError = null;
     
-    if (typeof result === 'string') {
-      transcribedText = result;
-    } else if (result && result.transcription) {
-      transcribedText = result.transcription;
-    } else if (result && result.text) {
-      transcribedText = result.text;
-    } else {
-      throw new Error('Node-whisper não retornou texto válido');
+    // Method 1: Try python whisper
+    try {
+      const { stdout } = await execAsync(`python3 -c "
+import whisper
+import sys
+model = whisper.load_model('base')
+result = model.transcribe('${finalPath}', language='pt')
+print(result['text'])
+      "`);
+      transcribedText = stdout.trim();
+    } catch (pythonError) {
+      whisperError = pythonError;
+      console.warn('Python whisper failed:', pythonError);
+      
+      // Method 2: Try whisper CLI
+      try {
+        const { stdout } = await execAsync(`whisper "${finalPath}" --language pt --model base --output_format txt --output_dir /tmp`);
+        const outputFile = `/tmp/${path.basename(finalPath, path.extname(finalPath))}.txt`;
+        if (fs.existsSync(outputFile)) {
+          transcribedText = fs.readFileSync(outputFile, 'utf8').trim();
+        }
+      } catch (cliError) {
+        console.warn('Whisper CLI failed:', cliError);
+        
+        // Method 3: Show clear error - no synthetic content
+        throw new Error('Transcrição real não disponível - instale Whisper ou forneça OpenAI API key');
+      }
+    }
+    
+    // Clean up temp file
+    if (fs.existsSync(tempWavPath) && tempWavPath !== audioFilePath) {
+      fs.unlinkSync(tempWavPath);
     }
 
     if (!transcribedText || transcribedText.trim().length === 0) {
-      throw new Error('Transcrição resultou em texto vazio');
+      throw new Error('Todas as tentativas de transcrição falharam');
     }
 
     console.log('REAL transcription result:', transcribedText);
