@@ -15,6 +15,7 @@ import Reports from "@/pages/Reports";
 import Companies from "@/pages/Companies";
 import Users from "@/pages/Users";
 import EvaluationCriteria from "@/pages/EvaluationCriteria";
+import Campaigns from "@/pages/Campaigns";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
@@ -54,6 +55,7 @@ function Router() {
             <Route path="/evaluation-criteria" component={EvaluationCriteria} />
             <Route path="/ranking" component={Ranking} />
             <Route path="/reports" component={Reports} />
+            <Route path="/campaigns" component={Campaigns} />
             <Route path="/companies" component={Companies} />
             <Route path="/users" component={Users} />
             <Route component={NotFound} />

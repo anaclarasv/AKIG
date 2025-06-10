@@ -13,7 +13,8 @@ import {
   Building, 
   Users, 
   LogOut,
-  Settings
+  Settings,
+  Megaphone
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -55,8 +56,10 @@ export default function Sidebar() {
           ...baseNavigation,
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Critérios', href: '/evaluation-criteria', icon: Settings },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
+          { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
           { name: 'Empresas', href: '/companies', icon: Building },
           { name: 'Usuários', href: '/users', icon: Users },
         ];
@@ -65,8 +68,10 @@ export default function Sidebar() {
           ...baseNavigation,
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Critérios', href: '/evaluation-criteria', icon: Settings },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
+          { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
         ];
       case 'evaluator':
         return [
