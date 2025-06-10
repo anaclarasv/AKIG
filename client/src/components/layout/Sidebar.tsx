@@ -15,7 +15,8 @@ import {
   LogOut,
   Settings,
   Megaphone,
-  Gift
+  Gift,
+  Shield
 } from "lucide-react";
 
 export default function Sidebar() {

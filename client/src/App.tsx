@@ -17,6 +17,7 @@ import Users from "@/pages/Users";
 import EvaluationCriteria from "@/pages/EvaluationCriteria";
 import Campaigns from "@/pages/Campaigns";
 import RewardsStore from "@/pages/RewardsStore";
+import LGPDCompliance from "@/pages/LGPDCompliance";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -85,6 +86,7 @@ function Router() {
                 <Users />
               </ProtectedRoute>
             </Route>
+            <Route path="/lgpd" component={LGPDCompliance} />
             <Route component={NotFound} />
           </Switch>
         </main>
