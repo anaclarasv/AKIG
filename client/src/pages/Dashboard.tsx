@@ -6,8 +6,7 @@ import AIMonitoringPanel from "@/components/dashboard/AIMonitoringPanel";
 import RankingPanel from "@/components/dashboard/RankingPanel";
 import EvaluationForm from "@/components/dashboard/EvaluationForm";
 import ActivityTable from "@/components/dashboard/ActivityTable";
-import PerformanceChart from "@/components/dashboard/PerformanceChart";
-import ContestEvaluationPanel from "@/components/dashboard/ContestEvaluationPanel";
+
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -52,11 +51,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Performance Evolution Chart */}
-          <PerformanceChart agentId={user.id} />
-
-          {/* Contest Evaluation Section */}
-          <ContestEvaluationPanel agentId={user.id} />
+          {/* Performance and Contest Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-lg border">
+              <h3 className="text-lg font-semibold mb-4">Evolução de Desempenho</h3>
+              <p className="text-muted-foreground">Gráfico de evolução será implementado em breve</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg border">
+              <h3 className="text-lg font-semibold mb-4">Contestação de Avaliações</h3>
+              <p className="text-muted-foreground">Sistema de contestação será implementado em breve</p>
+            </div>
+          </div>
 
           {/* Evaluation Section */}
           <div>

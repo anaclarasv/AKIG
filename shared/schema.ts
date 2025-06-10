@@ -142,6 +142,19 @@ export const evaluationContests = pgTable("evaluation_contests", {
   reviewedAt: timestamp("reviewed_at"),
 });
 
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull().default("info"), // info, success, warning, error
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  relatedId: integer("related_id"),
+  relatedType: varchar("related_type"), // evaluation, contest, monitoring, etc
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -187,6 +200,11 @@ export const insertEvaluationContestSchema = createInsertSchema(evaluationContes
   id: true,
   createdAt: true,
   reviewedAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Export types

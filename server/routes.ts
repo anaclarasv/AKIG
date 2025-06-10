@@ -699,8 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const contest = await storage.updateEvaluationContest(parseInt(id), {
         status,
-        response,
-        reviewedAt: new Date()
+        response
       });
 
       res.json(contest);
