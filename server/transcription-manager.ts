@@ -1,4 +1,8 @@
 import fs from "fs";
+import crypto from "crypto";
+
+// Simple in-memory cache for transcription optimization
+const transcriptionCache = new Map<string, any>();
 
 // Comprehensive transcription manager that prioritizes real transcription
 export class TranscriptionManager {
@@ -22,6 +26,18 @@ export class TranscriptionManager {
 
     if (!fs.existsSync(audioFilePath)) {
       throw new Error(`Arquivo de áudio não encontrado: ${audioFilePath}`);
+    }
+
+    // Generate cache key based on file content and size for faster lookups
+    const fileStats = fs.statSync(audioFilePath);
+    const fileBuffer = fs.readFileSync(audioFilePath);
+    const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+    const cacheKey = `${fileHash}_${fileStats.size}`;
+
+    // Check cache first for performance optimization
+    if (transcriptionCache.has(cacheKey)) {
+      console.log('Using cached transcription result');
+      return transcriptionCache.get(cacheKey);
     }
 
     // Try OpenAI Whisper API first (real transcription) with timeout optimization

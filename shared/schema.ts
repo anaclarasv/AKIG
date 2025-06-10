@@ -104,6 +104,7 @@ export const evaluations = pgTable("evaluations", {
   signedAt: timestamp("signed_at"),
   contestedAt: timestamp("contested_at"),
   contestReason: text("contest_reason"),
+  supervisorComment: text("supervisor_comment"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

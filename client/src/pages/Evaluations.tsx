@@ -487,6 +487,47 @@ export default function Evaluations() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Evaluation Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Avaliação #{selectedEvaluation?.id}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="editComment">Comentário do Supervisor</Label>
+              <Textarea
+                id="editComment"
+                placeholder="Adicione observações ou comentários sobre esta avaliação..."
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                rows={4}
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditComment("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSubmitEdit}
+                disabled={editEvaluationMutation.isPending}
+                className="akig-bg-primary hover:opacity-90"
+              >
+                {editEvaluationMutation.isPending ? "Salvando..." : "Salvar Comentário"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
