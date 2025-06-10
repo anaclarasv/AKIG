@@ -130,6 +130,18 @@ export const rewardPurchases = pgTable("reward_purchases", {
   purchasedAt: timestamp("purchased_at").defaultNow(),
 });
 
+// Evaluation contests
+export const evaluationContests = pgTable("evaluation_contests", {
+  id: serial("id").primaryKey(),
+  evaluationId: integer("evaluation_id").references(() => evaluations.id).notNull(),
+  agentId: varchar("agent_id").notNull(),
+  reason: text("reason").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, approved, rejected
+  response: text("response"),
+  createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -171,6 +183,12 @@ export const insertRewardSchema = createInsertSchema(rewards).omit({
   createdAt: true,
 });
 
+export const insertEvaluationContestSchema = createInsertSchema(evaluationContests).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -188,3 +206,5 @@ export type InsertEvaluationCriteria = z.infer<typeof insertEvaluationCriteriaSc
 export type Reward = typeof rewards.$inferSelect;
 export type InsertReward = z.infer<typeof insertRewardSchema>;
 export type RewardPurchase = typeof rewardPurchases.$inferSelect;
+export type EvaluationContest = typeof evaluationContests.$inferSelect;
+export type InsertEvaluationContest = z.infer<typeof insertEvaluationContestSchema>;

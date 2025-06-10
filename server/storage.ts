@@ -7,6 +7,7 @@ import {
   evaluationCriteria,
   rewards,
   rewardPurchases,
+  evaluationContests,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -22,6 +23,8 @@ import {
   type InsertEvaluationCriteria,
   type Reward,
   type InsertReward,
+  type EvaluationContest,
+  type InsertEvaluationContest,
   type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
@@ -94,6 +97,18 @@ export interface IStorage {
     virtualCoins: number;
     rank: number;
   }>>;
+
+  // Performance evolution operations
+  getPerformanceEvolution(agentId: string, months: number): Promise<Array<{
+    month: string;
+    score: number;
+    evaluations: number;
+  }>>;
+
+  // Evaluation contest operations
+  getEvaluationContests(agentId: string): Promise<EvaluationContest[]>;
+  createEvaluationContest(contest: InsertEvaluationContest): Promise<EvaluationContest>;
+  updateEvaluationContest(id: number, contest: Partial<InsertEvaluationContest>): Promise<EvaluationContest>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -569,6 +584,68 @@ export class DatabaseStorage implements IStorage {
       ...agent,
       rank: index + 1,
     }));
+  }
+
+  // Performance evolution operations
+  async getPerformanceEvolution(agentId: string, months: number): Promise<Array<{
+    month: string;
+    score: number;
+    evaluations: number;
+  }>> {
+    const monthsAgo = new Date();
+    monthsAgo.setMonth(monthsAgo.getMonth() - months);
+
+    const evaluationData = await db
+      .select({
+        month: sql<string>`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`,
+        avgScore: avg(evaluations.score),
+        count: count(evaluations.id)
+      })
+      .from(evaluations)
+      .where(
+        and(
+          eq(evaluations.agentId, agentId),
+          gte(evaluations.createdAt, monthsAgo)
+        )
+      )
+      .groupBy(sql`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`);
+
+    return evaluationData.map((item) => ({
+      month: item.month,
+      score: Number(item.avgScore) || 0,
+      evaluations: Number(item.count) || 0
+    }));
+  }
+
+  // Evaluation contest operations
+  async getEvaluationContests(agentId: string): Promise<EvaluationContest[]> {
+    const contests = await db
+      .select()
+      .from(evaluationContests)
+      .where(eq(evaluationContests.agentId, agentId))
+      .orderBy(desc(evaluationContests.createdAt));
+
+    return contests;
+  }
+
+  async createEvaluationContest(contestData: InsertEvaluationContest): Promise<EvaluationContest> {
+    const [contest] = await db
+      .insert(evaluationContests)
+      .values(contestData)
+      .returning();
+
+    return contest;
+  }
+
+  async updateEvaluationContest(id: number, contestData: Partial<InsertEvaluationContest>): Promise<EvaluationContest> {
+    const [contest] = await db
+      .update(evaluationContests)
+      .set(contestData)
+      .where(eq(evaluationContests.id, id))
+      .returning();
+
+    return contest;
   }
 }
 
