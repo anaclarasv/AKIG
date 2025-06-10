@@ -8,7 +8,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY 
 });
 
-// Real audio transcription using OpenAI Whisper (when available)
+// Real audio transcription using node-whisper (local processing)
 export async function transcribeAudioLocal(audioFilePath: string): Promise<{
   text: string;
   segments: Array<{
@@ -22,51 +22,67 @@ export async function transcribeAudioLocal(audioFilePath: string): Promise<{
   }>;
   duration: number;
 }> {
-  console.log('Starting real audio transcription for:', audioFilePath);
+  console.log('Starting node-whisper transcription for:', audioFilePath);
   
   try {
-    // First try real OpenAI Whisper transcription
-    const whisperResult = await transcribeAudio(audioFilePath);
-    console.log('OpenAI Whisper transcription successful:', whisperResult.text);
+    // Use node-whisper for real transcription
+    const nodeWhisper = require('node-whisper');
     
-    // Process the real transcription into segments with speaker detection
-    const segments = processRealTranscription(whisperResult.text, whisperResult.segments);
+    console.log('Executing node-whisper on audio file...');
     
-    // Get actual duration from file
+    // Configure for Portuguese transcription
+    const result = await nodeWhisper(audioFilePath, {
+      modelName: 'base',
+      language: 'pt',
+      whisperOptions: {
+        outputInText: true,
+        outputInJson: false,
+        translateToEnglish: false,
+        wordTimestamps: false,
+        temperature: 0.0
+      }
+    });
+
+    let transcribedText = '';
+    
+    // Extract text from result
+    if (typeof result === 'string') {
+      transcribedText = result;
+    } else if (result && result.transcription) {
+      transcribedText = result.transcription;
+    } else if (result && result.text) {
+      transcribedText = result.text;
+    } else {
+      throw new Error('Node-whisper não retornou texto válido');
+    }
+
+    if (!transcribedText || transcribedText.trim().length === 0) {
+      throw new Error('Transcrição resultou em texto vazio');
+    }
+
+    console.log('Node-whisper transcription result:', transcribedText);
+
+    // Get file duration
     const stats = await fs.promises.stat(audioFilePath);
     const duration = await getAudioDuration(audioFilePath, stats.size);
     
-    const result = {
-      text: whisperResult.text,
+    // Process real transcription into segments  
+    const segments = processRealTranscription(transcribedText.trim(), undefined);
+    
+    const finalResult = {
+      text: transcribedText.trim(),
       segments,
       duration
     };
     
-    console.log(`Real transcription completed: "${whisperResult.text}"`);
-    return result;
+    console.log(`Real transcription completed: "${transcribedText}"`);
+    return finalResult;
     
-  } catch (openaiError) {
-    console.log('OpenAI not available, using basic file analysis fallback');
+  } catch (whisperError) {
+    console.error('Node-whisper transcription failed:', whisperError);
     
-    // Fallback: analyze file and give honest feedback about limitations
-    const stats = await fs.promises.stat(audioFilePath);
-    const duration = await getAudioDuration(audioFilePath, stats.size);
-    
-    const result = {
-      text: "Transcrição não disponível - requer chave OpenAI válida para processar áudio real",
-      segments: [{
-        id: "1",
-        speaker: 'agent' as const,
-        text: "Transcrição automática não disponível no momento",
-        startTime: 0,
-        endTime: duration,
-        confidence: 0,
-        criticalWords: ["não", "disponível"]
-      }],
-      duration
-    };
-    
-    return result;
+    // Return error instead of fake content
+    throw new Error(`Falha na transcrição com node-whisper: ${whisperError instanceof Error ? whisperError.message : 'Erro desconhecido'}`);
   }
 }
 
@@ -243,60 +259,7 @@ function analyzeSpeechPatterns(buffer: Buffer, duration: number): number {
   return Math.min(changeCount / 100, 1); // Normalize to 0-1
 }
 
-function generateContentAwareTranscription(audioAnalysis: any) {
-  const { duration, intensityPattern, speechPattern, quality } = audioAnalysis;
-  
-  // Select conversation type based on real audio characteristics
-  let conversationType: 'complaint' | 'info' | 'support' = 'info';
-  
-  if (duration < 30 && intensityPattern === 'dynamic') {
-    conversationType = 'complaint'; // Short, dynamic = urgent issue
-  } else if (duration > 60 || speechPattern === 'monologue') {
-    conversationType = 'support'; // Long or monologue = technical support
-  }
-  
-  // Calculate segments based on speech patterns
-  const avgSegmentLength = speechPattern === 'conversational' ? 3 : 4;
-  const numSegments = Math.max(2, Math.floor(duration / avgSegmentLength));
-  
-  const conversationTemplates = {
-    complaint: [
-      { speaker: 'agent', text: 'Central de atendimento, bom dia! Em que posso ajudá-lo?' },
-      { speaker: 'client', text: 'Olá, estou com um problema urgente na minha conta.' },
-      { speaker: 'agent', text: 'Entendo sua preocupação. Pode me explicar qual é o problema?' },
-      { speaker: 'client', text: 'Meu cartão foi bloqueado sem motivo e preciso resolver isso.' },
-      { speaker: 'agent', text: 'Vou verificar sua conta imediatamente. Qual seu CPF?' },
-      { speaker: 'client', text: 'É 123.456.789-00.' },
-      { speaker: 'agent', text: 'Encontrei o bloqueio. Foi por segurança, mas já estou liberando.' },
-      { speaker: 'client', text: 'Quanto tempo vai demorar?' },
-      { speaker: 'agent', text: 'Já está liberado! Teste em alguns minutos.' },
-      { speaker: 'client', text: 'Perfeito, muito obrigado!' }
-    ],
-    info: [
-      { speaker: 'agent', text: 'Olá! Como posso ajudá-lo hoje?' },
-      { speaker: 'client', text: 'Oi, preciso de informações sobre minha fatura.' },
-      { speaker: 'agent', text: 'Claro! Posso verificar isso para você. Qual seu número?' },
-      { speaker: 'client', text: 'É 11987654321.' },
-      { speaker: 'agent', text: 'Sua fatura atual é de R$ 85,50 com vencimento dia 15.' },
-      { speaker: 'client', text: 'Pode enviar por email?' },
-      { speaker: 'agent', text: 'Sim, enviando agora para seu email cadastrado.' },
-      { speaker: 'client', text: 'Obrigado!' }
-    ],
-    support: [
-      { speaker: 'agent', text: 'Suporte técnico, como posso ajudar?' },
-      { speaker: 'client', text: 'Estou com problema na internet, está muito lenta.' },
-      { speaker: 'agent', text: 'Vou te ajudar. Primeiro, pode reiniciar o modem?' },
-      { speaker: 'client', text: 'Já fiz isso várias vezes.' },
-      { speaker: 'agent', text: 'Vou fazer um teste na linha. Aguarde um momento.' },
-      { speaker: 'client', text: 'Tá bom.' },
-      { speaker: 'agent', text: 'Identifiquei instabilidade. Vou agendar um técnico.' },
-      { speaker: 'client', text: 'Quando pode vir?' },
-      { speaker: 'agent', text: 'Amanhã pela manhã. Confirma seu endereço?' },
-      { speaker: 'client', text: 'Rua das Flores, 123.' },
-      { speaker: 'agent', text: 'Confirmado. Técnico chegará entre 8h e 12h.' },
-      { speaker: 'client', text: 'Perfeito, obrigado!' }
-    ]
-  };
+// REMOVED: This function was generating fake content instead of real transcription
   
   const templateSegments = conversationTemplates[conversationType].slice(0, numSegments);
   
