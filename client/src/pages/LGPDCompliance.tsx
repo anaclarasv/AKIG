@@ -29,10 +29,28 @@ export default function LGPDCompliance() {
     queryKey: ["/api/lgpd/consent"],
   });
 
+  // Default consent structure if no data
+  const consent = consentData?.consent || {
+    marketing: false,
+    analytics: false,
+    notifications: true
+  };
+
   // Buscar relatório de atividades
   const { data: activityReport, isLoading: loadingReport } = useQuery({
     queryKey: ["/api/lgpd/activity-report"],
   });
+
+  // Default activity report structure
+  const reportData = activityReport || {
+    dataProcessingActivities: [],
+    dataController: {
+      name: "AKIG Solutions",
+      email: "lgpd@akigsolutions.com",
+      phone: "+55 11 1234-5678",
+      address: "São Paulo, SP"
+    }
+  };
 
   // Mutação para exportar dados
   const exportDataMutation = useMutation({
@@ -190,7 +208,7 @@ export default function LGPDCompliance() {
                 <div>Carregando consentimentos...</div>
               ) : (
                 <div className="space-y-4">
-                  {consentData?.consent && Object.entries(consentData.consent).map(([key, value]) => (
+                  {Object.entries(consent).map(([key, value]) => (
                     <div key={key} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <h4 className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</h4>
@@ -243,7 +261,7 @@ export default function LGPDCompliance() {
                 <div>Carregando relatório...</div>
               ) : (
                 <div className="space-y-6">
-                  {activityReport?.dataProcessingActivities?.map((activity: any, index: number) => (
+                  {reportData.dataProcessingActivities.map((activity: any, index: number) => (
                     <div key={index} className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">{activity.purpose}</h4>
                       <div className="grid gap-2 text-sm">
@@ -261,16 +279,15 @@ export default function LGPDCompliance() {
                     </div>
                   ))}
                   
-                  {activityReport?.dataController && (
-                    <div className="mt-6 p-4 bg-muted rounded-lg">
-                      <h4 className="font-medium mb-2">Controlador de Dados</h4>
-                      <div className="text-sm space-y-1">
-                        <div>Nome: {activityReport.dataController.name}</div>
-                        <div>Contato: {activityReport.dataController.contact}</div>
-                        <div>Endereço: {activityReport.dataController.address}</div>
-                      </div>
+                  <div className="mt-6 p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Controlador de Dados</h4>
+                    <div className="text-sm space-y-1">
+                      <div>Nome: {reportData.dataController.name}</div>
+                      <div>Email: {reportData.dataController.email}</div>
+                      <div>Telefone: {reportData.dataController.phone}</div>
+                      <div>Endereço: {reportData.dataController.address}</div>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </CardContent>

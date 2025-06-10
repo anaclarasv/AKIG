@@ -48,7 +48,7 @@ router.get('/export-data', async (req, res) => {
 
   } catch (error) {
     console.error('Erro na exportação de dados:', error);
-    SecureLogger.logLGPDOperation(req.user?.id, 'EXPORT', false);
+    SecureLogger.logLGPDOperation(req.user?.id || 'unknown', 'EXPORT', false);
     res.status(500).json({ message: 'Erro interno do servidor' });
   }
 });
@@ -124,7 +124,7 @@ router.delete('/delete-data', async (req, res) => {
 
   } catch (error) {
     console.error('Erro na exclusão de dados:', error);
-    SecureLogger.logLGPDOperation(req.user?.id, 'DELETE', false);
+    SecureLogger.logLGPDOperation(req.user?.id || 'unknown', 'DELETE', false);
     res.status(500).json({ message: 'Erro interno do servidor' });
   }
 });
