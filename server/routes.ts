@@ -6,7 +6,6 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { transcribeAudio, analyzeTranscription, transcribeAudioLocal } from "./openai";
 import { analyzeTranscription } from "./openai";
 // import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
@@ -412,10 +411,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log('Starting local transcription...');
             
-            // Use real Whisper transcription system
-            const { transcribeAudioWithWhisper } = await import('./whisper-transcription');
-            transcriptionResult = await transcribeAudioWithWhisper(audioFile.path);
-            aiAnalysis = analyzeTranscriptionLocal(transcriptionResult);
+            // Use real audio transcription
+            const { transcribeAudioReal, analyzeRealTranscription } = await import('./real-transcription');
+            transcriptionResult = await transcribeAudioReal(audioFile.path);
+            aiAnalysis = analyzeRealTranscription(transcriptionResult);
             
           } catch (error) {
             console.error('Transcription failed:', (error as any).message);
@@ -501,8 +500,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Start async Whisper transcription
-      startAsyncTranscription(resolvedPath, sessionId);
+      // Process transcription with real Whisper in background
+      setImmediate(async () => {
+        try {
+          const { transcribeAudioReal, analyzeRealTranscription } = await import('./real-transcription');
+          console.log('Starting real Whisper transcription for session:', sessionId);
+          
+          const transcriptionResult = await transcribeAudioReal(resolvedPath);
+          const aiAnalysis = analyzeRealTranscription(transcriptionResult);
+          
+          const transcriptionData = {
+            segments: transcriptionResult.segments,
+            totalDuration: transcriptionResult.duration
+          };
+
+          await storage.updateMonitoringSession(sessionId, {
+            transcription: transcriptionData,
+            aiAnalysis,
+            status: 'completed'
+          });
+
+          console.log('Real transcription completed for session:', sessionId);
+        } catch (error) {
+          console.error('Real transcription error:', error);
+          await storage.updateMonitoringSession(sessionId, {
+            status: 'pending'
+          });
+        }
+      });
 
       // Return immediately with processing status
       const updatedSession = await storage.getMonitoringSession(sessionId);
