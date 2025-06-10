@@ -18,7 +18,7 @@ import {
 export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
-  const [currentRole, setCurrentRole] = useState(user?.role || 'agent');
+  const [currentRole, setCurrentRole] = useState((user?.role as string) || 'agent');
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -36,7 +36,7 @@ export default function Sidebar() {
     { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
     { name: 'Ranking', href: '/ranking', icon: Trophy },
     { name: 'Relatórios', href: '/reports', icon: FileBarChart },
-    ...(user?.role === 'admin' ? [
+    ...((user?.role as string) === 'admin' ? [
       { name: 'Empresas', href: '/companies', icon: Building },
       { name: 'Usuários', href: '/users', icon: Users },
     ] : []),
@@ -65,7 +65,7 @@ export default function Sidebar() {
       </div>
 
       {/* Role Switcher (Admin only) */}
-      {user?.role === 'admin' && (
+      {(user?.role as string) === 'admin' && (
         <div className="p-4 border-b border-sidebar-border">
           <Select value={currentRole} onValueChange={handleRoleSwitch}>
             <SelectTrigger className="w-full bg-sidebar-accent text-sidebar-accent-foreground">
@@ -90,17 +90,15 @@ export default function Sidebar() {
             
             return (
               <li key={item.name}>
-                <Link href={item.href}>
-                  <a className={`
-                    flex items-center space-x-3 p-3 rounded-lg transition-colors
-                    ${isActive 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
-                      : 'hover:bg-sidebar-accent/50'
-                    }
-                  `}>
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </a>
+                <Link href={item.href} className={`
+                  flex items-center space-x-3 p-3 rounded-lg transition-colors
+                  ${isActive 
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                    : 'hover:bg-sidebar-accent/50'
+                  }
+                `}>
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
                 </Link>
               </li>
             );
