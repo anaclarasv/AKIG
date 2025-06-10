@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Landing() {
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/auth";
   };
 
   return (
@@ -27,7 +27,7 @@ export default function Landing() {
             </ul>
           </div>
           <Button onClick={handleLogin} className="w-full akig-bg-primary hover:opacity-90">
-            Entrar com Replit
+            Fazer Login
           </Button>
         </CardContent>
       </Card>
