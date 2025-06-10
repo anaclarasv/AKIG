@@ -364,6 +364,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (user?.role === 'agent') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getMonitoringSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching monitoring session:", error);
+      res.status(500).json({ message: "Failed to fetch monitoring session" });
+    }
+  });
+
   app.post('/api/monitoring-sessions', isAuthenticated, upload.single('audio'), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -411,10 +429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log('Starting local transcription...');
             
-            // Use real node-whisper transcription
-            const { transcribeAudioReal, analyzeRealTranscription } = await import('./whisper-real');
-            transcriptionResult = await transcribeAudioReal(audioFile.path);
-            aiAnalysis = analyzeRealTranscription(transcriptionResult);
+            // Use OpenAI Whisper API for real transcription
+            const { transcribeAudioWithOpenAI, analyzeOpenAITranscription } = await import('./openai-whisper');
+            transcriptionResult = await transcribeAudioWithOpenAI(audioFile.path);
+            aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
             
           } catch (error) {
             console.error('Transcription failed:', (error as any).message);
@@ -500,14 +518,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Process transcription with real node-whisper in background
+      // Process transcription with OpenAI Whisper API in background
       setImmediate(async () => {
         try {
-          const { transcribeAudioReal, analyzeRealTranscription } = await import('./whisper-real');
-          console.log('Starting real node-whisper transcription for session:', sessionId);
+          const { transcribeAudioWithOpenAI, analyzeOpenAITranscription } = await import('./openai-whisper');
+          console.log('Starting OpenAI Whisper transcription for session:', sessionId);
           
-          const transcriptionResult = await transcribeAudioReal(resolvedPath);
-          const aiAnalysis = analyzeRealTranscription(transcriptionResult);
+          const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
+          const aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
           
           const transcriptionData = {
             segments: transcriptionResult.segments,
@@ -520,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'completed'
           });
 
-          console.log('Real node-whisper transcription completed for session:', sessionId);
+          console.log('OpenAI Whisper transcription completed for session:', sessionId);
         } catch (error) {
           console.error('Real transcription error:', error);
           await storage.updateMonitoringSession(sessionId, {
