@@ -103,7 +103,7 @@ export class SecurityMiddleware {
   /**
    * Rate limiting para prevenir ataques de força bruta
    */
-  static createRateLimit(windowMs: number = 15 * 60 * 1000, max: number = 100) {
+  static createRateLimit(windowMs: number = 10 * 60 * 1000, max: number = 500) {
     return rateLimit({
       windowMs,
       max,
@@ -116,13 +116,13 @@ export class SecurityMiddleware {
   }
   
   /**
-   * Rate limit específico para login (mais restritivo)
+   * Rate limit específico para login (ajustado para desenvolvimento)
    */
   static loginRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // 5 tentativas por IP
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 20, // 20 tentativas por IP
     message: {
-      error: 'Muitas tentativas de login, tente novamente em 15 minutos'
+      error: 'Muitas tentativas de login, tente novamente em alguns minutos'
     },
     skipSuccessfulRequests: true,
   });
