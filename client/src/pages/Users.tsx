@@ -47,6 +47,7 @@ export default function Users() {
     lastName: "",
     role: "agent",
     companyId: "",
+    virtualCoins: 0,
     isActive: true
   });
 
@@ -143,6 +144,7 @@ export default function Users() {
       lastName: "",
       role: "agent",
       companyId: "",
+      virtualCoins: 0,
       isActive: true
     });
   };
@@ -157,6 +159,7 @@ export default function Users() {
       lastName: userToEdit.lastName,
       role: userToEdit.role,
       companyId: userToEdit.companyId?.toString() || "",
+      virtualCoins: userToEdit.virtualCoins || 0,
       isActive: userToEdit.isActive
     });
     setIsEditDialogOpen(true);
@@ -169,19 +172,19 @@ export default function Users() {
   };
 
   const handleSubmit = () => {
+    const userData = {
+      ...formData,
+      companyId: formData.companyId || null,
+      virtualCoins: typeof formData.virtualCoins === 'string' ? parseInt(formData.virtualCoins) || 0 : formData.virtualCoins
+    };
+    
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
-        data: {
-          ...formData,
-          companyId: formData.companyId ? parseInt(formData.companyId) : null
-        }
+        data: userData
       });
     } else {
-      createUserMutation.mutate({
-        ...formData,
-        companyId: formData.companyId ? parseInt(formData.companyId) : null
-      });
+      createUserMutation.mutate(userData);
     }
   };
 
