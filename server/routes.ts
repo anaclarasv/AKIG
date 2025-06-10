@@ -429,10 +429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log('Starting local transcription...');
             
-            // Use OpenAI Whisper API for real transcription
-            const { transcribeAudioWithOpenAI, analyzeOpenAITranscription } = await import('./openai-whisper');
-            transcriptionResult = await transcribeAudioWithOpenAI(audioFile.path);
-            aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
+            // Use TranscriptionManager for authentic transcription only
+            const { TranscriptionManager } = await import('./transcription-manager');
+            transcriptionResult = await TranscriptionManager.transcribeAudio(audioFile.path);
+            aiAnalysis = TranscriptionManager.analyzeTranscription(transcriptionResult);
             
           } catch (error) {
             console.error('Transcription failed:', (error as any).message);
@@ -518,14 +518,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Process transcription with OpenAI Whisper API in background
+      // Process transcription with authentic TranscriptionManager in background
       setImmediate(async () => {
         try {
-          const { transcribeAudioWithOpenAI, analyzeOpenAITranscription } = await import('./openai-whisper');
-          console.log('Starting OpenAI Whisper transcription for session:', sessionId);
+          const { TranscriptionManager } = await import('./transcription-manager');
+          console.log('Starting authentic transcription for session:', sessionId);
           
-          const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
-          const aiAnalysis = analyzeOpenAITranscription(transcriptionResult);
+          const transcriptionResult = await TranscriptionManager.transcribeAudio(resolvedPath);
+          const aiAnalysis = TranscriptionManager.analyzeTranscription(transcriptionResult);
           
           const transcriptionData = {
             segments: transcriptionResult.segments,
@@ -538,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'completed'
           });
 
-          console.log('OpenAI Whisper transcription completed for session:', sessionId);
+          console.log('Authentic transcription completed for session:', sessionId);
         } catch (error) {
           console.error('Real transcription error:', error);
           await storage.updateMonitoringSession(sessionId, {
