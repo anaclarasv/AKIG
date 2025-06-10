@@ -43,6 +43,16 @@ export default function RewardsStore() {
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ['/api/rewards', companyIdForQuery],
+    queryFn: async () => {
+      const url = user?.role === 'admin' && companyIdForQuery 
+        ? `/api/rewards?companyId=${companyIdForQuery}`
+        : '/api/rewards';
+      const response = await fetch(url, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch rewards');
+      return response.json();
+    },
     enabled: !!companyIdForQuery && !!user,
   });
 

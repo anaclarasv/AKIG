@@ -591,10 +591,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rewards', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!user?.companyId) {
-        return res.status(400).json({ message: "Company ID required" });
+      let companyId: number;
+      
+      console.log(`[REWARDS] User role: ${user?.role}, Query companyId: ${req.query.companyId}, User companyId: ${user?.companyId}`);
+      
+      if (user?.role === 'admin') {
+        // Admin can specify companyId via query parameter
+        const queryCompanyId = req.query.companyId;
+        if (!queryCompanyId) {
+          console.log(`[REWARDS] Admin missing companyId parameter`);
+          return res.status(400).json({ message: "Company ID required" });
+        }
+        companyId = parseInt(queryCompanyId);
+        console.log(`[REWARDS] Admin using companyId: ${companyId}`);
+      } else {
+        // Other roles use their assigned companyId
+        if (!user?.companyId) {
+          console.log(`[REWARDS] User missing companyId: ${user?.id}`);
+          return res.status(400).json({ message: "Company ID required" });
+        }
+        companyId = user.companyId;
+        console.log(`[REWARDS] User using companyId: ${companyId}`);
       }
-      const rewards = await storage.getRewards(user.companyId);
+      
+      const rewards = await storage.getRewards(companyId);
       res.json(rewards);
     } catch (error) {
       console.error("Error fetching rewards:", error);
