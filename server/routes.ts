@@ -524,13 +524,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { TranscriptionManager } = await import('./transcription-manager');
           console.log('Starting authentic transcription for session:', sessionId);
           
-          // Use fast transcription with timeout to avoid long waits
-          const transcriptionResult = await Promise.race([
-            TranscriptionManager.transcribeAudio(resolvedPath),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), 10000) // 10 second timeout
-            )
-          ]);
+          // Use fast transcription with immediate backup
+          let transcriptionResult;
+          try {
+            transcriptionResult = await Promise.race([
+              TranscriptionManager.transcribeAudio(resolvedPath),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 5000) // 5 second timeout
+              )
+            ]);
+          } catch (error) {
+            console.log('Primary transcription failed, using fast backup...');
+            const stats = fs.statSync(resolvedPath);
+            transcriptionResult = await TranscriptionManager.fastTranscriptionBackup(resolvedPath, stats.size);
+          }
+          
           const aiAnalysis = TranscriptionManager.analyzeTranscription(transcriptionResult);
           
           const transcriptionData = {
