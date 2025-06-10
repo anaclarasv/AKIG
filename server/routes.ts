@@ -79,11 +79,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role,
         companyId: user.companyId,
         virtualCoins: user.virtualCoins,
-        isActive: user.isActive,
+        isActive: user.isActive
       });
     } catch (error) {
-      console.error("Error creating user:", error as Error);
+      console.error("Error creating user:", error);
       res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Get all users (admin only)
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can view all users" });
+      }
+      
+      const users = await storage.getAllUsers();
+      res.json(users.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        companyId: user.companyId,
+        virtualCoins: user.virtualCoins,
+        isActive: user.isActive
+      })));
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Update user (admin only)
+  app.put('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can update users" });
+      }
+
+      const userId = req.params.id;
+      const updates = req.body;
+      
+      // Remove password from updates if empty
+      if (updates.password === "") {
+        delete updates.password;
+      } else if (updates.password) {
+        // Hash new password
+        const { scrypt, randomBytes } = await import("crypto");
+        const { promisify } = await import("util");
+        const scryptAsync = promisify(scrypt);
+        
+        const salt = randomBytes(16).toString("hex");
+        const buf = (await scryptAsync(updates.password, salt, 64)) as Buffer;
+        updates.password = `${buf.toString("hex")}.${salt}`;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updates);
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role,
+        companyId: updatedUser.companyId,
+        virtualCoins: updatedUser.virtualCoins,
+        isActive: updatedUser.isActive
+      });
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user (admin only)
+  app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can delete users" });
+      }
+
+      const userId = req.params.id;
+      
+      // Prevent self-deletion
+      if (userId === currentUser.id) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      await storage.deleteUser(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
