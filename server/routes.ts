@@ -14,6 +14,7 @@ import {
   analyzeTranscriptionLocal,
   transcriptionEvents 
 } from "./whisper-transcription";
+import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
 import {
@@ -415,50 +416,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            console.log('Starting OpenAI Whisper transcription for real audio content...');
+            console.log('Starting real audio transcription with local Whisper...');
             
-            // Use OpenAI Whisper directly for real transcription
-            const whisperResult = await transcribeAudio(audioFile.path);
-            console.log('OpenAI Whisper result:', whisperResult.text);
-            
-            // Process the real transcription into segments
-            const sentences = whisperResult.text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const avgDuration = whisperResult.segments && whisperResult.segments.length > 0 
-              ? whisperResult.segments[whisperResult.segments.length - 1].endTime / whisperResult.segments.length
-              : 4; // 4 seconds per segment if no timing data
-            
-            const segments = sentences.map((sentence, index) => {
-              const startTime = index * avgDuration;
-              const endTime = (index + 1) * avgDuration;
-              
-              // Detect critical words in the REAL transcribed text
-              const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|demora|lento|urgente|grave)\b/gi;
-              const criticalWords = sentence.match(criticalWordPatterns) || [];
-              
-              return {
-                id: (index + 1).toString(),
-                speaker: index % 2 === 0 ? 'agent' : 'client',
-                text: sentence.trim(),
-                startTime: Math.round(startTime * 10) / 10,
-                endTime: Math.round(endTime * 10) / 10,
-                confidence: 0.95,
-                criticalWords: criticalWords.map(w => w.toLowerCase())
-              };
-            });
+            // Use local node-whisper for real transcription
+            const whisperResult = await transcribeWithNodeWhisper(audioFile.path);
+            console.log(`Real transcription completed: ${whisperResult.segments.length} segments`);
             
             transcriptionResult = {
-              text: whisperResult.text,
-              segments
+              text: whisperResult.segments.map(s => s.text).join(' '),
+              segments: whisperResult.segments.map(segment => ({
+                id: segment.id,
+                speaker: segment.speaker,
+                text: segment.text,
+                startTime: segment.startTime,
+                endTime: segment.endTime,
+                confidence: segment.confidence,
+                criticalWords: []
+              }))
             };
             
             // Analyze the REAL transcribed content
-            console.log('Analyzing real transcribed content with AI...');
-            aiAnalysis = await analyzeTranscription(whisperResult.text);
-            console.log('AI analysis of real content completed');
+            console.log('Analyzing real transcribed content with local AI...');
+            const fullText = whisperResult.segments.map(s => s.text).join(' ');
+            aiAnalysis = analyzeTranscriptionLocal({ 
+              segments: whisperResult.segments,
+              totalDuration: whisperResult.totalDuration 
+            });
+            console.log('Local AI analysis of real content completed');
             
           } catch (error) {
-            console.error('OpenAI Whisper transcription failed:', (error as Error).message);
-            throw new Error(`Transcription failed: ${(error as Error).message}`);
+            console.error('Real Whisper transcription failed:', (error as any).message);
+            console.log('Falling back to local transcription system...');
+            
+            // Fallback to our optimized local system
+            const fallbackResult = await transcribeAudioLocal(audioFile.path);
+            transcriptionResult = fallbackResult;
+            aiAnalysis = analyzeTranscriptionLocal(fallbackResult);
           }
           
           const transcriptionData = {
