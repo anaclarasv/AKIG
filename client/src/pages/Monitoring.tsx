@@ -197,8 +197,17 @@ export default function Monitoring() {
     );
   }
 
-  // Get selected session data
+  // Get selected session data with safe property access
   const selectedSessionData = sessions?.find(s => s.id === selectedSession);
+  
+  // Helper function to safely access aiAnalysis properties
+  const safeAnalysisValue = (session: any, property: string, defaultValue: any = 0) => {
+    try {
+      return session?.aiAnalysis?.[property] ?? defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
 
   // If a session is selected, show detailed view
   if (selectedSession && selectedSessionData) {
@@ -262,25 +271,25 @@ export default function Monitoring() {
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="p-2 bg-red-50 rounded">
                       <p className="text-red-600 font-semibold text-sm">
-                        {selectedSessionData.aiAnalysis.criticalWordsCount}
+                        {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
                       </p>
                       <p className="text-xs text-red-700">Palavras Críticas</p>
                     </div>
                     <div className="p-2 bg-amber-50 rounded">
                       <p className="text-amber-600 font-semibold text-sm">
-                        {Math.round(selectedSessionData.aiAnalysis.totalSilenceTime)}s
+                        {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
                       </p>
                       <p className="text-xs text-amber-700">Silêncio Total</p>
                     </div>
                     <div className="p-2 bg-blue-50 rounded">
                       <p className="text-blue-600 font-semibold text-sm">
-                        {selectedSessionData.aiAnalysis.averageToneScore.toFixed(1)}
+                        {(safeAnalysisValue(selectedSessionData, 'averageToneScore') || 0).toFixed(1)}
                       </p>
                       <p className="text-xs text-blue-700">Tom Médio</p>
                     </div>
                     <div className="p-2 bg-green-50 rounded">
                       <p className="text-green-600 font-semibold text-sm">
-                        {selectedSessionData.aiAnalysis.sentimentScore.toFixed(1)}
+                        {(safeAnalysisValue(selectedSessionData, 'sentimentScore') || 0).toFixed(1)}
                       </p>
                       <p className="text-xs text-green-700">Sentimento</p>
                     </div>
@@ -393,19 +402,19 @@ export default function Monitoring() {
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2 bg-red-50 rounded">
                       <p className="text-red-600 font-semibold text-sm">
-                        {session.aiAnalysis.criticalWordsCount}
+                        {safeAnalysisValue(session, 'criticalWordsCount')}
                       </p>
                       <p className="text-xs text-red-700">Críticas</p>
                     </div>
                     <div className="p-2 bg-amber-50 rounded">
                       <p className="text-amber-600 font-semibold text-sm">
-                        {session.aiAnalysis.totalSilenceTime}s
+                        {safeAnalysisValue(session, 'totalSilenceTime')}s
                       </p>
                       <p className="text-xs text-amber-700">Silêncio</p>
                     </div>
                     <div className="p-2 bg-blue-50 rounded">
                       <p className="text-blue-600 font-semibold text-sm">
-                        {session.aiAnalysis.averageToneScore.toFixed(1)}
+                        {(safeAnalysisValue(session, 'averageToneScore') || 0).toFixed(1)}
                       </p>
                       <p className="text-xs text-blue-700">Tom</p>
                     </div>
