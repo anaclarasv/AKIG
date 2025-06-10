@@ -8,7 +8,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY 
 });
 
-// Audio content analyzer using binary data patterns (free and unlimited)
+// Real audio transcription using OpenAI Whisper (when available)
 export async function transcribeAudioLocal(audioFilePath: string): Promise<{
   text: string;
   segments: Array<{
@@ -22,34 +22,131 @@ export async function transcribeAudioLocal(audioFilePath: string): Promise<{
   }>;
   duration: number;
 }> {
-  console.log('Analyzing audio content patterns for:', audioFilePath);
+  console.log('Starting real audio transcription for:', audioFilePath);
   
   try {
-    // Read file headers and analyze content patterns
-    const buffer = await fs.promises.readFile(audioFilePath);
+    // First try real OpenAI Whisper transcription
+    const whisperResult = await transcribeAudio(audioFilePath);
+    console.log('OpenAI Whisper transcription successful:', whisperResult.text);
+    
+    // Process the real transcription into segments with speaker detection
+    const segments = processRealTranscription(whisperResult.text, whisperResult.segments);
+    
+    // Get actual duration from file
     const stats = await fs.promises.stat(audioFilePath);
-    
-    // Analyze audio characteristics from binary data
-    const audioAnalysis = analyzeAudioBinaryContent(buffer, stats.size);
-    
-    console.log(`Audio analysis: ${audioAnalysis.duration}s, ${audioAnalysis.intensityPattern}, ${audioAnalysis.speechPattern}`);
-    
-    // Generate content-aware transcription
-    const segments = generateContentAwareTranscription(audioAnalysis);
+    const duration = await getAudioDuration(audioFilePath, stats.size);
     
     const result = {
-      text: segments.map((s: any) => s.text).join(' '),
+      text: whisperResult.text,
       segments,
-      duration: audioAnalysis.duration
+      duration
     };
     
-    console.log(`Content-aware transcription completed: ${segments.length} segments`);
+    console.log(`Real transcription completed: "${whisperResult.text}"`);
     return result;
     
-  } catch (error) {
-    console.error('Audio content analysis error:', error);
-    throw error;
+  } catch (openaiError) {
+    console.log('OpenAI not available, using basic file analysis fallback');
+    
+    // Fallback: analyze file and give honest feedback about limitations
+    const stats = await fs.promises.stat(audioFilePath);
+    const duration = await getAudioDuration(audioFilePath, stats.size);
+    
+    const result = {
+      text: "Transcrição não disponível - requer chave OpenAI válida para processar áudio real",
+      segments: [{
+        id: "1",
+        speaker: 'agent' as const,
+        text: "Transcrição automática não disponível no momento",
+        startTime: 0,
+        endTime: duration,
+        confidence: 0,
+        criticalWords: ["não", "disponível"]
+      }],
+      duration
+    };
+    
+    return result;
   }
+}
+
+function processRealTranscription(text: string, whisperSegments?: any[]): Array<{
+  id: string;
+  speaker: 'agent' | 'client';
+  text: string;
+  startTime: number;
+  endTime: number;
+  confidence: number;
+  criticalWords: string[];
+}> {
+  // If Whisper provided segments, use them
+  if (whisperSegments && whisperSegments.length > 0) {
+    return whisperSegments.map((segment, index) => {
+      const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|demora|lento|urgente|grave)\b/gi;
+      const criticalWords = segment.text.match(criticalWordPatterns) || [];
+      
+      return {
+        id: (index + 1).toString(),
+        speaker: index % 2 === 0 ? 'agent' : 'client' as 'agent' | 'client',
+        text: segment.text.trim(),
+        startTime: segment.start || (index * 3),
+        endTime: segment.end || ((index + 1) * 3),
+        confidence: 0.95,
+        criticalWords: criticalWords.map(w => w.toLowerCase())
+      };
+    });
+  }
+  
+  // Otherwise, split the text into logical segments
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const avgDuration = 4; // 4 seconds per sentence
+  
+  return sentences.map((sentence, index) => {
+    const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|demora|lento|urgente|grave)\b/gi;
+    const criticalWords = sentence.match(criticalWordPatterns) || [];
+    
+    return {
+      id: (index + 1).toString(),
+      speaker: index % 2 === 0 ? 'agent' : 'client' as 'agent' | 'client',
+      text: sentence.trim(),
+      startTime: index * avgDuration,
+      endTime: (index + 1) * avgDuration,
+      confidence: 0.9,
+      criticalWords: criticalWords.map(w => w.toLowerCase())
+    };
+  });
+}
+
+async function getAudioDuration(audioFilePath: string, fileSize: number): Promise<number> {
+  // Try using ffprobe if available
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(audioFilePath, (err, metadata) => {
+      if (!err && metadata.format.duration) {
+        resolve(metadata.format.duration);
+      } else {
+        // Fallback estimation based on file size and format
+        const extension = path.extname(audioFilePath).toLowerCase();
+        let estimatedDuration: number;
+        
+        switch (extension) {
+          case '.mp3':
+            estimatedDuration = fileSize / 16000; // ~128kbps
+            break;
+          case '.wav':
+            estimatedDuration = fileSize / 176400; // 44.1kHz stereo
+            break;
+          case '.m4a':
+          case '.aac':
+            estimatedDuration = fileSize / 12000; // ~96kbps
+            break;
+          default:
+            estimatedDuration = fileSize / 20000;
+        }
+        
+        resolve(Math.max(5, Math.min(estimatedDuration, 300)));
+      }
+    });
+  });
 }
 
 function analyzeAudioBinaryContent(buffer: Buffer, fileSize: number) {
@@ -323,6 +420,8 @@ export async function transcribeAudio(audioFilePath: string): Promise<{
     confidence: number;
   }>;
 }> {
+  console.log(`Starting OpenAI Whisper transcription for: ${audioFilePath}`);
+  
   try {
     const audioReadStream = fs.createReadStream(audioFilePath);
 
@@ -330,26 +429,31 @@ export async function transcribeAudio(audioFilePath: string): Promise<{
       file: audioReadStream,
       model: "whisper-1",
       response_format: "verbose_json",
-      timestamp_granularities: ["segment"]
+      timestamp_granularities: ["segment"],
+      language: "pt" // Portuguese language hint for better accuracy
     });
+
+    console.log(`OpenAI Whisper transcribed text: "${transcription.text}"`);
+    console.log(`Whisper segments count: ${transcription.segments?.length || 0}`);
 
     // Convert Whisper segments to our format
     const segments = transcription.segments?.map((segment, index) => ({
       id: `segment_${index}`,
-      speaker: index % 2 === 0 ? 'agent' : 'client' as 'agent' | 'client', // Alternate between speakers
-      text: segment.text,
+      speaker: index % 2 === 0 ? 'agent' : 'client' as 'agent' | 'client',
+      text: segment.text.trim(),
       startTime: segment.start,
       endTime: segment.end,
-      confidence: 0.95 // Whisper doesn't provide confidence per segment
+      confidence: 0.95
     })) || [];
 
     return {
       text: transcription.text,
       segments
     };
-  } catch (error) {
-    console.error("Error transcribing audio:", error);
-    throw new Error("Failed to transcribe audio");
+  } catch (error: any) {
+    console.error("OpenAI Whisper transcription error:", error);
+    console.error("Error details:", error.message);
+    throw new Error(`OpenAI Whisper failed: ${error.message}`);
   }
 }
 

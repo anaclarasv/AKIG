@@ -397,41 +397,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            console.log('Starting local audio transcription based on real file characteristics...');
-            const localResult = await transcribeAudioLocal(audioFile.path);
-            console.log('Local transcription completed:', localResult);
+            console.log('Starting OpenAI Whisper transcription for real audio content...');
+            
+            // Use OpenAI Whisper directly for real transcription
+            const whisperResult = await transcribeAudio(audioFile.path);
+            console.log('OpenAI Whisper result:', whisperResult.text);
+            
+            // Process the real transcription into segments
+            const sentences = whisperResult.text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const avgDuration = whisperResult.segments && whisperResult.segments.length > 0 
+              ? whisperResult.segments[whisperResult.segments.length - 1].endTime / whisperResult.segments.length
+              : 4; // 4 seconds per segment if no timing data
+            
+            const segments = sentences.map((sentence, index) => {
+              const startTime = index * avgDuration;
+              const endTime = (index + 1) * avgDuration;
+              
+              // Detect critical words in the REAL transcribed text
+              const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|demora|lento|urgente|grave)\b/gi;
+              const criticalWords = sentence.match(criticalWordPatterns) || [];
+              
+              return {
+                id: (index + 1).toString(),
+                speaker: index % 2 === 0 ? 'agent' : 'client',
+                text: sentence.trim(),
+                startTime: Math.round(startTime * 10) / 10,
+                endTime: Math.round(endTime * 10) / 10,
+                confidence: 0.95,
+                criticalWords: criticalWords.map(w => w.toLowerCase())
+              };
+            });
             
             transcriptionResult = {
-              text: localResult.text,
-              segments: localResult.segments
+              text: whisperResult.text,
+              segments
             };
             
-            // Generate realistic AI analysis based on transcription content
-            const criticalWords = localResult.segments.reduce((acc: number, seg: any) => acc + seg.criticalWords.length, 0);
-            const totalDuration = localResult.duration;
-            const segmentCount = localResult.segments.length;
-            
-            aiAnalysis = {
-              criticalWordsCount: criticalWords,
-              totalSilenceTime: Math.max(0, totalDuration - (segmentCount * 3)), // Estimate silence
-              averageToneScore: criticalWords > 2 ? 6.5 : 8.2, // Lower score if many critical words
-              sentimentScore: criticalWords > 3 ? 0.3 : 0.7, // Lower sentiment if problems detected
-              recommendations: criticalWords > 2 ? [
-                'Atenção para resolver problemas do cliente rapidamente',
-                'Manter tom empático durante situações difíceis',
-                'Oferecer soluções concretas para os problemas relatados'
-              ] : [
-                'Excelente atendimento com foco na satisfação do cliente',
-                'Comunicação clara e objetiva',
-                'Resolução eficiente da solicitação'
-              ]
-            };
-            
-            console.log('Analysis completed based on real audio characteristics');
+            // Analyze the REAL transcribed content
+            console.log('Analyzing real transcribed content with AI...');
+            aiAnalysis = await analyzeTranscription(whisperResult.text);
+            console.log('AI analysis of real content completed');
             
           } catch (error) {
-            console.error('Error in local transcription:', (error as Error).message);
-            throw error;
+            console.error('OpenAI Whisper transcription failed:', (error as Error).message);
+            throw new Error(`Transcription failed: ${(error as Error).message}`);
           }
           
           const transcriptionData = {
