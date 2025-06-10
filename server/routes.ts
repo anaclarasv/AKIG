@@ -167,8 +167,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
+      // Agents cannot access monitoring sessions
+      if (user?.role === 'agent') {
+        return res.status(403).json({ message: "Access denied" });
+      }
       const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
-      const agentId = user?.role === 'agent' ? user.id : undefined;
+      const agentId = req.query.agentId as string;
       const sessions = await storage.getMonitoringSessions(companyId, agentId);
       res.json(sessions);
     } catch (error) {

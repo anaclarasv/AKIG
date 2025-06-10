@@ -102,6 +102,14 @@ export interface Reward {
   companyId: number;
 }
 
+export interface RewardPurchase {
+  id: number;
+  userId: string;
+  rewardId: number;
+  purchasedAt: string;
+  reward?: Reward;
+}
+
 export interface RankingEntry {
   userId: string;
   firstName: string;

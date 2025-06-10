@@ -56,12 +56,15 @@ export default function Evaluations() {
     return evaluation.status === activeTab;
   });
 
+  const headerTitle = user?.role === 'agent' ? 'Minhas Avaliações' : 'Avaliações';
+  const headerSubtitle = user?.role === 'agent' ? 'Visualize suas avaliações de atendimento' : 'Gerenciamento de avaliações de monitoria';
+
   if (isLoading) {
     return (
       <div className="p-6">
         <Header 
-          title="Avaliações"
-          subtitle="Gerenciamento de avaliações de monitoria"
+          title={headerTitle}
+          subtitle={headerSubtitle}
         />
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(4)].map((_, i) => (
@@ -79,8 +82,8 @@ export default function Evaluations() {
   return (
     <div className="p-6">
       <Header 
-        title="Avaliações"
-        subtitle="Gerenciamento de avaliações de monitoria"
+        title={headerTitle}
+        subtitle={headerSubtitle}
       />
 
       <div className="mt-6">
