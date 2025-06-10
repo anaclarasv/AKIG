@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
@@ -50,6 +50,7 @@ export default function Monitoring() {
 
   const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],
+    refetchInterval: selectedSession ? 3000 : false, // Poll every 3 seconds when viewing a session
   });
 
   const { data: campaigns } = useQuery<Campaign[]>({
@@ -219,23 +220,37 @@ export default function Monitoring() {
             <CardContent className="space-y-4">
               {selectedSessionData.audioUrl && (
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={togglePlayback}
-                      className="w-10 h-10 p-0"
-                    >
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                    <Volume2 className="w-4 h-4 text-muted-foreground" />
-                    <Progress value={33} className="flex-1" />
+                  <audio 
+                    controls 
+                    className="w-full"
+                    preload="metadata"
+                  >
+                    <source src={`/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`} type="audio/mpeg" />
+                    Seu navegador não suporta o elemento de áudio.
+                  </audio>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Duração:</span>
+                    <span className="font-medium">
+                      {selectedSessionData.duration ? 
+                        `${Math.floor(selectedSessionData.duration / 60)}:${String(selectedSessionData.duration % 60).padStart(2, '0')}` 
+                        : 'Calculando...'}
+                    </span>
                   </div>
-                  <div className="text-center text-sm text-muted-foreground">
-                    {selectedSessionData.duration ? 
-                      `${Math.floor(selectedSessionData.duration / 60)}:${String(selectedSessionData.duration % 60).padStart(2, '0')}` 
-                      : 'Processando...'}
-                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = `/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`;
+                      link.download = `audio_sessao_${selectedSession}.mp3`;
+                      link.click();
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar Áudio
+                  </Button>
                 </div>
               )}
               
