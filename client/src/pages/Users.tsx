@@ -173,7 +173,7 @@ export default function Users() {
         id: editingUser.id,
         data: {
           ...formData,
-          companyId: formData.companyId ? parseInt(formData.companyId) : undefined
+          companyId: formData.companyId ? parseInt(formData.companyId) : null
         }
       });
     } else {
