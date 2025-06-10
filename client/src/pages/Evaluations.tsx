@@ -115,8 +115,8 @@ export default function Evaluations() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Nota Final:</span>
-                        <span className={`text-xl font-bold ${getScoreColor(evaluation.finalScore)}`}>
-                          {evaluation.finalScore.toFixed(1)}
+                        <span className={`text-xl font-bold ${getScoreColor(Number(evaluation.finalScore))}`}>
+                          {Number(evaluation.finalScore).toFixed(1)}
                         </span>
                       </div>
 

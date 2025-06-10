@@ -29,7 +29,7 @@ import {
   type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists } from "drizzle-orm";
+import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -611,13 +611,14 @@ export class DatabaseStorage implements IStorage {
     const evaluationData = await db
       .select({
         month: sql<string>`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`,
-        avgScore: avg(evaluations.score),
+        avgScore: avg(evaluations.finalScore),
         count: count(evaluations.id)
       })
       .from(evaluations)
+      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
       .where(
         and(
-          eq(evaluations.agentId, agentId),
+          eq(monitoringSessions.agentId, agentId),
           gte(evaluations.createdAt, monthsAgo)
         )
       )
@@ -706,7 +707,11 @@ export class DatabaseStorage implements IStorage {
   async exportUserData(userId: string): Promise<any> {
     // Exporta todos os dados pessoais do usuário de forma segura
     const userData = await db.select().from(users).where(eq(users.id, userId));
-    const userEvaluations = await db.select().from(evaluations).where(eq(evaluations.agentId, userId));
+    const userEvaluations = await db
+      .select()
+      .from(evaluations)
+      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      .where(eq(monitoringSessions.agentId, userId));
     const userMonitorings = await db.select().from(monitoringSessions).where(eq(monitoringSessions.agentId, userId));
     const userContests = await db.select().from(evaluationContests).where(eq(evaluationContests.agentId, userId));
     const userNotifications = await db.select().from(notifications).where(eq(notifications.userId, userId));
@@ -727,7 +732,15 @@ export class DatabaseStorage implements IStorage {
     // Remove dados em ordem para respeitar foreign keys
     await db.delete(notifications).where(eq(notifications.userId, userId));
     await db.delete(evaluationContests).where(eq(evaluationContests.agentId, userId));
-    await db.delete(evaluations).where(eq(evaluations.agentId, userId));
+    // Delete evaluations for this user's monitoring sessions
+    const userMonitoringIds = await db
+      .select({ id: monitoringSessions.id })
+      .from(monitoringSessions)
+      .where(eq(monitoringSessions.agentId, userId));
+    
+    for (const monitoring of userMonitoringIds) {
+      await db.delete(evaluations).where(eq(evaluations.monitoringSessionId, monitoring.id));
+    }
     await db.delete(monitoringSessions).where(eq(monitoringSessions.agentId, userId));
     await db.delete(users).where(eq(users.id, userId));
   }
