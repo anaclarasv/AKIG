@@ -381,21 +381,30 @@ export default function Monitoring() {
           <Card className="lg:col-span-2 akig-card-shadow">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Transcrição em Tempo Real</CardTitle>
-                {selectedSessionData.status === 'pending' && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span className="text-sm text-muted-foreground">Processando áudio...</span>
+                <CardTitle>Transcrição com IA Local</CardTitle>
+                {(selectedSessionData.status === 'processing' || processingStatuses[selectedSessionData.id] === 'processing') && (
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm text-muted-foreground">Processando com Whisper local...</span>
+                    </div>
+                    <Progress 
+                      value={transcriptionProgress[selectedSessionData.id] || 0} 
+                      className="w-full"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {transcriptionProgress[selectedSessionData.id] || 0}% concluído
+                    </span>
                   </div>
                 )}
               </div>
               <Button 
                 onClick={() => handleStartTranscription(selectedSessionData.id)}
-                disabled={transcribingMutation.isPending}
+                disabled={transcribingMutation.isPending || processingStatuses[selectedSessionData.id] === 'processing'}
                 size="sm"
                 variant="outline"
               >
-                {transcribingMutation.isPending ? (
+                {(transcribingMutation.isPending || processingStatuses[selectedSessionData.id] === 'processing') ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
                     Transcrevendo...

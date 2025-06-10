@@ -33,11 +33,14 @@ export default function AuthPage() {
       return response.json();
     },
     onSuccess: () => {
+      // Force page reload to ensure proper session handling
       toast({
         title: "Login realizado com sucesso!",
         description: "Redirecionando para o dashboard...",
       });
-      window.location.href = "/";
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
