@@ -35,6 +35,18 @@ export default function Monitoring() {
   // Check if user can view all sessions or only their own
   const canViewAllSessions = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator';
 
+  // Redirect agents away from this page
+  if (user?.role === 'agent') {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-foreground mb-4">Acesso Negado</h2>
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
+        </div>
+      </div>
+    );
+  }
+
   const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],
   });
