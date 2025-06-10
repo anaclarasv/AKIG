@@ -35,16 +35,20 @@ export default function RewardsStore() {
 
   const { data: companies } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
+    enabled: user?.role === 'admin' || user?.role === 'supervisor',
   });
 
+  // For agents, use their companyId; for others, use selectedCompanyId
+  const companyIdForQuery = user?.role === 'agent' ? user.companyId : selectedCompanyId;
+
   const { data: rewards, isLoading } = useQuery<Reward[]>({
-    queryKey: ['/api/rewards', selectedCompanyId],
-    enabled: !!selectedCompanyId || user?.role === 'admin',
+    queryKey: ['/api/rewards', companyIdForQuery],
+    enabled: !!companyIdForQuery && !!user,
   });
 
   const { data: userPurchases } = useQuery<RewardPurchase[]>({
     queryKey: ['/api/user-reward-purchases'],
-    enabled: user?.role !== 'admin',
+    enabled: !!user && user.role !== 'admin',
   });
 
   const createMutation = useMutation({
