@@ -7,6 +7,13 @@ import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { transcribeAudio, analyzeTranscription, transcribeAudioLocal } from "./openai";
+import { 
+  startAsyncTranscription, 
+  getTranscriptionStatus, 
+  clearTranscriptionCache, 
+  analyzeTranscriptionLocal,
+  transcriptionEvents 
+} from "./whisper-transcription";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
 import {
@@ -528,25 +535,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Audio file not found on server" });
       }
       
-      const transcriptionResult = await transcribeAudio(resolvedPath);
-      console.log('Instant transcription completed, analyzing content...');
-      const aiAnalysis = await analyzeTranscription(transcriptionResult.text);
-      console.log('Analysis completed instantly');
-
-      const transcriptionData = {
-        segments: transcriptionResult.segments || [],
-        totalDuration: transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 60
-      };
-
-      // Update session with new transcription
-      const updatedSession = await storage.updateMonitoringSession(sessionId, {
-        transcription: transcriptionData,
-        aiAnalysis,
-        status: 'completed'
+      // Update status to processing immediately
+      await storage.updateMonitoringSession(sessionId, {
+        status: "processing"
       });
 
-      console.log(`Instant transcription completed for session ${sessionId}`);
-      res.json(updatedSession);
+      // Start async Whisper transcription
+      startAsyncTranscription(resolvedPath, sessionId);
+
+      // Return immediately with processing status
+      const updatedSession = await storage.getMonitoringSession(sessionId);
+      res.json({
+        ...updatedSession,
+        status: "processing",
+        message: "Transcription started - processing in background with Whisper"
+      });
 
     } catch (error) {
       console.error("Error in instant transcription:", error);
