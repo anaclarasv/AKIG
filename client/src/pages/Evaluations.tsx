@@ -19,8 +19,10 @@ export default function Evaluations() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
   const [contestReason, setContestReason] = useState("");
+  const [editComment, setEditComment] = useState("");
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isContestDialogOpen, setIsContestDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -81,6 +83,32 @@ export default function Evaluations() {
     },
   });
 
+  // Mutation for editing evaluation comments
+  const editEvaluationMutation = useMutation({
+    mutationFn: async ({ evaluationId, comment }: { evaluationId: number; comment: string }) => {
+      const response = await apiRequest("PATCH", `/api/evaluations/${evaluationId}`, {
+        supervisorComment: comment
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Comentário salvo",
+        description: "O comentário do supervisor foi salvo com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/evaluations'] });
+      setIsEditDialogOpen(false);
+      setEditComment("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar comentário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handler functions
   const handleViewEvaluation = (evaluation: Evaluation) => {
     setSelectedEvaluation(evaluation);
@@ -96,11 +124,26 @@ export default function Evaluations() {
     setIsContestDialogOpen(true);
   };
 
+  const handleEditEvaluation = (evaluation: Evaluation) => {
+    setSelectedEvaluation(evaluation);
+    setEditComment(evaluation.supervisorComment || "");
+    setIsEditDialogOpen(true);
+  };
+
   const handleSubmitContest = () => {
     if (selectedEvaluation && contestReason.trim()) {
       contestEvaluationMutation.mutate({
         evaluationId: selectedEvaluation.id,
         reason: contestReason.trim()
+      });
+    }
+  };
+
+  const handleSubmitEdit = () => {
+    if (selectedEvaluation && editComment.trim()) {
+      editEvaluationMutation.mutate({
+        evaluationId: selectedEvaluation.id,
+        comment: editComment.trim()
       });
     }
   };
@@ -235,16 +278,65 @@ export default function Evaluations() {
                       )}
 
                       <div className="flex items-center space-x-2 pt-2">
+                        {/* Visualizar button - available for all roles */}
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="flex-1"
                           onClick={() => handleViewEvaluation(evaluation)}
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          Ver Detalhes
+                          Visualizar
                         </Button>
-                        {evaluation.status === "pending" && (
+
+                        {/* Role-specific buttons */}
+                        {user?.role === 'evaluator' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => handleEditEvaluation(evaluation)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-amber-600 hover:text-amber-800"
+                              onClick={() => handleContestEvaluation(evaluation)}
+                            >
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Contestação
+                            </Button>
+                          </>
+                        )}
+
+                        {user?.role === 'supervisor' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => handleEditEvaluation(evaluation)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-amber-600 hover:text-amber-800"
+                              onClick={() => handleContestEvaluation(evaluation)}
+                            >
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Contestação
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Agent-specific buttons */}
+                        {user?.role === 'agent' && evaluation.status === "pending" && (
                           <Button 
                             size="sm" 
                             className="akig-bg-primary hover:opacity-90"
@@ -255,7 +347,8 @@ export default function Evaluations() {
                             Assinar
                           </Button>
                         )}
-                        {evaluation.status === "signed" && (
+
+                        {user?.role === 'agent' && evaluation.status === "signed" && (
                           <Button 
                             variant="outline" 
                             size="sm" 

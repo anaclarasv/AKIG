@@ -24,12 +24,18 @@ export class TranscriptionManager {
       throw new Error(`Arquivo de áudio não encontrado: ${audioFilePath}`);
     }
 
-    // Try OpenAI Whisper API first (real transcription)
+    // Try OpenAI Whisper API first (real transcription) with timeout optimization
     try {
       const { transcribeAudioWithOpenAI, analyzeOpenAITranscription } = await import('./openai-whisper');
       console.log('Attempting OpenAI Whisper transcription...');
       
-      const result = await transcribeAudioWithOpenAI(audioFilePath);
+      // Add 30-second timeout to prevent long waits
+      const transcriptionPromise = transcribeAudioWithOpenAI(audioFilePath);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Transcription timeout after 30 seconds')), 30000)
+      );
+      
+      const result = await Promise.race([transcriptionPromise, timeoutPromise]) as any;
       
       return {
         ...result,

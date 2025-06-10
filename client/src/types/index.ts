@@ -90,6 +90,7 @@ export interface Evaluation {
   signedAt?: string;
   contestedAt?: string;
   contestReason?: string;
+  supervisorComment?: string;
   createdAt: string;
 }
 
