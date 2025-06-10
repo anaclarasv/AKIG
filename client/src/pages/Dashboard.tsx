@@ -15,11 +15,30 @@ export default function Dashboard() {
     setLocation("/monitoring");
   };
 
-  // Check if user can create monitoring sessions - only supervisors and evaluators, not agents
-  const canCreateMonitoring = (user?.role === 'supervisor' || user?.role === 'evaluator') && user?.role !== 'agent';
+  // Check if user can create monitoring sessions - only supervisors and evaluators
+  const canCreateMonitoring = user?.role === 'supervisor' || user?.role === 'evaluator';
   
   // Check if user can view activities
   const canViewActivities = user?.role !== 'agent';
+
+  // Agent-specific dashboard
+  if (user?.role === 'agent') {
+    return (
+      <div className="p-6">
+        <Header 
+          title="Painel do Atendente"
+          subtitle="Suas avaliações e desempenho"
+        />
+
+        <div className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <RankingPanel />
+          </div>
+          <EvaluationForm />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
