@@ -411,8 +411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log('Starting local transcription...');
             
-            // Use real audio transcription
-            const { transcribeAudioReal, analyzeRealTranscription } = await import('./real-transcription');
+            // Use real node-whisper transcription
+            const { transcribeAudioReal, analyzeRealTranscription } = await import('./whisper-real');
             transcriptionResult = await transcribeAudioReal(audioFile.path);
             aiAnalysis = analyzeRealTranscription(transcriptionResult);
             
@@ -500,11 +500,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Process transcription with real Whisper in background
+      // Process transcription with real node-whisper in background
       setImmediate(async () => {
         try {
-          const { transcribeAudioReal, analyzeRealTranscription } = await import('./real-transcription');
-          console.log('Starting real Whisper transcription for session:', sessionId);
+          const { transcribeAudioReal, analyzeRealTranscription } = await import('./whisper-real');
+          console.log('Starting real node-whisper transcription for session:', sessionId);
           
           const transcriptionResult = await transcribeAudioReal(resolvedPath);
           const aiAnalysis = analyzeRealTranscription(transcriptionResult);
@@ -520,7 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'completed'
           });
 
-          console.log('Real transcription completed for session:', sessionId);
+          console.log('Real node-whisper transcription completed for session:', sessionId);
         } catch (error) {
           console.error('Real transcription error:', error);
           await storage.updateMonitoringSession(sessionId, {

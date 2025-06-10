@@ -259,33 +259,7 @@ function analyzeSpeechPatterns(buffer: Buffer, duration: number): number {
   return Math.min(changeCount / 100, 1); // Normalize to 0-1
 }
 
-// REMOVED: This function was generating fake content instead of real transcription
-  
-  const templateSegments = conversationTemplates[conversationType].slice(0, numSegments);
-  
-  // Create segments with timing based on actual audio duration
-  const segments = templateSegments.map((template, index) => {
-    const segmentDuration = duration / templateSegments.length;
-    const startTime = index * segmentDuration;
-    const endTime = Math.min(startTime + segmentDuration * 0.9, duration);
-    
-    // Detect critical words
-    const criticalWordPatterns = /\b(problema|erro|cancelar|reclamar|insatisfeito|ruim|falha|defeito|demora|lento|urgente|grave)\b/gi;
-    const criticalWords = template.text.match(criticalWordPatterns) || [];
-    
-    return {
-      id: (index + 1).toString(),
-      speaker: template.speaker as 'agent' | 'client',
-      text: template.text,
-      startTime: Math.round(startTime * 10) / 10,
-      endTime: Math.round(endTime * 10) / 10,
-      confidence: quality === 'high' ? 0.95 : 0.85,
-      criticalWords: criticalWords.map((w: string) => w.toLowerCase())
-    };
-  });
-  
-  return segments;
-}
+// Function removed - was generating fake content
 
 function generateTranscriptionFromAudio(duration: number, size: number, bitrate: number) {
   // Analyze real file characteristics to determine content type
