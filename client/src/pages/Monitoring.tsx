@@ -22,6 +22,8 @@ export default function Monitoring() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [transcriptionProgress, setTranscriptionProgress] = useState<{[key: number]: number}>({});
+  const [processingStatuses, setProcessingStatuses] = useState<{[key: number]: string}>({});
   const [formData, setFormData] = useState({
     agentId: "",
     campaignId: "",
@@ -94,27 +96,85 @@ export default function Monitoring() {
     },
   });
 
-  // Mutation for instant transcription
+  // Enhanced transcription mutation with progress monitoring
   const transcribingMutation = useMutation({
     mutationFn: async (sessionId: number) => {
+      setProcessingStatuses(prev => ({ ...prev, [sessionId]: "processing" }));
+      setTranscriptionProgress(prev => ({ ...prev, [sessionId]: 0 }));
+      
       const response = await apiRequest("POST", `/api/monitoring-sessions/${sessionId}/transcribe`);
-      return response.json();
+      const result = await response.json();
+      
+      // Start polling for progress if processing
+      if (result.status === "processing") {
+        pollTranscriptionStatus(sessionId);
+      }
+      
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       toast({
-        title: "Sucesso",
-        description: "Transcrição concluída instantaneamente!",
+        title: "Transcrição Iniciada",
+        description: "Processamento em segundo plano iniciado. Você pode reproduzir o áudio enquanto aguarda.",
       });
     },
     onError: (error) => {
       toast({
         title: "Erro na transcrição",
-        description: "Falha ao transcrever áudio. Tente novamente.",
+        description: "Falha ao iniciar transcrição. Tente novamente.",
         variant: "destructive",
       });
     },
   });
+
+  // Function to poll transcription status with real-time updates
+  const pollTranscriptionStatus = async (sessionId: number) => {
+    const maxAttempts = 30; // 1 minute maximum
+    let attempts = 0;
+    
+    const poll = async () => {
+      try {
+        const response = await apiRequest("GET", `/api/monitoring-sessions/${sessionId}/transcription-status`);
+        const status = await response.json();
+        
+        if (status.progress !== undefined) {
+          setTranscriptionProgress(prev => ({ ...prev, [sessionId]: status.progress }));
+        }
+        
+        if (status.status === "completed") {
+          setProcessingStatuses(prev => ({ ...prev, [sessionId]: "completed" }));
+          setTranscriptionProgress(prev => ({ ...prev, [sessionId]: 100 }));
+          queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+          
+          toast({
+            title: "Transcrição Concluída",
+            description: "A transcrição foi processada com sucesso e está disponível para análise!",
+          });
+          return;
+        }
+        
+        if (status.status === "error") {
+          setProcessingStatuses(prev => ({ ...prev, [sessionId]: "error" }));
+          toast({
+            title: "Erro na Transcrição",
+            description: "Falha no processamento. Tente novamente.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Continue polling if still processing
+        if (status.status === "processing" && attempts < maxAttempts) {
+          attempts++;
+          setTimeout(poll, 2000); // Poll every 2 seconds
+        }
+      } catch (error) {
+        console.error("Error polling transcription status:", error);
+      }
+    };
+    
+    poll();
+  };
 
   const handleStartTranscription = (sessionId: number) => {
     transcribingMutation.mutate(sessionId);

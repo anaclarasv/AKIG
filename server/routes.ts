@@ -552,8 +552,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      console.error("Error in instant transcription:", error);
-      res.status(500).json({ message: "Failed to transcribe audio" });
+      console.error("Error in Whisper transcription:", error);
+      res.status(500).json({ message: "Failed to start transcription" });
+    }
+  });
+
+  // Get transcription status endpoint
+  app.get("/api/monitoring-sessions/:id/transcription-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const status = getTranscriptionStatus(sessionId);
+      
+      if (status && status.status === "completed") {
+        // Update database with completed transcription
+        const aiAnalysis = analyzeTranscriptionLocal(status);
+        await storage.updateMonitoringSession(sessionId, {
+          transcription: {
+            segments: status.segments,
+            totalDuration: status.totalDuration
+          },
+          aiAnalysis,
+          status: "completed"
+        });
+        
+        // Clear cache after updating database
+        clearTranscriptionCache(sessionId);
+        
+        const updatedSession = await storage.getMonitoringSession(sessionId);
+        res.json(updatedSession);
+      } else if (status) {
+        res.json({
+          status: status.status,
+          progress: status.progress || 0,
+          segments: status.segments
+        });
+      } else {
+        // Check database status
+        const session = await storage.getMonitoringSession(sessionId);
+        res.json({
+          status: session?.status || "pending",
+          progress: session?.status === "completed" ? 100 : 0
+        });
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+      res.status(500).json({ message: "Failed to get transcription status" });
     }
   });
 

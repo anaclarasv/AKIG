@@ -244,7 +244,7 @@ async function generateSmartTranscription(audioPath: string, sessionId: number):
  */
 export async function startAsyncTranscription(audioPath: string, sessionId: number): Promise<void> {
   // Executa transcrição em background
-  processWhisperTranscription(audioPath, sessionId).catch(error => {
+  generateSmartTranscription(audioPath, sessionId).catch((error: any) => {
     console.error(`Erro na transcrição assíncrona da sessão ${sessionId}:`, error);
   });
 }
