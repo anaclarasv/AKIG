@@ -585,17 +585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Session not found" });
       }
 
-      const status = {
-        sessionId,
-        hasTranscription: !!session.transcription,
-        hasAnalysis: !!session.aiAnalysis,
-        status: session.transcription ? 'completed' : 'pending'
-      };
-      
-      if (status.status === "completed") {
+      if (session.transcription) {
         // Return existing completed transcription
-        const updatedSession = await storage.getMonitoringSession(sessionId);
-        res.json(updatedSession);
+        res.json(session);
       } else {
         res.json({
           status: "pending",
