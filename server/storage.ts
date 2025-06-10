@@ -25,7 +25,7 @@ import {
   type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, avg, sql } from "drizzle-orm";
+import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -416,12 +416,41 @@ export class DatabaseStorage implements IStorage {
     pendingForms: number;
     activeAgents: number;
   }> {
-    // Return mock data for now to get the app running
+    // Get today's date for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Count all monitoring sessions from today
+    const allMonitorings = await db.select().from(monitoringSessions);
+    const todayMonitorings = allMonitorings.filter(session => {
+      if (!session.createdAt) return false;
+      const sessionDate = session.createdAt.toISOString().split('T')[0];
+      return sessionDate === todayStr;
+    }).length;
+
+    // Calculate average score from evaluations
+    const allEvaluations = await db.select().from(evaluations);
+    const validScores = allEvaluations
+      .map(e => Number(e.finalScore))
+      .filter(score => !isNaN(score) && score > 0);
+    const averageScore = validScores.length > 0 ? 
+      validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
+
+    // Count pending forms (monitoring sessions without evaluations)
+    const evaluationSessionIds = allEvaluations.map(e => e.monitoringSessionId);
+    const completedMonitorings = allMonitorings.filter(s => s.status === 'completed');
+    const pendingForms = completedMonitorings.filter(s => !evaluationSessionIds.includes(s.id)).length;
+
+    // Count active agents
+    const allUsers = await db.select().from(users);
+    const activeAgents = allUsers.filter(u => u.role === 'agent' && u.isActive).length;
+
     return {
-      todayMonitorings: 5,
-      averageScore: 8.5,
-      pendingForms: 3,
-      activeAgents: 12,
+      todayMonitorings,
+      averageScore: Math.round(averageScore * 10) / 10, // Round to 1 decimal
+      pendingForms,
+      activeAgents,
     };
   }
 
@@ -433,18 +462,46 @@ export class DatabaseStorage implements IStorage {
     virtualCoins: number;
     rank: number;
   }>> {
-    // Simplified implementation for now
+    // Get all active agents
     const allUsers = await db.select().from(users).where(and(
       eq(users.role, "agent"),
       eq(users.isActive, true)
     ));
 
-    return allUsers.map((user, index) => ({
-      userId: user.id,
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      averageScore: 8.5, // Mock score for now
-      virtualCoins: user.virtualCoins || 0,
+    // Get all evaluations to calculate average scores
+    const allEvaluations = await db.select().from(evaluations);
+    const allMonitoringSessions = await db.select().from(monitoringSessions);
+
+    // Calculate average score for each agent
+    const agentScores = allUsers.map(user => {
+      // Find monitoring sessions for this agent
+      const userSessions = allMonitoringSessions.filter(s => s.agentId === user.id);
+      const sessionIds = userSessions.map(s => s.id);
+      
+      // Find evaluations for this agent's sessions
+      const userEvaluations = allEvaluations.filter(e => sessionIds.includes(e.monitoringSessionId));
+      
+      // Calculate average score
+      const validScores = userEvaluations
+        .map(evaluation => Number(evaluation.finalScore))
+        .filter(score => !isNaN(score) && score > 0);
+      const averageScore = validScores.length > 0 ? 
+        validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
+
+      return {
+        userId: user.id,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        averageScore: Math.round(averageScore * 10) / 10, // Round to 1 decimal
+        virtualCoins: user.virtualCoins || 0,
+      };
+    });
+
+    // Sort by average score (descending) and assign ranks
+    const sortedAgents = agentScores.sort((a, b) => b.averageScore - a.averageScore);
+    
+    return sortedAgents.map((agent, index) => ({
+      ...agent,
       rank: index + 1,
     }));
   }
