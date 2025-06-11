@@ -28,8 +28,28 @@ import {
 } from "lucide-react";
 import type { Evaluation, MonitoringSession } from "@/types";
 
-interface EvaluationWithSession extends Evaluation {
-  session: MonitoringSession;
+interface EvaluationWithSession {
+  id: number;
+  monitoringSessionId: number;
+  evaluatorId: string;
+  finalScore: number;
+  partialScore: number;
+  observations?: string;
+  status: string;
+  hasCriticalFailure?: boolean;
+  criticalFailureReason?: string;
+  createdAt: string;
+  updatedAt: string;
+  session: {
+    id: number;
+    agentId: string;
+    campaignId: number;
+    status: string;
+    duration?: number;
+    audioUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 interface EvaluationScores {
@@ -105,8 +125,8 @@ export default function MyEvaluationsPage() {
       return sum + calculateOverallScore(evaluation);
     }, 0) / evaluations.length,
     totalEvaluations: evaluations.length,
-    criticalFailures: evaluations.filter(e => e.hasCriticalFailure).length,
-    completedEvaluations: evaluations.filter(e => e.status === 'completed').length,
+    criticalFailures: evaluations.filter(e => e.hasCriticalFailure || false).length,
+    completedEvaluations: evaluations.filter(e => e.status === 'completed' || e.status === 'signed').length,
     averageScoreDisplay: evaluations.length > 0 ? (evaluations.reduce((sum, evaluation) => sum + calculateOverallScore(evaluation), 0) / evaluations.length).toFixed(1) : '0'
   } : null;
 
@@ -189,14 +209,20 @@ export default function MyEvaluationsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-300">Pontos Fortes</p>
+                  <p className="text-sm font-medium text-orange-600 dark:text-orange-300">Falhas Críticas</p>
                   <p className="text-lg font-bold text-orange-800 dark:text-orange-100">
-                    {overallStats?.strongPoints.length || 0} identificados
+                    {overallStats?.criticalFailures || 0}
                   </p>
                 </div>
-                <CheckCircle className="w-12 h-12 text-orange-600" />
+                {overallStats?.criticalFailures === 0 ? (
+                  <CheckCircle className="w-12 h-12 text-green-600" />
+                ) : (
+                  <XCircle className="w-12 h-12 text-orange-600" />
+                )}
               </div>
-              <p className="text-sm text-orange-600 mt-2">continue assim!</p>
+              <p className="text-sm text-orange-600 mt-2">
+                {overallStats?.criticalFailures === 0 ? 'Excelente trabalho!' : 'Pontos de atenção'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -314,54 +340,46 @@ export default function MyEvaluationsPage() {
             </Card>
           </div>
 
-          {/* Painel Lateral - Insights e Dicas */}
+          {/* Painel Lateral - Resumo e Dicas */}
           <div className="space-y-6">
-            {/* Pontos Fortes */}
+            {/* Resumo do Período */}
             <Card className="akig-card-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  Pontos Fortes
+                <CardTitle className="flex items-center gap-2 text-blue-600">
+                  <BarChart3 className="w-5 h-5" />
+                  Resumo do Período
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {overallStats?.strongPoints.map((point, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-foreground">{point}</span>
-                    </div>
-                  ))}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total de Avaliações</span>
+                    <span className="font-semibold">{overallStats?.totalEvaluations || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Pontuação Média</span>
+                    <span className="font-semibold">{overallStats?.averageScoreDisplay || '0'} pts</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Avaliações Concluídas</span>
+                    <span className="font-semibold">{overallStats?.completedEvaluations || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Falhas Críticas</span>
+                    <span className={`font-semibold ${overallStats?.criticalFailures === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {overallStats?.criticalFailures || 0}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Pontos a Melhorar */}
-            <Card className="akig-card-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600">
-                  <Target className="w-5 h-5" />
-                  Pontos a Melhorar
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {overallStats?.improvementAreas.map((area, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="text-sm text-foreground">{area}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dicas Personalizadas */}
+            {/* Dicas de Melhoria */}
             <Card className="akig-card-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-blue-600">
                   <Lightbulb className="w-5 h-5" />
-                  Dicas Personalizadas
+                  Dicas de Desenvolvimento
                 </CardTitle>
               </CardHeader>
               <CardContent>
