@@ -6,6 +6,8 @@ import AIMonitoringPanel from "@/components/dashboard/AIMonitoringPanel";
 import RankingPanel from "@/components/dashboard/RankingPanel";
 import EvaluationForm from "@/components/dashboard/EvaluationForm";
 import ActivityTable from "@/components/dashboard/ActivityTable";
+import AgentPerformanceChart from "@/components/dashboard/AgentPerformanceChart";
+import AgentContestPanel from "@/components/dashboard/AgentContestPanel";
 
 
 export default function Dashboard() {
@@ -53,14 +55,8 @@ export default function Dashboard() {
 
           {/* Performance and Contest Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg border">
-              <h3 className="text-lg font-semibold mb-4">Evolução de Desempenho</h3>
-              <p className="text-muted-foreground">Gráfico de evolução será implementado em breve</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg border">
-              <h3 className="text-lg font-semibold mb-4">Contestação de Avaliações</h3>
-              <p className="text-muted-foreground">Sistema de contestação será implementado em breve</p>
-            </div>
+            <AgentPerformanceChart />
+            <AgentContestPanel />
           </div>
 
           {/* Evaluation Section */}

@@ -626,6 +626,101 @@ export default function EvaluationsFixed() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog for viewing evaluation details */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Avaliação #{selectedEvaluation?.id}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Sessão de Monitoramento</Label>
+                <p className="text-sm font-semibold">#{selectedEvaluation?.monitoringSessionId}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Avaliador</Label>
+                <p className="text-sm font-semibold">{selectedEvaluation?.evaluatorId}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Pontuação Final</Label>
+                <p className={`text-lg font-bold ${
+                  selectedEvaluation && selectedEvaluation.finalScore >= 8 ? 'text-green-600' :
+                  selectedEvaluation && selectedEvaluation.finalScore >= 6 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {selectedEvaluation?.finalScore.toFixed(1)} pts
+                </p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                <div className="mt-1">
+                  {selectedEvaluation && getStatusBadge(selectedEvaluation.status)}
+                </div>
+              </div>
+            </div>
+            
+            {selectedEvaluation?.observations && (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Observações</Label>
+                <div className="mt-2 p-3 bg-muted rounded-lg">
+                  <p className="text-sm">{selectedEvaluation.observations}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsViewDialogOpen(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for editing evaluation */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Avaliação #{selectedEvaluation?.id}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="editComment">Comentário do Supervisor</Label>
+              <Textarea
+                id="editComment"
+                placeholder="Adicione observações ou comentários sobre esta avaliação..."
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                rows={4}
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditComment("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSubmitEdit}
+                disabled={editEvaluationMutation.isPending}
+                className="akig-bg-primary hover:opacity-90"
+              >
+                {editEvaluationMutation.isPending ? "Salvando..." : "Salvar Comentário"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog for reviewing contestation */}
       <Dialog open={isContestReviewDialogOpen} onOpenChange={setIsContestReviewDialogOpen}>
         <DialogContent>

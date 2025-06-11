@@ -1485,6 +1485,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Performance evolution endpoint for agents
+  app.get("/api/performance-evolution/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const months = parseInt(req.query.months as string) || 6;
+      
+      const user = await storage.getUser(req.user.id);
+      
+      // Only allow agents to view their own data, or supervisors/admins to view any data
+      if (user?.role === 'agent' && req.user.id !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const performanceData = await storage.getPerformanceEvolution(userId, months);
+      res.json(performanceData);
+    } catch (error) {
+      console.error("Error fetching performance evolution:", error);
+      res.status(500).json({ message: "Failed to fetch performance evolution" });
+    }
+  });
+
   // Monitoring Evaluations endpoints
   app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
     try {
