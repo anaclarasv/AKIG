@@ -321,6 +321,22 @@ export default function MyEvaluationsPage() {
                               </p>
                             </div>
                           )}
+
+                          {/* Botão Ver Detalhes */}
+                          <div className="border-t pt-3 mt-4">
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm text-muted-foreground">
+                                Criada em: {new Date(evaluation.createdAt).toLocaleDateString('pt-BR')}
+                              </div>
+                              <button
+                                onClick={() => setLocation(`/evaluation/${evaluation.id}`)}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Ver Detalhes
+                              </button>
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     );
