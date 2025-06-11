@@ -1116,6 +1116,65 @@ export class DatabaseStorage implements IStorage {
 
     return updated;
   }
+
+  async getMonitoringEvaluation(monitoringSessionId: number): Promise<any> {
+    const [evaluation] = await db
+      .select()
+      .from(monitoringEvaluations)
+      .where(eq(monitoringEvaluations.monitoringSessionId, monitoringSessionId));
+
+    return evaluation;
+  }
+
+  async getMonitoringFormTemplate(id: number): Promise<any> {
+    // Get form template with sections and criteria
+    const form = await db
+      .select()
+      .from(monitoringForms)
+      .where(eq(monitoringForms.id, id));
+
+    if (!form.length) return null;
+
+    const sections = await db
+      .select()
+      .from(formSections)
+      .where(eq(formSections.formId, id))
+      .orderBy(formSections.orderIndex);
+
+    const sectionsWithCriteria = await Promise.all(
+      sections.map(async (section) => {
+        const criteria = await db
+          .select()
+          .from(formCriteria)
+          .where(eq(formCriteria.sectionId, section.id))
+          .orderBy(formCriteria.orderIndex);
+
+        return {
+          ...section,
+          criteria
+        };
+      })
+    );
+
+    return {
+      ...form[0],
+      sections: sectionsWithCriteria
+    };
+  }
+
+  async getEvaluationResponse(evaluationId: number, criterionId: number): Promise<any> {
+    const [response] = await db
+      .select()
+      .from(evaluationResponses)
+      .where(
+        and(
+          eq(evaluationResponses.evaluationId, evaluationId),
+          eq(evaluationResponses.criteriaId, criterionId)
+        )
+      );
+
+    return response;
+  }
 }
 
 export const storage = new DatabaseStorage();

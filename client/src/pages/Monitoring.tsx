@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Play, Pause, Volume2, Download, Upload, Plus, MoreVertical, Trash2, Archive } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
 import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
@@ -688,14 +689,18 @@ export default function Monitoring() {
                 )}
 
                 <div className="flex items-center space-x-2 pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => setSelectedSession(session.id)}
-                  >
-                    {session.status === 'pending' ? 'Acompanhar Transcrição' : 'Ver Detalhes'}
-                  </Button>
+                  {/* Ver Detalhes para todos os perfis autorizados */}
+                  <Link href={`/monitoring/${session.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                    >
+                      {session.status === 'pending' ? 'Acompanhar' : 'Ver Ficha Completa'}
+                    </Button>
+                  </Link>
+                  
+                  {/* Botão de Avaliar apenas para evaluators/admin */}
                   {(user?.role === 'evaluator' || user?.role === 'admin') && session.transcription && (
                     <Button 
                       variant="default" 
@@ -708,6 +713,7 @@ export default function Monitoring() {
                       Avaliar
                     </Button>
                   )}
+                  
                   <Button variant="outline" size="sm">
                     <Download className="w-4 h-4" />
                   </Button>
