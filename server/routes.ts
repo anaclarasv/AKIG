@@ -1270,6 +1270,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Monitoring Forms endpoints
+  app.get("/api/monitoring-forms/active", isAuthenticated, async (req, res) => {
+    try {
+      const form = await storage.getActiveMonitoringForm();
+      res.json(form);
+    } catch (error) {
+      console.error("Error fetching active monitoring form:", error);
+      res.status(500).json({ message: "Failed to fetch monitoring form" });
+    }
+  });
+
+  app.get("/api/monitoring-forms/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const form = await storage.getMonitoringForm(parseInt(id));
+      res.json(form);
+    } catch (error) {
+      console.error("Error fetching monitoring form:", error);
+      res.status(500).json({ message: "Failed to fetch monitoring form" });
+    }
+  });
+
+  // Monitoring Evaluations endpoints
+  app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
+    try {
+      const evaluationData = {
+        ...req.body,
+        evaluatorId: req.user.id,
+      };
+      const evaluation = await storage.createMonitoringEvaluation(evaluationData);
+      res.status(201).json(evaluation);
+    } catch (error) {
+      console.error("Error creating monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to create monitoring evaluation" });
+    }
+  });
+
+  app.get("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId } = req.query;
+      const evaluations = await storage.getMonitoringEvaluations(
+        sessionId ? parseInt(sessionId as string) : undefined
+      );
+      res.json(evaluations);
+    } catch (error) {
+      console.error("Error fetching monitoring evaluations:", error);
+      res.status(500).json({ message: "Failed to fetch monitoring evaluations" });
+    }
+  });
+
+  app.patch("/api/monitoring-evaluations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const evaluation = await storage.updateMonitoringEvaluation(parseInt(id), req.body);
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error updating monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to update monitoring evaluation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
