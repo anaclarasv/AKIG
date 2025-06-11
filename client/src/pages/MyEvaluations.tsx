@@ -259,15 +259,15 @@ export default function MyEvaluationsPage() {
                           {/* Critérios Avaliados */}
                           <div className="space-y-2 mb-4">
                             <h5 className="text-sm font-medium text-foreground">Critérios Avaliados:</h5>
-                            {Object.entries(scores).map(([criteriaId, scoreData]) => (
+                            {Object.entries(scores).map(([criteriaId, scoreData]: [string, any]) => (
                               <div key={criteriaId} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">{scoreData.criteriaName}</span>
+                                <span className="text-muted-foreground">{scoreData?.criteriaName || `Critério ${criteriaId}`}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className={getScoreColor((scoreData.score / scoreData.maxScore) * 100)}>
-                                    {scoreData.score}/{scoreData.maxScore}
+                                  <span className={getScoreColor((scoreData?.score / scoreData?.maxScore) * 100 || 0)}>
+                                    {scoreData?.score || 0}/{scoreData?.maxScore || 10}
                                   </span>
                                   <Progress 
-                                    value={(scoreData.score / scoreData.maxScore) * 100} 
+                                    value={(scoreData?.score / scoreData?.maxScore) * 100 || 0} 
                                     className="w-16 h-2" 
                                   />
                                 </div>

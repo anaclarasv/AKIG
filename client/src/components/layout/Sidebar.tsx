@@ -85,7 +85,7 @@ export default function Sidebar() {
       case 'agent':
         return [
           ...baseNavigation,
-          { name: 'Minhas Avaliações', href: '/evaluations', icon: ClipboardCheck },
+          { name: 'Minhas Monitorias', href: '/my-evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
         ];
