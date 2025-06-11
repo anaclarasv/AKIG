@@ -208,7 +208,12 @@ export default function Monitoring() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type.startsWith('audio/')) {
+      // Accept any audio file or files with audio extensions
+      const isAudioFile = file.type.startsWith('audio/') || 
+                         /\.(mp3|wav|flac|aac|ogg|webm|m4a|mp4|amr|3gp|aiff)$/i.test(file.name);
+      
+      if (isAudioFile) {
+        console.log('File selected:', file.name, file.type, file.size);
         setAudioFile(file);
       } else {
         toast({

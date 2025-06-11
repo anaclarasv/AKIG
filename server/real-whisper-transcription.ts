@@ -1,212 +1,258 @@
-import nodeWhisper from 'node-whisper';
+import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 
-export class RealWhisperTranscription {
-  private static transcriptionCache = new Map<string, any>();
-  private static processingStatus = new Map<string, any>();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-  /**
-   * Transcreve áudio usando Whisper local real
-   */
-  static async transcribeAudio(audioFilePath: string): Promise<any> {
-    console.log('Iniciando transcrição real com Whisper para:', audioFilePath);
+export async function transcribeAudioWithWhisper(audioFilePath: string): Promise<{
+  text: string;
+  segments: Array<{
+    id: string;
+    speaker: string;
+    text: string;
+    startTime: number;
+    endTime: number;
+    confidence: number;
+    criticalWords: string[];
+  }>;
+  duration: number;
+  success: boolean;
+  transcription_engine: string;
+  error?: string;
+}> {
+  try {
+    console.log(`Starting Whisper transcription for: ${audioFilePath}`);
     
-    const cacheKey = audioFilePath;
-    if (this.transcriptionCache.has(cacheKey)) {
-      console.log('Retornando transcrição do cache');
-      return this.transcriptionCache.get(cacheKey);
-    }
-
-    // Verificar se arquivo existe
+    // Check if file exists
     if (!fs.existsSync(audioFilePath)) {
-      throw new Error(`Arquivo de áudio não encontrado: ${audioFilePath}`);
+      throw new Error(`Audio file not found: ${audioFilePath}`);
     }
 
-    try {
-      // Marcar como processando
-      this.processingStatus.set(cacheKey, { status: 'processing', progress: 10 });
-
-      console.log('Executando Whisper com configurações em português...');
-      
-      // Atualizar status
-      this.processingStatus.set(cacheKey, { status: 'processing', progress: 30 });
-
-      // Executar transcrição real com configuração simples
-      const startTime = Date.now();
-      
-      // Usar a API correta do node-whisper sem opções para evitar erros
-      const transcript = await nodeWhisper(audioFilePath);
-      
-      const endTime = Date.now();
-      const processingTime = (endTime - startTime) / 1000;
-      
-      console.log(`✅ Transcrição concluída em ${processingTime}s`);
-      
-      // Atualizar status
-      this.processingStatus.set(cacheKey, { status: 'processing', progress: 80 });
-
-      // Processar resultado
-      const result = this.processWhisperResult(transcript, audioFilePath);
-      
-      // Cache do resultado
-      this.transcriptionCache.set(cacheKey, result);
-      
-      // Marcar como concluído
-      this.processingStatus.set(cacheKey, { status: 'completed', progress: 100 });
-      
-      console.log('📝 Texto transcrito:', result.text.substring(0, 100) + '...');
-      return result;
-
-    } catch (error: any) {
-      console.error('Erro na transcrição Whisper:', error);
-      this.processingStatus.set(cacheKey, { 
-        status: 'error', 
-        progress: 0, 
-        error: error?.message || 'Erro desconhecido na transcrição' 
-      });
-      throw error;
+    const fileStats = fs.statSync(audioFilePath);
+    const fileSizeMB = fileStats.size / (1024 * 1024);
+    
+    console.log(`File size: ${fileSizeMB.toFixed(2)}MB`);
+    
+    // Check file size limit (25MB for Whisper API)
+    if (fileStats.size > 25 * 1024 * 1024) {
+      throw new Error('File too large. Maximum size is 25MB for Whisper API.');
     }
-  }
 
-  /**
-   * Processa o resultado do Whisper para o formato esperado
-   */
-  private static processWhisperResult(transcript: any, audioFilePath: string): any {
-    console.log('🔄 Processando resultado do Whisper...');
+    // Create readable stream for OpenAI
+    const audioStream = fs.createReadStream(audioFilePath);
     
-    // Obter duração do áudio
-    const stats = fs.statSync(audioFilePath);
-    const estimatedDuration = this.estimateAudioDuration(stats.size);
+    console.log('Calling OpenAI Whisper API...');
     
-    let segments = [];
-    let fullText = '';
+    // Call OpenAI Whisper API with timestamps
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioStream,
+      model: "whisper-1",
+      language: "pt", // Portuguese
+      response_format: "verbose_json",
+      timestamp_granularities: ["segment"]
+    });
 
-    if (transcript && typeof transcript === 'object') {
-      // Se o Whisper retornou segmentos com timestamps
-      if (transcript.segments && Array.isArray(transcript.segments)) {
-        segments = transcript.segments.map((segment: any, index: number) => ({
-          id: `seg_${index + 1}`,
-          speaker: this.detectSpeaker(segment.text, index),
+    console.log('Whisper API response received');
+
+    if (!transcription.text || transcription.text.trim().length === 0) {
+      return {
+        text: "Whisper processou o arquivo mas não detectou conteúdo de fala clara.",
+        segments: [],
+        duration: 60.0,
+        success: false,
+        transcription_engine: 'openai_whisper',
+        error: 'No speech detected'
+      };
+    }
+
+    // Process segments from Whisper
+    const segments = [];
+    if (transcription.segments && transcription.segments.length > 0) {
+      for (let i = 0; i < transcription.segments.length; i++) {
+        const segment = transcription.segments[i];
+        
+        segments.push({
+          id: `segment_${i}`,
+          speaker: detectSpeaker(segment.text, i),
           text: segment.text.trim(),
-          startTime: segment.start || (index * 5),
-          endTime: segment.end || ((index + 1) * 5),
-          confidence: segment.confidence || 0.9
-        }));
-        fullText = transcript.segments.map((s: any) => s.text).join(' ');
-      } else if (transcript.text) {
-        // Se retornou apenas texto
-        fullText = transcript.text;
-        segments = this.createSegmentsFromText(fullText, estimatedDuration);
+          startTime: segment.start,
+          endTime: segment.end,
+          confidence: 0.9, // Whisper doesn't provide segment-level confidence
+          criticalWords: detectCriticalWords(segment.text)
+        });
       }
-    } else if (typeof transcript === 'string') {
-      // Se retornou string direta
-      fullText = transcript;
-      segments = this.createSegmentsFromText(fullText, estimatedDuration);
+    } else {
+      // Create single segment if no timestamp data
+      segments.push({
+        id: 'segment_0',
+        speaker: 'unknown',
+        text: transcription.text.trim(),
+        startTime: 0,
+        endTime: transcription.duration || 60,
+        confidence: 0.9,
+        criticalWords: detectCriticalWords(transcription.text)
+      });
     }
 
-    return {
-      text: fullText,
+    const result = {
+      text: transcription.text.trim(),
       segments,
-      duration: estimatedDuration,
-      transcriptionMethod: 'whisper_local',
-      isAuthentic: true,
-      processingTime: 'real',
-      confidence: 0.9
+      duration: transcription.duration || calculateDurationFromSegments(segments),
+      success: true,
+      transcription_engine: 'openai_whisper',
+      segments_count: segments.length
     };
-  }
 
-  /**
-   * Cria segmentos a partir de texto quando não há timestamps
-   */
-  private static createSegmentsFromText(text: string, duration: number): any[] {
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const segmentDuration = duration / sentences.length;
-    
-    return sentences.map((sentence, index) => ({
-      id: `seg_${index + 1}`,
-      speaker: this.detectSpeaker(sentence, index),
-      text: sentence.trim(),
-      startTime: index * segmentDuration,
-      endTime: (index + 1) * segmentDuration,
-      confidence: 0.9
-    }));
-  }
+    console.log(`Transcription completed: ${result.text.length} characters, ${segments.length} segments`);
+    return result;
 
-  /**
-   * Detecta falante básico baseado no conteúdo
-   */
-  private static detectSpeaker(text: string, index: number): string {
-    const agentKeywords = ['posso ajudar', 'obrigad', 'aqui é', 'vou verificar', 'empresa'];
-    const clientKeywords = ['preciso', 'problema', 'quero', 'gostaria', 'não consigo'];
+  } catch (error: any) {
+    console.error('Whisper transcription error:', error);
     
-    const lowerText = text.toLowerCase();
-    
-    if (agentKeywords.some(keyword => lowerText.includes(keyword))) {
-      return 'agent';
-    } else if (clientKeywords.some(keyword => lowerText.includes(keyword))) {
-      return 'client';
+    if (error.message?.includes('API key')) {
+      return {
+        text: "Erro: Chave da API OpenAI não configurada. Configure OPENAI_API_KEY nas variáveis de ambiente.",
+        segments: [],
+        duration: 60.0,
+        success: false,
+        transcription_engine: 'openai_whisper',
+        error: 'API key not configured'
+      };
     }
-    
-    // Alternância simples se não conseguir detectar
-    return index % 2 === 0 ? 'agent' : 'client';
-  }
 
-  /**
-   * Estima duração do áudio baseado no tamanho do arquivo
-   */
-  private static estimateAudioDuration(fileSize: number): number {
-    // Estimativa aproximada: 1MB ≈ 60 segundos para MP3 de qualidade média
-    const estimatedSeconds = Math.max(30, fileSize / 17000);
-    return Math.min(900, estimatedSeconds); // Máximo 15 minutos
-  }
-
-  /**
-   * Verifica status da transcrição
-   */
-  static getTranscriptionStatus(audioFilePath: string): any {
-    return this.processingStatus.get(audioFilePath) || { status: 'not_found' };
-  }
-
-  /**
-   * Limpa cache
-   */
-  static clearCache(): void {
-    this.transcriptionCache.clear();
-    this.processingStatus.clear();
-    console.log('🧹 Cache de transcrições limpo');
-  }
-
-  /**
-   * Análise básica do texto transcrito
-   */
-  static analyzeTranscription(transcriptionResult: any): any {
-    const { text, segments } = transcriptionResult;
-    
-    // Análise de sentimento
-    const positiveWords = ['obrigado', 'excelente', 'ótimo', 'bom', 'perfeito'];
-    const negativeWords = ['problema', 'erro', 'ruim', 'dificuldade', 'não funciona'];
-    
-    const positiveCount = positiveWords.filter(word => 
-      text.toLowerCase().includes(word)
-    ).length;
-    
-    const negativeCount = negativeWords.filter(word => 
-      text.toLowerCase().includes(word)
-    ).length;
-    
-    const sentiment = positiveCount > negativeCount ? 0.7 : 0.4;
-    
     return {
-      sentiment,
-      tone: 0.7,
-      criticalWordsCount: negativeCount,
-      positiveIndicators: positiveCount,
-      overallScore: Math.min(10, 5 + (sentiment * 5)),
-      recommendations: negativeCount > 2 ? 
-        ['Melhorar abordagem com cliente', 'Focar em soluções rápidas'] :
-        ['Atendimento adequado', 'Manter padrão de qualidade'],
-      analysisMethod: 'whisper_nlp'
+      text: `Erro na transcrição com Whisper: ${error.message}`,
+      segments: [],
+      duration: 60.0,
+      success: false,
+      transcription_engine: 'openai_whisper',
+      error: error.message
     };
   }
+}
+
+function detectSpeaker(text: string, index: number): string {
+  // Basic speaker detection based on content patterns
+  const lowerText = text.toLowerCase();
+  
+  // Agent patterns
+  if (lowerText.includes('bom dia') || 
+      lowerText.includes('boa tarde') || 
+      lowerText.includes('posso ajudar') ||
+      lowerText.includes('atendimento') ||
+      lowerText.includes('empresa')) {
+    return 'agent';
+  }
+  
+  // Client patterns  
+  if (lowerText.includes('problema') ||
+      lowerText.includes('reclamação') ||
+      lowerText.includes('quero falar') ||
+      lowerText.includes('não funciona')) {
+    return 'client';
+  }
+  
+  // Alternate by index if no clear pattern
+  return index % 2 === 0 ? 'agent' : 'client';
+}
+
+function detectCriticalWords(text: string): string[] {
+  const criticalKeywords = [
+    'problema', 'reclamação', 'irritado', 'chateado', 'péssimo', 
+    'ruim', 'terrível', 'inaceitável', 'absurdo', 'revoltante',
+    'cancelar', 'processo', 'advogado', 'justiça', 'procon',
+    'gerente', 'supervisor', 'responsável', 'diretor'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  return criticalKeywords.filter(keyword => lowerText.includes(keyword));
+}
+
+function calculateDurationFromSegments(segments: any[]): number {
+  if (segments.length === 0) return 60;
+  
+  const lastSegment = segments[segments.length - 1];
+  return lastSegment.endTime || 60;
+}
+
+export function analyzeWhisperTranscription(transcriptionResult: any): any {
+  if (!transcriptionResult.success || !transcriptionResult.text) {
+    return {
+      sentiment: 0.5,
+      confidence: 0.3,
+      criticalMoments: [],
+      recommendations: ["Transcrição não disponível para análise"],
+      summary: "Falha na transcrição"
+    };
+  }
+
+  const text = transcriptionResult.text.toLowerCase();
+  const segments = transcriptionResult.segments || [];
+  
+  // Count critical words across all segments
+  let totalCriticalWords = 0;
+  const criticalMoments = [];
+  
+  segments.forEach((segment: any, index: number) => {
+    const criticalWords = segment.criticalWords || [];
+    totalCriticalWords += criticalWords.length;
+    
+    if (criticalWords.length > 0) {
+      criticalMoments.push({
+        timestamp: segment.startTime,
+        text: segment.text,
+        keywords: criticalWords,
+        severity: criticalWords.length > 2 ? 'high' : 'medium'
+      });
+    }
+  });
+
+  // Sentiment analysis based on content
+  let sentiment = 0.7; // Default neutral-positive
+  
+  if (text.includes('problema') || text.includes('reclamação')) {
+    sentiment -= 0.2;
+  }
+  if (text.includes('irritado') || text.includes('chateado')) {
+    sentiment -= 0.3;
+  }
+  if (text.includes('obrigado') || text.includes('excelente')) {
+    sentiment += 0.2;
+  }
+  
+  sentiment = Math.max(0, Math.min(1, sentiment));
+
+  return {
+    sentiment,
+    confidence: 0.85,
+    criticalMoments,
+    recommendations: generateRecommendations(sentiment, totalCriticalWords),
+    summary: `Transcrição real processada com ${segments.length} segmentos. ${totalCriticalWords} palavras críticas detectadas.`
+  };
+}
+
+function generateRecommendations(sentiment: number, criticalCount: number): string[] {
+  const recommendations = [];
+  
+  if (sentiment < 0.4) {
+    recommendations.push("Cliente demonstra insatisfação - considere escalonamento");
+    recommendations.push("Revisar protocolos de atendimento para situações críticas");
+  }
+  
+  if (criticalCount > 3) {
+    recommendations.push("Múltiplas palavras críticas detectadas - monitorar de perto");
+    recommendations.push("Considerar intervenção do supervisor em tempo real");
+  }
+  
+  if (sentiment > 0.7 && criticalCount === 0) {
+    recommendations.push("Atendimento positivo - usar como exemplo de boas práticas");
+  }
+  
+  if (recommendations.length === 0) {
+    recommendations.push("Atendimento dentro dos padrões normais");
+  }
+  
+  return recommendations;
 }

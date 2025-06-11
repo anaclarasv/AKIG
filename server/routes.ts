@@ -580,102 +580,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use Python transcriber with SpeechRecognition (based on QualityCallMonitor approach)
+      // Use OpenAI Whisper for real transcription
       try {
-        console.log('Starting Python-based real transcription for session:', sessionId);
+        console.log('Starting OpenAI Whisper transcription for session:', sessionId);
         
-        const { spawn } = await import('child_process');
-        const util = await import('util');
-        const execFile = util.promisify(spawn);
+        const { transcribeAudioWithWhisper, analyzeWhisperTranscription } = await import('./real-whisper-transcription');
         
-        // Execute honest transcriber - no fake dialogues
-        const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/honest-transcriber.py',
-          resolvedPath
-        ], {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        const transcriptionResult = await transcribeAudioWithWhisper(resolvedPath);
         
-        let stdout = '';
-        let stderr = '';
-        
-        pythonProcess.stdout.on('data', (data) => {
-          stdout += data.toString();
-        });
-        
-        pythonProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
-        
-        const result = await new Promise((resolve, reject) => {
-          pythonProcess.on('close', (code) => {
-            if (code === 0) {
-              try {
-                const transcriptionResult = JSON.parse(stdout);
-                resolve(transcriptionResult);
-              } catch (parseError) {
-                reject(new Error(`Failed to parse transcription result: ${parseError}`));
-              }
-            } else {
-              reject(new Error(`Python transcriber failed with code ${code}: ${stderr}`));
-            }
+        if (transcriptionResult.success) {
+          console.log(`Whisper transcription successful: ${transcriptionResult.text.length} characters`);
+          
+          // Analyze the transcription
+          const analysis = analyzeWhisperTranscription(transcriptionResult);
+          
+          // Update session with transcription results
+          await storage.updateMonitoringSession(sessionId, {
+            transcription: transcriptionResult.text,
+            transcriptionSegments: transcriptionResult.segments,
+            duration: transcriptionResult.duration,
+            status: 'completed',
+            completedAt: new Date(),
+            analysis: analysis
           });
           
-          pythonProcess.on('error', (error) => {
-            reject(new Error(`Failed to start Python transcriber: ${error.message}`));
+          console.log(`Session ${sessionId} updated with Whisper transcription and analysis`);
+        } else {
+          console.error(`Whisper transcription failed: ${transcriptionResult.error}`);
+          await storage.updateMonitoringSession(sessionId, {
+            status: 'error',
+            error: transcriptionResult.error || 'Whisper transcription failed'
           });
-          
-          // Timeout after 5 minutes
-          setTimeout(() => {
-            pythonProcess.kill();
-            reject(new Error('Transcription timeout'));
-          }, 300000);
-        });
-        
-        const transcriptionData = result as any;
-        
-        // Generate AI analysis based on real transcription
-        const transcript = transcriptionData.text || '';
-        const hasGreeting = transcript.toLowerCase().includes('olá') || transcript.toLowerCase().includes('bom dia');
-        const hasGratitude = transcript.toLowerCase().includes('obrigad') || transcript.toLowerCase().includes('agradec');
-        const hasProblem = transcript.toLowerCase().includes('problema') || transcript.toLowerCase().includes('dificuldade');
-        
-        const sentiment = hasGratitude ? 0.9 : hasGreeting ? 0.8 : hasProblem ? 0.4 : 0.7;
-        
-        const aiAnalysis = {
-          sentiment,
-          keyTopics: [
-            ...(hasGreeting ? ['saudação'] : []),
-            ...(hasGratitude ? ['agradecimento'] : []),
-            ...(hasProblem ? ['problema'] : []),
-            'atendimento'
-          ],
-          criticalMoments: hasProblem ? [
-            { time: transcriptionData.duration * 0.3, description: 'Cliente relata dificuldade' }
-          ] : [],
-          recommendations: [
-            transcriptionData.success ? 'Transcrição processada com sucesso' : 'Verificar qualidade do áudio',
-            sentiment > 0.7 ? 'Manter padrão de qualidade' : 'Melhorar abordagem de atendimento'
-          ],
-          score: Math.round(sentiment * 10)
-        };
-        
-        const finalTranscriptionData = {
-          segments: transcriptionData.segments || [],
-          totalDuration: transcriptionData.duration || 60
-        };
-
-        await storage.updateMonitoringSession(sessionId, {
-          transcription: finalTranscriptionData,
-          aiAnalysis,
-          status: 'completed'
-        });
-
-        console.log('Python transcription completed for session:', sessionId, 'Success:', transcriptionData.success);
+        }
       } catch (error) {
-        console.error('Python transcription failed:', error);
+        console.error('OpenAI Whisper transcription failed:', error);
         await storage.updateMonitoringSession(sessionId, {
-          status: 'failed'
+          status: 'error',
+          error: `Whisper transcription error: ${(error as any).message}`
         });
         return res.status(500).json({ message: `Transcription failed: ${(error as any).message}` });
       }
