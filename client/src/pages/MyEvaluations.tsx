@@ -25,7 +25,8 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  BarChart3
+  BarChart3,
+  Eye
 } from "lucide-react";
 import type { Evaluation, MonitoringSession } from "@/types";
 
