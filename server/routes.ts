@@ -685,9 +685,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transcription: {
               text: result.text,
               segments: result.segments,
-              totalDuration: result.duration
+              totalDuration: Math.round(result.duration)
             },
-            duration: result.duration,
+            duration: Math.round(result.duration),
             aiAnalysis: aiAnalysis,
             status: 'completed'
           });
