@@ -132,9 +132,12 @@ export interface IStorage {
   // Monitoring Forms operations
   getActiveMonitoringForm(): Promise<any>;
   getMonitoringForm(id: number): Promise<any>;
+  getMonitoringFormTemplate(id: number): Promise<any>;
   createMonitoringEvaluation(evaluation: any): Promise<any>;
+  getMonitoringEvaluation(monitoringSessionId: number): Promise<any>;
   getMonitoringEvaluations(sessionId?: number): Promise<any[]>;
   updateMonitoringEvaluation(id: number, updates: any): Promise<any>;
+  getEvaluationResponse(evaluationId: number, criterionId: number): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {

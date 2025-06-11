@@ -418,15 +418,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (user?.role === 'agent') {
-        return res.status(403).json({ message: "Access denied" });
-      }
       const sessionId = parseInt(req.params.id);
       const session = await storage.getMonitoringSession(sessionId);
+      
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
-      res.json(session);
+
+      // Agents can only view their own sessions
+      if (user?.role === 'agent' && session.agentId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get agent and evaluator info
+      const agent = await storage.getUser(session.agentId);
+      const evaluator = session.evaluatorId ? await storage.getUser(session.evaluatorId) : null;
+
+      const sessionWithDetails = {
+        ...session,
+        agent: agent ? {
+          firstName: agent.firstName,
+          lastName: agent.lastName
+        } : null,
+        evaluator: evaluator ? {
+          firstName: evaluator.firstName,
+          lastName: evaluator.lastName
+        } : null
+      };
+
+      res.json(sessionWithDetails);
     } catch (error) {
       console.error("Error fetching monitoring session:", error);
       res.status(500).json({ message: "Failed to fetch monitoring session" });
@@ -1267,6 +1287,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
       res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  // Monitoring Evaluations endpoints
+  app.get("/api/monitoring-evaluations/:monitoringId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const monitoringId = parseInt(req.params.monitoringId);
+      
+      // Get the monitoring session first to check permissions
+      const monitoringSession = await storage.getMonitoringSession(monitoringId);
+      if (!monitoringSession) {
+        return res.status(404).json({ message: "Monitoring session not found" });
+      }
+
+      // Agents can only view evaluations of their own sessions
+      if (user?.role === 'agent' && monitoringSession.agentId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const evaluation = await storage.getMonitoringEvaluation(monitoringId);
+      if (!evaluation) {
+        return res.status(404).json({ message: "Evaluation not found" });
+      }
+
+      // Get form criteria and build sections with responses
+      const formTemplate = await storage.getMonitoringFormTemplate(1);
+      if (!formTemplate) {
+        return res.status(404).json({ message: "Form template not found" });
+      }
+
+      const sections = await Promise.all(
+        formTemplate.sections.map(async (section) => {
+          const criteria = await Promise.all(
+            section.criteria.map(async (criterion) => {
+              // Get the response for this criterion from evaluation_responses
+              const response = await storage.getEvaluationResponse(evaluation.id, criterion.id);
+              return {
+                ...criterion,
+                response: response?.value || null
+              };
+            })
+          );
+
+          // Calculate achieved score for this section
+          const achievedScore = criteria.reduce((total, criterion) => {
+            if (criterion.isCritical && criterion.response === "true") {
+              // Critical failure - section gets 0 points
+              return 0;
+            }
+            if (!criterion.isCritical && (criterion.response === "sim" || criterion.response === "na")) {
+              return total + criterion.weight;
+            }
+            return total;
+          }, 0);
+
+          return {
+            ...section,
+            criteria,
+            achievedScore
+          };
+        })
+      );
+
+      const evaluationWithSections = {
+        ...evaluation,
+        sections
+      };
+
+      res.json(evaluationWithSections);
+    } catch (error) {
+      console.error("Error fetching monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch monitoring evaluation" });
+    }
+  });
+
+  // Sign monitoring evaluation (for agents)
+  app.post("/api/monitoring-evaluations/:id/sign", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const evaluationId = parseInt(req.params.id);
+      const { comment, agentId, signedAt } = req.body;
+
+      // Only agents can sign evaluations
+      if (user?.role !== 'agent') {
+        return res.status(403).json({ message: "Only agents can sign evaluations" });
+      }
+
+      const evaluation = await storage.getMonitoringEvaluation(evaluationId);
+      if (!evaluation) {
+        return res.status(404).json({ message: "Evaluation not found" });
+      }
+
+      // Get the monitoring session to verify ownership
+      const monitoringSession = await storage.getMonitoringSession(evaluation.monitoringSessionId);
+      if (!monitoringSession || monitoringSession.agentId !== user.id) {
+        return res.status(403).json({ message: "You can only sign your own evaluations" });
+      }
+
+      // Check if already signed
+      if (evaluation.agentSignature) {
+        return res.status(400).json({ message: "Evaluation already signed" });
+      }
+
+      // Update evaluation with signature
+      const updatedEvaluation = await storage.updateMonitoringEvaluation(evaluationId, {
+        agentSignature: comment || "Assinatura digital confirmada",
+        agentSignedAt: new Date(signedAt)
+      });
+
+      res.json(updatedEvaluation);
+    } catch (error) {
+      console.error("Error signing monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to sign monitoring evaluation" });
     }
   });
 
