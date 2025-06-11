@@ -18,10 +18,13 @@ import type { Evaluation } from "@/types";
 export default function Evaluations() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
+  const [selectedContest, setSelectedContest] = useState<any>(null);
   const [contestReason, setContestReason] = useState("");
+  const [contestResponse, setContestResponse] = useState("");
   const [editComment, setEditComment] = useState("");
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isContestDialogOpen, setIsContestDialogOpen] = useState(false);
+  const [isContestReviewDialogOpen, setIsContestReviewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,6 +33,12 @@ export default function Evaluations() {
   // For agents, only fetch their own evaluations
   const { data: evaluations, isLoading } = useQuery<Evaluation[]>({
     queryKey: user?.role === 'agent' ? ['/api/evaluations', 'agent', user.id] : ['/api/evaluations'],
+  });
+
+  // Fetch evaluation contests for admin and evaluator roles
+  const { data: contests } = useQuery({
+    queryKey: ['/api/evaluation-contests'],
+    enabled: ['admin', 'evaluator'].includes(user?.role || ''),
   });
 
   // Mutation for signing evaluations
@@ -56,19 +65,19 @@ export default function Evaluations() {
     },
   });
 
-  // Mutation for contesting evaluations
-  const contestEvaluationMutation = useMutation({
+  // Mutation for soliciting contestations (agent/supervisor)
+  const solicitContestMutation = useMutation({
     mutationFn: async ({ evaluationId, reason }: { evaluationId: number, reason: string }) => {
-      const response = await apiRequest("PATCH", `/api/evaluations/${evaluationId}`, {
-        status: "contested",
-        contestReason: reason
+      const response = await apiRequest("POST", "/api/evaluation-contests", {
+        evaluationId,
+        reason
       });
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Contestação registrada",
-        description: "A contestação foi registrada com sucesso.",
+        title: "Contestação solicitada",
+        description: "Sua solicitação de contestação foi enviada para análise.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/evaluations'] });
       setIsContestDialogOpen(false);
@@ -76,7 +85,34 @@ export default function Evaluations() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao contestar",
+        title: "Erro ao solicitar contestação",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for reviewing contestations (admin/evaluator)
+  const reviewContestMutation = useMutation({
+    mutationFn: async ({ contestId, status, response }: { contestId: number, status: string, response: string }) => {
+      const res = await apiRequest("PATCH", `/api/evaluation-contests/${contestId}`, {
+        status,
+        response
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contestação analisada",
+        description: "A análise da contestação foi registrada com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/evaluation-contests'] });
+      setIsContestReviewDialogOpen(false);
+      setContestResponse("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao analisar contestação",
         description: error.message,
         variant: "destructive",
       });
@@ -130,11 +166,27 @@ export default function Evaluations() {
     setIsEditDialogOpen(true);
   };
 
+  const handleReviewContest = (contest: any) => {
+    setSelectedContest(contest);
+    setIsContestReviewDialogOpen(true);
+  };
+
   const handleSubmitContest = () => {
     if (selectedEvaluation && contestReason.trim()) {
-      contestEvaluationMutation.mutate({
+      // Agent/Supervisor solicita contestação
+      solicitContestMutation.mutate({
         evaluationId: selectedEvaluation.id,
         reason: contestReason.trim()
+      });
+    }
+  };
+
+  const handleSubmitContestReview = (status: 'approved' | 'rejected') => {
+    if (selectedContest && contestResponse.trim()) {
+      reviewContestMutation.mutate({
+        contestId: selectedContest.id,
+        status,
+        response: contestResponse.trim()
       });
     }
   };
@@ -217,11 +269,16 @@ export default function Evaluations() {
 
       <div className="mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${['admin', 'evaluator'].includes(user?.role || '') ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="all">Todas</TabsTrigger>
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
             <TabsTrigger value="signed">Assinadas</TabsTrigger>
-            <TabsTrigger value="contested">Contestadas</TabsTrigger>
+            {['admin', 'evaluator'].includes(user?.role || '') && (
+              <TabsTrigger value="contests">Contestações Recebidas</TabsTrigger>
+            )}
+            {['agent', 'supervisor'].includes(user?.role || '') && (
+              <TabsTrigger value="contested">Contestadas</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
