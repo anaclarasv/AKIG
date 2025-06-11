@@ -328,7 +328,7 @@ export class DatabaseStorage implements IStorage {
       ...session,
       agent,
       evaluator,
-    };
+    } as any;
   }
 
   async createMonitoringSession(session: InsertMonitoringSession): Promise<MonitoringSession> {
