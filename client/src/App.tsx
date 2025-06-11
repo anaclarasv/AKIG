@@ -21,6 +21,7 @@ import LGPDCompliance from "@/pages/LGPDCompliance";
 import MyEvaluations from "@/pages/MyEvaluations";
 import ArchivedSessions from "@/pages/ArchivedSessions";
 import TestEvaluationForm from "@/pages/TestEvaluationForm";
+import SimpleTestForm from "@/pages/SimpleTestForm";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -43,6 +44,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/demo-evaluation" component={SimpleTestForm} />
         <Route component={NotFound} />
       </Switch>
     );
