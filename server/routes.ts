@@ -1577,14 +1577,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sign monitoring evaluation (for agents)
-  app.post("/api/monitoring-evaluations/:id/sign", isAuthenticated, async (req: any, res) => {
+  app.post("/api/monitoring-evaluations/:id/sign", async (req: any, res) => {
     try {
+      // Check if user is authenticated
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
       const evaluationId = parseInt(req.params.id);
-      const { comment, agentId, signedAt } = req.body;
+      const { comment, signedAt } = req.body;
 
       // Only agents can sign evaluations
-      if (user?.role !== 'agent') {
+      if (user.role !== 'agent') {
         return res.status(403).json({ message: "Only agents can sign evaluations" });
       }
 
@@ -1607,7 +1616,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update evaluation with signature
       const updatedEvaluation = await storage.updateMonitoringEvaluation(evaluationId, {
         agentSignature: comment || "Assinatura digital confirmada",
-        agentSignedAt: new Date(signedAt)
+        agentSignedAt: new Date(signedAt || new Date()),
+        status: 'signed'
       });
 
       res.json(updatedEvaluation);

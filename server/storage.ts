@@ -71,6 +71,9 @@ export interface IStorage {
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
   updateEvaluation(id: number, evaluation: Partial<InsertEvaluation>): Promise<Evaluation>;
   
+  // Monitoring evaluation operations
+  updateMonitoringEvaluation(id: number, updates: any): Promise<any>;
+  
   // Evaluation criteria operations
   getEvaluationCriteria(companyId: number): Promise<EvaluationCriteria[]>;
   createEvaluationCriteria(criteria: InsertEvaluationCriteria): Promise<EvaluationCriteria>;
@@ -1219,7 +1222,18 @@ export class DatabaseStorage implements IStorage {
     return response;
   }
 
+  async updateMonitoringEvaluation(evaluationId: number, updates: any): Promise<any> {
+    const [updated] = await db
+      .update(monitoringEvaluations)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringEvaluations.id, evaluationId))
+      .returning();
 
+    return updated;
+  }
 }
 
 export const storage = new DatabaseStorage();

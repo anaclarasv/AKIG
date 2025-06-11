@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Clock, 
   Calendar, 
@@ -81,16 +82,9 @@ export default function MonitoringEvaluationDetails() {
 
   const signMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/monitoring-evaluations/${id}/sign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          comment: signatureComment,
-          agentId: user?.id,
-          signedAt: new Date().toISOString(),
-        }),
+      const response = await apiRequest('POST', `/api/monitoring-evaluations/${id}/sign`, {
+        comment: signatureComment,
+        signedAt: new Date().toISOString(),
       });
 
       if (!response.ok) {
