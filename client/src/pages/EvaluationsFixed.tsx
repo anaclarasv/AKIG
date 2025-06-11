@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, Clock, AlertTriangle, FileSignature, Eye, Edit, AlertCircle } from "lucide-react";
@@ -15,7 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Evaluation } from "@/types";
 
-export default function Evaluations() {
+export default function EvaluationsFixed() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
   const [selectedContest, setSelectedContest] = useState<any>(null);
@@ -31,12 +31,12 @@ export default function Evaluations() {
   const queryClient = useQueryClient();
 
   // For agents, only fetch their own evaluations
-  const { data: evaluations, isLoading } = useQuery<Evaluation[]>({
+  const { data: evaluations = [], isLoading } = useQuery<Evaluation[]>({
     queryKey: user?.role === 'agent' ? ['/api/evaluations', 'agent', user.id] : ['/api/evaluations'],
   });
 
   // Fetch evaluation contests for admin and evaluator roles
-  const { data: contests = [] } = useQuery({
+  const { data: contests = [] } = useQuery<any[]>({
     queryKey: ['/api/evaluation-contests'],
     enabled: ['admin', 'evaluator'].includes(user?.role || ''),
   });
@@ -129,8 +129,8 @@ export default function Evaluations() {
     },
     onSuccess: () => {
       toast({
-        title: "Comentário salvo",
-        description: "O comentário do supervisor foi salvo com sucesso.",
+        title: "Comentário atualizado",
+        description: "O comentário foi atualizado com sucesso.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/evaluations'] });
       setIsEditDialogOpen(false);
@@ -138,14 +138,18 @@ export default function Evaluations() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao salvar comentário",
+        title: "Erro ao editar",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Handler functions
+  const filteredEvaluations = evaluations.filter((evaluation) => {
+    if (activeTab === "all") return true;
+    return evaluation.status === activeTab;
+  });
+
   const handleViewEvaluation = (evaluation: Evaluation) => {
     setSelectedEvaluation(evaluation);
     setIsViewDialogOpen(true);
@@ -173,7 +177,6 @@ export default function Evaluations() {
 
   const handleSubmitContest = () => {
     if (selectedEvaluation && contestReason.trim()) {
-      // Agent/Supervisor solicita contestação
       solicitContestMutation.mutate({
         evaluationId: selectedEvaluation.id,
         reason: contestReason.trim()
@@ -232,13 +235,11 @@ export default function Evaluations() {
     return "text-red-600";
   };
 
-  const filteredEvaluations = evaluations?.filter(evaluation => {
-    if (activeTab === "all") return true;
-    return evaluation.status === activeTab;
-  });
-
+  // Header content based on user role
   const headerTitle = user?.role === 'agent' ? 'Minhas Avaliações' : 'Avaliações';
-  const headerSubtitle = user?.role === 'agent' ? 'Visualize suas avaliações de atendimento' : 'Gerenciamento de avaliações de monitoria';
+  const headerSubtitle = user?.role === 'agent' 
+    ? 'Visualize e gerencie suas avaliações de atendimento'
+    : 'Gerencie avaliações de atendimento e contestações';
 
   if (isLoading) {
     return (
@@ -273,11 +274,12 @@ export default function Evaluations() {
             <TabsTrigger value="all">Todas</TabsTrigger>
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
             <TabsTrigger value="signed">Assinadas</TabsTrigger>
-            {['admin', 'evaluator'].includes(user?.role || '') ? (
-              <TabsTrigger value="contests">Contestações Recebidas</TabsTrigger>
-            ) : ['agent', 'supervisor'].includes(user?.role || '') ? (
+            {['admin', 'evaluator'].includes(user?.role || '') && (
+              <TabsTrigger value="contests">Contestações</TabsTrigger>
+            )}
+            {['agent', 'supervisor'].includes(user?.role || '') && (
               <TabsTrigger value="contested">Contestadas</TabsTrigger>
-            ) : null}
+            )}
           </TabsList>
 
           {/* Aba de Contestações para Admin/Evaluator */}
@@ -297,7 +299,7 @@ export default function Evaluations() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Solicitada em: {new Date(contest.createdAt).toLocaleString('pt-BR')}
+                        Solicitada em: {new Date(contest.createdAt || Date.now()).toLocaleString('pt-BR')}
                       </p>
                     </CardHeader>
                     <CardContent>
@@ -352,220 +354,126 @@ export default function Evaluations() {
             <TabsContent value={activeTab} className="mt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {filteredEvaluations?.map((evaluation) => (
-                <Card key={evaluation.id} className="akig-card-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center">
-                        {getStatusIcon(evaluation.status)}
-                        <span className="ml-2">Avaliação #{evaluation.id}</span>
-                      </CardTitle>
-                      {getStatusBadge(evaluation.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Criada em: {new Date(evaluation.createdAt).toLocaleString('pt-BR')}
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+                  <Card key={evaluation.id} className="akig-card-shadow">
+                    <CardHeader>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Nota Final:</span>
-                        <span className={`text-xl font-bold ${getScoreColor(Number(evaluation.finalScore))}`}>
-                          {Number(evaluation.finalScore).toFixed(1)}
-                        </span>
+                        <CardTitle className="text-lg flex items-center">
+                          {getStatusIcon(evaluation.status)}
+                          <span className="ml-2">Avaliação #{evaluation.id}</span>
+                        </CardTitle>
+                        {getStatusBadge(evaluation.status)}
                       </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
-                            AG
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">Agente #123</p>
-                          <p className="text-xs text-muted-foreground">
-                            Avaliador: {evaluation.evaluatorId}
-                          </p>
+                      <p className="text-sm text-muted-foreground">
+                        Criada em: {new Date(evaluation.createdAt).toLocaleString('pt-BR')}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Nota Final:</span>
+                          <span className={`text-xl font-bold ${getScoreColor(Number(evaluation.finalScore))}`}>
+                            {Number(evaluation.finalScore).toFixed(1)}
+                          </span>
                         </div>
-                      </div>
 
-                      {evaluation.observations && (
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-sm text-muted-foreground font-medium mb-1">Observações:</p>
-                          <p className="text-sm">{evaluation.observations}</p>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
+                              AG
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Agente #{evaluation.monitoringSessionId}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Avaliador: {evaluation.evaluatorId}
+                            </p>
+                          </div>
                         </div>
-                      )}
 
-                      {evaluation.status === "contested" && evaluation.contestReason && (
-                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                          <p className="text-sm text-red-700 font-medium mb-1">Motivo da Contestação:</p>
-                          <p className="text-sm text-red-600">{evaluation.contestReason}</p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-2 pt-2">
-                        {/* Visualizar button - available for all roles */}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleViewEvaluation(evaluation)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Visualizar
-                        </Button>
-
-                        {/* Botões sempre visíveis para teste - remover verificação de role temporariamente */}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => {
-                            console.log('Clicou em Editar para avaliação:', evaluation.id);
-                            handleEditEvaluation(evaluation);
-                          }}
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-amber-600 hover:text-amber-800"
-                          onClick={() => {
-                            console.log('Clicou em Contestação para avaliação:', evaluation.id);
-                            handleContestEvaluation(evaluation);
-                          }}
-                        >
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          Contestação
-                        </Button>
-
-
-
-                        {/* Agent-specific buttons */}
-                        {user?.role === 'agent' && evaluation.status === "pending" && (
-                          <Button 
-                            size="sm" 
-                            className="akig-bg-primary hover:opacity-90"
-                            onClick={() => handleSignEvaluation(evaluation.id)}
-                            disabled={signEvaluationMutation.isPending}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Assinar
-                          </Button>
+                        {evaluation.observations && (
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-sm text-muted-foreground font-medium mb-1">Observações:</p>
+                            <p className="text-sm">{evaluation.observations}</p>
+                          </div>
                         )}
 
-                        {user?.role === 'agent' && evaluation.status === "signed" && (
+                        <div className="flex items-center space-x-2 pt-2">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="text-amber-600 hover:text-amber-800"
-                            onClick={() => handleContestEvaluation(evaluation)}
+                            onClick={() => handleViewEvaluation(evaluation)}
                           >
-                            <AlertCircle className="w-4 h-4 mr-1" />
-                            Contestar
+                            <Eye className="w-4 h-4 mr-1" />
+                            Visualizar
                           </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
 
-            {(!filteredEvaluations || filteredEvaluations.length === 0) && (
-              <Card className="akig-card-shadow">
-                <CardContent className="pt-6 text-center">
-                  <div className="py-12">
-                    <FileSignature className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Nenhuma avaliação encontrada
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {activeTab === "all" 
-                        ? "Nenhuma avaliação foi criada ainda" 
-                        : `Nenhuma avaliação ${activeTab === "pending" ? "pendente" : activeTab === "signed" ? "assinada" : "contestada"} encontrada`
-                      }
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+                          {/* Buttons for agent/supervisor - can solicit contestation */}
+                          {['agent', 'supervisor'].includes(user?.role || '') && evaluation.status === 'signed' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-amber-600 hover:text-amber-800"
+                              onClick={() => handleContestEvaluation(evaluation)}
+                            >
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              Solicitar Contestação
+                            </Button>
+                          )}
+
+                          {/* Buttons for admin/evaluator - can edit */}
+                          {['admin', 'evaluator'].includes(user?.role || '') && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => handleEditEvaluation(evaluation)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {filteredEvaluations.length === 0 && (
+                  <Card className="col-span-2">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <div className="text-center">
+                        <FileSignature className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          Nenhuma avaliação encontrada
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {activeTab === "all" 
+                            ? "Nenhuma avaliação foi criada ainda" 
+                            : `Nenhuma avaliação ${activeTab === "pending" ? "pendente" : activeTab === "signed" ? "assinada" : "contestada"} encontrada`
+                          }
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
           )}
         </Tabs>
       </div>
 
-      {/* View Evaluation Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Avaliação #{selectedEvaluation?.id}</DialogTitle>
-          </DialogHeader>
-          {selectedEvaluation && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <div className="mt-1">{getStatusBadge(selectedEvaluation.status)}</div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Nota Final</Label>
-                  <div className={`text-2xl font-bold mt-1 ${getScoreColor(Number(selectedEvaluation.finalScore))}`}>
-                    {Number(selectedEvaluation.finalScore).toFixed(1)}
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium">Avaliador</Label>
-                <p className="mt-1 text-sm">{selectedEvaluation.evaluatorId}</p>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium">Data de Criação</Label>
-                <p className="mt-1 text-sm">{new Date(selectedEvaluation.createdAt).toLocaleString('pt-BR')}</p>
-              </div>
-
-              {selectedEvaluation.observations && (
-                <div>
-                  <Label className="text-sm font-medium">Observações</Label>
-                  <div className="mt-1 p-3 bg-muted rounded-lg">
-                    <p className="text-sm">{selectedEvaluation.observations}</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedEvaluation.contestReason && (
-                <div>
-                  <Label className="text-sm font-medium">Motivo da Contestação</Label>
-                  <div className="mt-1 p-3 bg-red-50 rounded-lg border border-red-200">
-                    <p className="text-sm text-red-600">{selectedEvaluation.contestReason}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                  Fechar
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Contest Evaluation Dialog */}
+      {/* Dialog for soliciting contestation */}
       <Dialog open={isContestDialogOpen} onOpenChange={setIsContestDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contestar Avaliação #{selectedEvaluation?.id}</DialogTitle>
+            <DialogTitle>Solicitar Contestação - Avaliação #{selectedEvaluation?.id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="contestReason">Motivo da Contestação *</Label>
               <Textarea
                 id="contestReason"
-                placeholder="Descreva o motivo da contestação desta avaliação..."
+                placeholder="Descreva o motivo da solicitação de contestação desta avaliação..."
                 value={contestReason}
                 onChange={(e) => setContestReason(e.target.value)}
                 rows={4}
@@ -585,30 +493,35 @@ export default function Evaluations() {
               </Button>
               <Button 
                 onClick={handleSubmitContest}
-                disabled={!contestReason.trim() || contestEvaluationMutation.isPending}
+                disabled={!contestReason.trim() || solicitContestMutation.isPending}
                 className="bg-amber-600 hover:bg-amber-700"
               >
-                {contestEvaluationMutation.isPending ? "Enviando..." : "Enviar Contestação"}
+                {solicitContestMutation.isPending ? "Enviando..." : "Solicitar Contestação"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Evaluation Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      {/* Dialog for reviewing contestation */}
+      <Dialog open={isContestReviewDialogOpen} onOpenChange={setIsContestReviewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Avaliação #{selectedEvaluation?.id}</DialogTitle>
+            <DialogTitle>Analisar Contestação #{selectedContest?.id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <p className="text-sm text-orange-700 font-medium mb-1">Motivo da Contestação:</p>
+              <p className="text-sm text-orange-600">{selectedContest?.reason}</p>
+            </div>
+            
             <div>
-              <Label htmlFor="editComment">Comentário do Supervisor</Label>
+              <Label htmlFor="contestResponse">Resposta da Análise *</Label>
               <Textarea
-                id="editComment"
-                placeholder="Adicione observações ou comentários sobre esta avaliação..."
-                value={editComment}
-                onChange={(e) => setEditComment(e.target.value)}
+                id="contestResponse"
+                placeholder="Descreva sua análise e decisão sobre esta contestação..."
+                value={contestResponse}
+                onChange={(e) => setContestResponse(e.target.value)}
                 rows={4}
                 className="mt-1"
               />
@@ -618,18 +531,25 @@ export default function Evaluations() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setEditComment("");
+                  setIsContestReviewDialogOpen(false);
+                  setContestResponse("");
                 }}
               >
                 Cancelar
               </Button>
               <Button 
-                onClick={handleSubmitEdit}
-                disabled={editEvaluationMutation.isPending}
-                className="akig-bg-primary hover:opacity-90"
+                variant="destructive"
+                onClick={() => handleSubmitContestReview('rejected')}
+                disabled={!contestResponse.trim() || reviewContestMutation.isPending}
               >
-                {editEvaluationMutation.isPending ? "Salvando..." : "Salvar Comentário"}
+                Rejeitar
+              </Button>
+              <Button 
+                onClick={() => handleSubmitContestReview('approved')}
+                disabled={!contestResponse.trim() || reviewContestMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {reviewContestMutation.isPending ? "Processando..." : "Aprovar"}
               </Button>
             </div>
           </div>

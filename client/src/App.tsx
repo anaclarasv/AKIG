@@ -9,7 +9,7 @@ import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import Monitoring from "@/pages/Monitoring";
-import Evaluations from "@/pages/Evaluations";
+import EvaluationsFixed from "@/pages/EvaluationsFixed";
 import Ranking from "@/pages/Ranking";
 import Reports from "@/pages/Reports";
 import Companies from "@/pages/Companies";
