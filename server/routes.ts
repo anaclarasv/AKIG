@@ -588,9 +588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const util = await import('util');
         const execFile = util.promisify(spawn);
         
-        // Execute Python transcriber for real audio content
+        // Execute Python transcriber with Whisper local CLI
         const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/real-audio-transcriber.py',
+          '/home/runner/workspace/server/whisper-local-transcriber.py',
           resolvedPath
         ], {
           stdio: ['pipe', 'pipe', 'pipe']
