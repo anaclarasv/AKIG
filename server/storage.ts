@@ -1161,6 +1161,22 @@ export class DatabaseStorage implements IStorage {
     return evaluation;
   }
 
+  async getMonitoringEvaluationById(evaluationId: number): Promise<any> {
+    const [evaluation] = await db
+      .select()
+      .from(monitoringEvaluations)
+      .where(eq(monitoringEvaluations.id, evaluationId));
+
+    return evaluation;
+  }
+
+  async getEvaluationResponses(evaluationId: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(evaluationResponses)
+      .where(eq(evaluationResponses.evaluationId, evaluationId));
+  }
+
   async getMonitoringFormTemplate(id: number): Promise<any> {
     // Get form template with sections and criteria
     const form = await db

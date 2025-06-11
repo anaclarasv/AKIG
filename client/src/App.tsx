@@ -23,6 +23,7 @@ import ArchivedSessions from "@/pages/ArchivedSessions";
 import TestEvaluationForm from "@/pages/TestEvaluationForm";
 import SimpleTestForm from "@/pages/SimpleTestForm";
 import MonitoringDetails from "@/pages/MonitoringDetails";
+import MonitoringEvaluationDetails from "@/pages/MonitoringEvaluationDetails";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -68,6 +69,11 @@ function Router() {
             <Route path="/my-evaluations" component={() => (
               <ProtectedRoute allowedRoles={['agent']}>
                 <MyEvaluations />
+              </ProtectedRoute>
+            )} />
+            <Route path="/evaluation/:id" component={() => (
+              <ProtectedRoute allowedRoles={['agent']}>
+                <MonitoringEvaluationDetails />
               </ProtectedRoute>
             )} />
             <Route path="/evaluation-criteria" component={() => (

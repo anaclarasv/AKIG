@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import Header from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ interface EvaluationScores {
 
 export default function MyEvaluationsPage() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [selectedPeriod, setSelectedPeriod] = useState("30");
 
   const { data: evaluations, isLoading } = useQuery<EvaluationWithSession[]>({

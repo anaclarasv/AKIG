@@ -1422,6 +1422,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get detailed monitoring evaluation with session data (for evaluation details page)
+  app.get("/api/monitoring-evaluations/:id/details", isAuthenticated, async (req: any, res) => {
+    try {
+      const evaluationId = parseInt(req.params.id);
+      const user = await storage.getUser(req.user.id);
+      
+      // Get the evaluation
+      const evaluation = await storage.getMonitoringEvaluationById(evaluationId);
+      if (!evaluation) {
+        return res.status(404).json({ message: "Evaluation not found" });
+      }
+
+      // Get the monitoring session with full details
+      const monitoringSession = await storage.getMonitoringSession(evaluation.monitoringSessionId);
+      if (!monitoringSession) {
+        return res.status(404).json({ message: "Monitoring session not found" });
+      }
+
+      // Only agents can view their own evaluations, or supervisors/evaluators can view any
+      if (user?.role === 'agent' && monitoringSession.agentId !== user.id) {
+        return res.status(403).json({ message: "You can only view your own evaluations" });
+      }
+
+      // Get the form and its sections/criteria
+      const form = await storage.getMonitoringForm(evaluation.formId);
+      if (!form) {
+        return res.status(404).json({ message: "Evaluation form not found" });
+      }
+
+      // Get all responses for this evaluation
+      const responses = await storage.getEvaluationResponses(evaluationId);
+
+      // Build sections with criteria and scores
+      const sections = await Promise.all(
+        form.sections.map(async (section: any) => {
+          const criteria = section.criteria.map((criterion: any) => {
+            const response = responses.find((r: any) => r.criteriaId === criterion.id);
+            return {
+              ...criterion,
+              score: response?.pointsEarned || 0,
+              maxScore: criterion.weight,
+              comment: response?.response || ''
+            };
+          });
+
+          return {
+            ...section,
+            criteria
+          };
+        })
+      );
+
+      // Parse transcription if it exists
+      let transcription = null;
+      if (monitoringSession.transcription) {
+        try {
+          transcription = typeof monitoringSession.transcription === 'string' 
+            ? JSON.parse(monitoringSession.transcription) 
+            : monitoringSession.transcription;
+        } catch (e) {
+          console.warn("Failed to parse transcription:", e);
+        }
+      }
+
+      const detailedEvaluation = {
+        ...evaluation,
+        finalScore: parseFloat(evaluation.finalScore as string),
+        partialScore: parseFloat(evaluation.partialScore as string),
+        session: {
+          ...monitoringSession,
+          transcription
+        },
+        sections
+      };
+
+      res.json(detailedEvaluation);
+    } catch (error) {
+      console.error("Error fetching detailed monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch detailed monitoring evaluation" });
+    }
+  });
+
   // Sign monitoring evaluation (for agents)
   app.post("/api/monitoring-evaluations/:id/sign", isAuthenticated, async (req: any, res) => {
     try {
