@@ -29,7 +29,7 @@ import {
   type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists, inArray } from "drizzle-orm";
+import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists, inArray, isNotNull } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -228,7 +228,12 @@ export class DatabaseStorage implements IStorage {
     return updatedCampaign;
   }
 
-  async getMonitoringSessions(companyId?: number, agentId?: string): Promise<MonitoringSession[]> {
+  async getMonitoringSessions(companyId?: number, agentId?: string, includeArchived: boolean = false): Promise<MonitoringSession[]> {
+    const activeCondition = includeArchived ? undefined : and(
+      isNull(monitoringSessions.archivedAt),
+      isNull(monitoringSessions.deletedAt)
+    );
+
     if (companyId && agentId) {
       // Get sessions for specific company and agent
       const sessionsWithCampaigns = await db
@@ -237,7 +242,8 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(and(
           eq(campaigns.companyId, companyId),
-          eq(monitoringSessions.agentId, agentId)
+          eq(monitoringSessions.agentId, agentId),
+          activeCondition
         ))
         .orderBy(desc(monitoringSessions.createdAt));
       
@@ -248,19 +254,27 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(monitoringSessions)
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
-        .where(eq(campaigns.companyId, companyId))
+        .where(and(
+          eq(campaigns.companyId, companyId),
+          activeCondition
+        ))
         .orderBy(desc(monitoringSessions.createdAt));
       
       return sessionsWithCampaigns.map(result => result.monitoring_sessions);
     } else if (agentId) {
       // Get sessions for specific agent
       return await db.select().from(monitoringSessions)
-        .where(eq(monitoringSessions.agentId, agentId))
+        .where(and(
+          eq(monitoringSessions.agentId, agentId),
+          activeCondition
+        ))
         .orderBy(desc(monitoringSessions.createdAt));
     }
     
     // Get all sessions
-    return await db.select().from(monitoringSessions).orderBy(desc(monitoringSessions.createdAt));
+    return await db.select().from(monitoringSessions)
+      .where(activeCondition)
+      .orderBy(desc(monitoringSessions.createdAt));
   }
 
   async getMonitoringSession(id: number): Promise<MonitoringSession | undefined> {

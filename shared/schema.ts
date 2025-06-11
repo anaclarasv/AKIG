@@ -74,7 +74,13 @@ export const monitoringSessions = pgTable("monitoring_sessions", {
   duration: integer("duration"), // in seconds
   criticalMoments: jsonb("critical_moments"), // timestamps of critical moments
   aiAnalysis: jsonb("ai_analysis"), // AI analysis results
-  status: varchar("status").default("pending"), // pending, in_progress, completed, archived
+  status: varchar("status").default("pending"), // pending, in_progress, completed, archived, deleted
+  archivedAt: timestamp("archived_at"),
+  archivedBy: varchar("archived_by").references(() => users.id),
+  archiveReason: text("archive_reason"),
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: varchar("deleted_by").references(() => users.id),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
