@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Filter, Download, Eye, Edit, TriangleAlert } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 // Mock data - in real app this would come from API
 const mockActivities = [
@@ -52,6 +53,7 @@ const mockActivities = [
 ];
 
 export default function ActivityTable() {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -59,6 +61,10 @@ export default function ActivityTable() {
   const [contestModalOpen, setContestModalOpen] = useState(false);
   const [contestReason, setContestReason] = useState("");
   const totalPages = 25; // Mock total pages
+  
+  // Define permissions based on user role
+  const canEdit = user?.role === 'supervisor' || user?.role === 'evaluator';
+  const canContest = user?.role === 'agent' || user?.role === 'supervisor';
 
   const getStatusBadge = (status: string, score: number) => {
     switch (status) {
@@ -184,32 +190,31 @@ export default function ActivityTable() {
                         size="sm" 
                         className="text-blue-600 hover:text-blue-800"
                         onClick={() => {
-                          console.log('Visualizar clicked for activity:', activity.id);
                           setSelectedActivity(activity);
                           setViewModalOpen(true);
                         }}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          console.log('Editar clicked for activity:', activity.id);
-                          setSelectedActivity(activity);
-                          setEditModalOpen(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      {activity.status === "signed" && (
+                      {canEdit && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setSelectedActivity(activity);
+                            setEditModalOpen(true);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canContest && activity.status === "signed" && (
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="text-amber-600 hover:text-amber-800"
                           onClick={() => {
-                            console.log('Contestação clicked for activity:', activity.id);
                             setSelectedActivity(activity);
                             setContestModalOpen(true);
                           }}
@@ -256,14 +261,59 @@ export default function ActivityTable() {
 
         {/* Modal Editar */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Editar Avaliação #{selectedActivity?.id}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Funcionalidade de edição será implementada aqui.
-              </p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-2">Atendente</label>
+                  <p className="text-sm text-muted-foreground p-2 bg-muted rounded">{selectedActivity?.agentName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Campanha</label>
+                  <p className="text-sm text-muted-foreground p-2 bg-muted rounded">{selectedActivity?.campaignName}</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium block mb-2">Nova Nota</label>
+                <div className="flex items-center space-x-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                    <button
+                      key={score}
+                      className={`w-8 h-8 rounded-full border-2 transition-colors text-sm font-medium ${
+                        score === Math.floor(selectedActivity?.score || 0)
+                          ? 'border-blue-500 bg-blue-50 text-blue-600' 
+                          : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                      }`}
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium block mb-2">Observações</label>
+                <Textarea
+                  placeholder="Adicione observações sobre a reavaliação..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => {
+                  // Aqui seria implementada a lógica de salvar
+                  setEditModalOpen(false);
+                }}>
+                  Salvar Alterações
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -318,11 +368,26 @@ export default function ActivityTable() {
                 variant={currentPage === 1 ? "default" : "outline"} 
                 size="sm"
                 className={currentPage === 1 ? "akig-bg-primary" : ""}
+                onClick={() => setCurrentPage(1)}
               >
                 1
               </Button>
-              <Button variant="outline" size="sm">2</Button>
-              <Button variant="outline" size="sm">3</Button>
+              <Button 
+                variant={currentPage === 2 ? "default" : "outline"} 
+                size="sm"
+                className={currentPage === 2 ? "akig-bg-primary" : ""}
+                onClick={() => setCurrentPage(2)}
+              >
+                2
+              </Button>
+              <Button 
+                variant={currentPage === 3 ? "default" : "outline"} 
+                size="sm"
+                className={currentPage === 3 ? "akig-bg-primary" : ""}
+                onClick={() => setCurrentPage(3)}
+              >
+                3
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm"

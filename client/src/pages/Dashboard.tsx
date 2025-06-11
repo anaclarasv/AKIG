@@ -24,6 +24,9 @@ export default function Dashboard() {
   
   // Check if user can view activities
   const canViewActivities = user?.role !== 'agent';
+  
+  // Check if user should see evaluation form (only supervisors)
+  const canViewEvaluationForm = user?.role === 'supervisor';
 
   // Agent-specific dashboard
   if (user?.role === 'agent') {
@@ -81,7 +84,7 @@ export default function Dashboard() {
           <RankingPanel />
         </div>
 
-        <EvaluationForm />
+        {canViewEvaluationForm && <EvaluationForm />}
         {canViewActivities && <ActivityTable />}
       </div>
     </div>
