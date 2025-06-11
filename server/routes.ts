@@ -831,8 +831,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive monitoring session
+  // Archive monitoring session (soft delete with reason)
   app.patch('/api/monitoring-sessions/:id/archive', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const sessionId = parseInt(req.params.id);
+      const { reason } = req.body;
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const archivedSession = await storage.archiveMonitoringSession(sessionId, user.id, reason);
+      res.json({ 
+        message: 'Monitoria arquivada com sucesso', 
+        session: archivedSession 
+      });
+    } catch (error) {
+      console.error('Error archiving monitoring session:', error);
+      res.status(500).json({ message: 'Failed to archive monitoring session' });
+    }
+  });
+
+  // Soft delete monitoring session 
+  app.patch('/api/monitoring-sessions/:id/soft-delete', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const sessionId = parseInt(req.params.id);
+      const { reason } = req.body;
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      const deletedSession = await storage.softDeleteMonitoringSession(sessionId, user.id, reason);
+      res.json({ 
+        message: 'Monitoria excluída com sucesso', 
+        session: deletedSession 
+      });
+    } catch (error) {
+      console.error('Error soft deleting monitoring session:', error);
+      res.status(500).json({ message: 'Failed to soft delete monitoring session' });
+    }
+  });
+
+  // Restore monitoring session from archive/deleted state
+  app.patch('/api/monitoring-sessions/:id/restore', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!['admin', 'supervisor'].includes(user?.role || '')) {
@@ -846,14 +900,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Session not found" });
       }
 
-      await storage.updateMonitoringSession(sessionId, {
-        status: 'archived'
+      const restoredSession = await storage.restoreMonitoringSession(sessionId);
+      res.json({ 
+        message: 'Monitoria restaurada com sucesso', 
+        session: restoredSession 
       });
-
-      res.json({ message: 'Session archived successfully' });
     } catch (error) {
-      console.error('Error archiving monitoring session:', error);
-      res.status(500).json({ message: 'Failed to archive monitoring session' });
+      console.error('Error restoring monitoring session:', error);
+      res.status(500).json({ message: 'Failed to restore monitoring session' });
+    }
+  });
+
+  // Get archived monitoring sessions
+  app.get('/api/monitoring-sessions/archived', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const archivedSessions = await storage.getArchivedMonitoringSessions(companyId);
+      res.json(archivedSessions);
+    } catch (error) {
+      console.error("Error fetching archived monitoring sessions:", error);
+      res.status(500).json({ message: "Failed to fetch archived monitoring sessions" });
+    }
+  });
+
+  // Get deleted monitoring sessions  
+  app.get('/api/monitoring-sessions/deleted', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
+      const deletedSessions = await storage.getDeletedMonitoringSessions(companyId);
+      res.json(deletedSessions);
+    } catch (error) {
+      console.error("Error fetching deleted monitoring sessions:", error);
+      res.status(500).json({ message: "Failed to fetch deleted monitoring sessions" });
     }
   });
 

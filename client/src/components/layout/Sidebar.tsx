@@ -16,7 +16,8 @@ import {
   Settings,
   Megaphone,
   Gift,
-  Shield
+  Shield,
+  Archive
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -64,6 +65,7 @@ export default function Sidebar() {
           { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
           { name: 'Empresas', href: '/companies', icon: Building },
           { name: 'Usuários', href: '/users', icon: Users },
+          { name: 'Arquivadas', href: '/archived-sessions', icon: Archive },
         ];
       case 'supervisor':
         return [

@@ -303,6 +303,103 @@ export class DatabaseStorage implements IStorage {
     await db.delete(monitoringSessions).where(eq(monitoringSessions.id, id));
   }
 
+  // Archive monitoring session (soft delete)
+  async archiveMonitoringSession(id: number, userId: string, reason?: string): Promise<MonitoringSession> {
+    const [archivedSession] = await db
+      .update(monitoringSessions)
+      .set({
+        status: "archived",
+        archivedAt: new Date(),
+        archivedBy: userId,
+        archiveReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringSessions.id, id))
+      .returning();
+    return archivedSession;
+  }
+
+  // Soft delete monitoring session
+  async softDeleteMonitoringSession(id: number, userId: string, reason?: string): Promise<MonitoringSession> {
+    const [deletedSession] = await db
+      .update(monitoringSessions)
+      .set({
+        status: "deleted",
+        deletedAt: new Date(),
+        deletedBy: userId,
+        deleteReason: reason,
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringSessions.id, id))
+      .returning();
+    return deletedSession;
+  }
+
+  // Restore monitoring session from archive or deleted state
+  async restoreMonitoringSession(id: number): Promise<MonitoringSession> {
+    const [restoredSession] = await db
+      .update(monitoringSessions)
+      .set({
+        status: "completed",
+        archivedAt: null,
+        archivedBy: null,
+        archiveReason: null,
+        deletedAt: null,
+        deletedBy: null,
+        deleteReason: null,
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringSessions.id, id))
+      .returning();
+    return restoredSession;
+  }
+
+  // Get archived monitoring sessions
+  async getArchivedMonitoringSessions(companyId?: number): Promise<MonitoringSession[]> {
+    const baseCondition = isNotNull(monitoringSessions.archivedAt);
+    
+    if (companyId) {
+      const sessionsWithCampaigns = await db
+        .select()
+        .from(monitoringSessions)
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+        .where(and(
+          eq(campaigns.companyId, companyId),
+          baseCondition
+        ))
+        .orderBy(desc(monitoringSessions.archivedAt));
+      
+      return sessionsWithCampaigns.map(result => result.monitoring_sessions);
+    }
+    
+    return await db.select().from(monitoringSessions)
+      .where(baseCondition)
+      .orderBy(desc(monitoringSessions.archivedAt));
+  }
+
+  // Get deleted monitoring sessions
+  async getDeletedMonitoringSessions(companyId?: number): Promise<MonitoringSession[]> {
+    const baseCondition = isNotNull(monitoringSessions.deletedAt);
+    
+    if (companyId) {
+      const sessionsWithCampaigns = await db
+        .select()
+        .from(monitoringSessions)
+        .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
+        .where(and(
+          eq(campaigns.companyId, companyId),
+          baseCondition
+        ))
+        .orderBy(desc(monitoringSessions.deletedAt));
+      
+      return sessionsWithCampaigns.map(result => result.monitoring_sessions);
+    }
+    
+    return await db.select().from(monitoringSessions)
+      .where(baseCondition)
+      .orderBy(desc(monitoringSessions.deletedAt));
+  }
+
   async getEvaluations(companyId?: number, agentId?: string): Promise<Evaluation[]> {
     if (companyId && agentId) {
       const evaluationsWithSessions = await db
