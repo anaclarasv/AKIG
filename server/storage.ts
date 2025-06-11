@@ -123,6 +123,13 @@ export interface IStorage {
   deleteUserData(userId: string): Promise<void>;
   getUserConsent(userId: string): Promise<any>;
   updateUserConsent(userId: string, consent: any): Promise<any>;
+
+  // Monitoring Forms operations
+  getActiveMonitoringForm(): Promise<any>;
+  getMonitoringForm(id: number): Promise<any>;
+  createMonitoringEvaluation(evaluation: any): Promise<any>;
+  getMonitoringEvaluations(sessionId?: number): Promise<any[]>;
+  updateMonitoringEvaluation(id: number, updates: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -986,6 +993,120 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return user;
+  }
+
+  async getActiveMonitoringForm(): Promise<any> {
+    const form = await db
+      .select()
+      .from(monitoringForms)
+      .where(eq(monitoringForms.isActive, true))
+      .limit(1);
+
+    if (!form.length) return null;
+
+    const sections = await db
+      .select()
+      .from(formSections)
+      .where(eq(formSections.formId, form[0].id))
+      .orderBy(formSections.orderIndex);
+
+    const sectionsWithCriteria = await Promise.all(
+      sections.map(async (section) => {
+        const criteria = await db
+          .select()
+          .from(formCriteria)
+          .where(eq(formCriteria.sectionId, section.id))
+          .orderBy(formCriteria.orderIndex);
+
+        return {
+          ...section,
+          criteria,
+        };
+      })
+    );
+
+    return {
+      ...form[0],
+      sections: sectionsWithCriteria,
+    };
+  }
+
+  async getMonitoringForm(id: number): Promise<any> {
+    const [form] = await db
+      .select()
+      .from(monitoringForms)
+      .where(eq(monitoringForms.id, id));
+
+    if (!form) return null;
+
+    const sections = await db
+      .select()
+      .from(formSections)
+      .where(eq(formSections.formId, form.id))
+      .orderBy(formSections.orderIndex);
+
+    const sectionsWithCriteria = await Promise.all(
+      sections.map(async (section) => {
+        const criteria = await db
+          .select()
+          .from(formCriteria)
+          .where(eq(formCriteria.sectionId, section.id))
+          .orderBy(formCriteria.orderIndex);
+
+        return {
+          ...section,
+          criteria,
+        };
+      })
+    );
+
+    return {
+      ...form,
+      sections: sectionsWithCriteria,
+    };
+  }
+
+  async createMonitoringEvaluation(evaluationData: any): Promise<any> {
+    const { responses, ...evaluation } = evaluationData;
+
+    const [savedEvaluation] = await db
+      .insert(monitoringEvaluations)
+      .values(evaluation)
+      .returning();
+
+    // Save individual responses
+    if (responses && responses.length > 0) {
+      await db.insert(evaluationResponses).values(
+        responses.map((response: any) => ({
+          evaluationId: savedEvaluation.id,
+          criteriaId: response.criteriaId,
+          response: response.response,
+          pointsEarned: response.pointsEarned,
+        }))
+      );
+    }
+
+    return savedEvaluation;
+  }
+
+  async getMonitoringEvaluations(sessionId?: number): Promise<any[]> {
+    let query = db.select().from(monitoringEvaluations);
+
+    if (sessionId) {
+      query = query.where(eq(monitoringEvaluations.monitoringSessionId, sessionId));
+    }
+
+    return await query.orderBy(desc(monitoringEvaluations.createdAt));
+  }
+
+  async updateMonitoringEvaluation(id: number, updates: any): Promise<any> {
+    const [updated] = await db
+      .update(monitoringEvaluations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(monitoringEvaluations.id, id))
+      .returning();
+
+    return updated;
   }
 }
 
