@@ -689,22 +689,12 @@ export default function Monitoring() {
                 )}
 
                 <div className="flex items-center space-x-2 pt-2">
-                  {/* Ver Detalhes para todos os perfis autorizados */}
-                  <Link href={`/monitoring/${session.id}`}>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                    >
-                      {session.status === 'pending' ? 'Acompanhar' : 'Ver Ficha Completa'}
-                    </Button>
-                  </Link>
-                  
                   {/* Botão de Avaliar apenas para evaluators/admin */}
                   {(user?.role === 'evaluator' || user?.role === 'admin') && session.transcription && (
                     <Button 
                       variant="default" 
                       size="sm"
+                      className="flex-1"
                       onClick={() => {
                         setSelectedSession(session.id);
                         setShowEvaluationForm(true);
