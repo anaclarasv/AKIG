@@ -580,38 +580,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use SimpleAudioProcessor for real file analysis
+      // Use Python transcriber with SpeechRecognition (based on QualityCallMonitor approach)
       try {
-        const { SimpleAudioProcessor } = await import('./simple-audio-processor');
+        console.log('Starting Python-based real transcription for session:', sessionId);
         
-        const result = await SimpleAudioProcessor.processRealAudioFile(resolvedPath);
+        const { spawn } = await import('child_process');
+        const util = await import('util');
+        const execFile = util.promisify(spawn);
+        
+        // Execute Python transcriber
+        const pythonProcess = spawn('python3', [
+          '/home/runner/workspace/server/python-transcriber.py',
+          resolvedPath
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        const result = await new Promise((resolve, reject) => {
+          pythonProcess.on('close', (code) => {
+            if (code === 0) {
+              try {
+                const transcriptionResult = JSON.parse(stdout);
+                resolve(transcriptionResult);
+              } catch (parseError) {
+                reject(new Error(`Failed to parse transcription result: ${parseError}`));
+              }
+            } else {
+              reject(new Error(`Python transcriber failed with code ${code}: ${stderr}`));
+            }
+          });
+          
+          pythonProcess.on('error', (error) => {
+            reject(new Error(`Failed to start Python transcriber: ${error.message}`));
+          });
+          
+          // Timeout after 5 minutes
+          setTimeout(() => {
+            pythonProcess.kill();
+            reject(new Error('Transcription timeout'));
+          }, 300000);
+        });
+        
+        const transcriptionData = result as any;
+        
+        // Generate AI analysis based on real transcription
+        const transcript = transcriptionData.text || '';
+        const hasGreeting = transcript.toLowerCase().includes('olá') || transcript.toLowerCase().includes('bom dia');
+        const hasGratitude = transcript.toLowerCase().includes('obrigad') || transcript.toLowerCase().includes('agradec');
+        const hasProblem = transcript.toLowerCase().includes('problema') || transcript.toLowerCase().includes('dificuldade');
+        
+        const sentiment = hasGratitude ? 0.9 : hasGreeting ? 0.8 : hasProblem ? 0.4 : 0.7;
         
         const aiAnalysis = {
-          sentiment: 0.8,
-          keyTopics: ['arquivo_real'],
-          criticalMoments: [],
-          recommendations: ['Arquivo processado com características reais'],
-          score: 8
+          sentiment,
+          keyTopics: [
+            ...(hasGreeting ? ['saudação'] : []),
+            ...(hasGratitude ? ['agradecimento'] : []),
+            ...(hasProblem ? ['problema'] : []),
+            'atendimento'
+          ],
+          criticalMoments: hasProblem ? [
+            { time: transcriptionData.duration * 0.3, description: 'Cliente relata dificuldade' }
+          ] : [],
+          recommendations: [
+            transcriptionData.success ? 'Transcrição processada com sucesso' : 'Verificar qualidade do áudio',
+            sentiment > 0.7 ? 'Manter padrão de qualidade' : 'Melhorar abordagem de atendimento'
+          ],
+          score: Math.round(sentiment * 10)
         };
         
-        const transcriptionData = {
-          segments: result.segments,
-          totalDuration: result.duration
+        const finalTranscriptionData = {
+          segments: transcriptionData.segments || [],
+          totalDuration: transcriptionData.duration || 60
         };
 
         await storage.updateMonitoringSession(sessionId, {
-          transcription: transcriptionData,
+          transcription: finalTranscriptionData,
           aiAnalysis,
           status: 'completed'
         });
 
-        console.log('Real audio processing completed for session:', sessionId);
+        console.log('Python transcription completed for session:', sessionId, 'Success:', transcriptionData.success);
       } catch (error) {
-        console.error('Real audio processing failed:', error);
+        console.error('Python transcription failed:', error);
         await storage.updateMonitoringSession(sessionId, {
           status: 'failed'
         });
-        return res.status(500).json({ message: `Processing failed: ${(error as any).message}` });
+        return res.status(500).json({ message: `Transcription failed: ${(error as any).message}` });
       }
 
       // Return immediately with processing status
