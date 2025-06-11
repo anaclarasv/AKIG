@@ -580,19 +580,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use OpenAI Whisper API for real transcription
+      // Use Whisper offline for real transcription
       try {
-        console.log('Starting OpenAI Whisper API transcription for session:', sessionId);
+        console.log('Starting Whisper offline real transcription for session:', sessionId);
         
-        const { transcribeAudioWithOpenAI } = await import('./openai-transcription');
+        const { spawn } = await import('child_process');
         
-        const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
+        const pythonProcess = spawn('python3', [
+          '/home/runner/workspace/server/whisper-offline-real.py',
+          resolvedPath
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
         
-        console.log('OpenAI Whisper transcription completed successfully');
-        console.log(`Text length: ${transcriptionResult.text.length} characters`);
-        console.log(`Segments: ${transcriptionResult.segments.length}`);
+        let stdout = '';
+        let stderr = '';
         
-        const result = transcriptionResult;
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+          console.log('Whisper progress:', data.toString().trim());
+        });
+        
+        const transcriptionResult = await new Promise((resolve, reject) => {
+          pythonProcess.on('close', (code) => {
+            if (code === 0) {
+              try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+              } catch (parseError) {
+                reject(new Error(`Failed to parse transcription result: ${parseError}`));
+              }
+            } else {
+              reject(new Error(`Whisper transcriber failed with code ${code}: ${stderr}`));
+            }
+          });
+          
+          pythonProcess.on('error', (error) => {
+            reject(new Error(`Failed to start Whisper transcriber: ${error.message}`));
+          });
+          
+          // Timeout after 5 minutes for longer audio files
+          setTimeout(() => {
+            pythonProcess.kill();
+            reject(new Error('Transcription timeout after 5 minutes'));
+          }, 300000);
+        });
+        
+        const result = transcriptionResult as any;
+        
+        console.log('Whisper offline transcription completed successfully');
+        console.log(`Text length: ${result.text.length} characters`);
+        console.log(`Segments: ${result.segments.length}`);
         
         if (result.text && result.segments) {
           console.log(`OpenAI Whisper transcription successful: ${result.text.length} characters, ${result.segments.length} segments`);
