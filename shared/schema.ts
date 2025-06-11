@@ -74,7 +74,7 @@ export const monitoringSessions = pgTable("monitoring_sessions", {
   duration: integer("duration"), // in seconds
   criticalMoments: jsonb("critical_moments"), // timestamps of critical moments
   aiAnalysis: jsonb("ai_analysis"), // AI analysis results
-  status: varchar("status").default("pending"), // pending, in_progress, completed
+  status: varchar("status").default("pending"), // pending, in_progress, completed, archived
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
