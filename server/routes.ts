@@ -1588,7 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only agents can sign evaluations" });
       }
 
-      const evaluation = await storage.getMonitoringEvaluation(evaluationId);
+      const evaluation = await storage.getMonitoringEvaluationById(evaluationId);
       if (!evaluation) {
         return res.status(404).json({ message: "Evaluation not found" });
       }

@@ -1142,15 +1142,7 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(monitoringEvaluations.createdAt));
   }
 
-  async updateMonitoringEvaluation(id: number, updates: any): Promise<any> {
-    const [updated] = await db
-      .update(monitoringEvaluations)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(monitoringEvaluations.id, id))
-      .returning();
 
-    return updated;
-  }
 
   async getMonitoringEvaluation(monitoringSessionId: number): Promise<any> {
     const [evaluation] = await db
@@ -1226,6 +1218,8 @@ export class DatabaseStorage implements IStorage {
 
     return response;
   }
+
+
 }
 
 export const storage = new DatabaseStorage();

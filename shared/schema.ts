@@ -209,6 +209,8 @@ export const monitoringEvaluations = pgTable("monitoring_evaluations", {
   criticalFailureReason: text("critical_failure_reason"),
   observations: text("observations"),
   status: varchar("status").notNull().default("draft"), // draft, completed, signed
+  agentSignature: varchar("agent_signature"),
+  agentSignedAt: timestamp("agent_signed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

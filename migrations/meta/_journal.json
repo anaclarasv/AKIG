@@ -15,6 +15,13 @@
       "when": 1749651818163,
       "tag": "0001_nifty_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749683864928,
+      "tag": "0002_windy_george_stacy",
+      "breakpoints": true
     }
   ]
 }
