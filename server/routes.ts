@@ -367,17 +367,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      console.log('User accessing monitoring sessions:', { userId: req.user.id, role: user?.role });
       
-      // Only admins, supervisors, and evaluators can access monitoring sessions
-      if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
-        console.log('Access denied for user role:', user?.role);
+      let sessions;
+      
+      if (user?.role === 'agent') {
+        // Agents can only see their own sessions
+        const companyId = user?.companyId ?? undefined;
+        sessions = await storage.getMonitoringSessions(companyId, user.id);
+      } else if (['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
+        // Admins, supervisors, and evaluators can see all sessions
+        const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
+        const agentId = req.query.agentId as string;
+        sessions = await storage.getMonitoringSessions(companyId, agentId);
+      } else {
         return res.status(403).json({ message: "Access denied" });
       }
       
-      const companyId = user?.role === 'admin' ? undefined : (user?.companyId ?? undefined);
-      const agentId = req.query.agentId as string;
-      const sessions = await storage.getMonitoringSessions(companyId, agentId);
       res.json(sessions);
     } catch (error) {
       console.error("Error fetching monitoring sessions:", error);
