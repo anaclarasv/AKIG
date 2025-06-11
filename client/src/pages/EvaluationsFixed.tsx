@@ -43,7 +43,7 @@ export default function EvaluationsFixed() {
 
   // Fetch agent's own contests for contested evaluations tab
   const { data: agentContests = [] } = useQuery<any[]>({
-    queryKey: ['/api/evaluation-contests', 'agent', user?.id],
+    queryKey: ['/api/evaluation-contests'],
     enabled: ['agent', 'supervisor'].includes(user?.role || ''),
   });
 
@@ -381,8 +381,93 @@ export default function EvaluationsFixed() {
             </TabsContent>
           )}
 
+          {/* Aba de Avaliações Contestadas (Agent/Supervisor) */}
+          {activeTab === "contested" && ['agent', 'supervisor'].includes(user?.role || '') && (
+            <TabsContent value="contested" className="mt-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {agentContests.map((contest: any) => (
+                  <Card key={contest.id} className="akig-card-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center">
+                          <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          <span className="ml-2">Contestação #{contest.id}</span>
+                        </CardTitle>
+                        <Badge variant={contest.status === 'pending' ? 'default' : contest.status === 'approved' ? 'default' : 'destructive'}>
+                          {contest.status === 'pending' ? 'Pendente' : contest.status === 'approved' ? 'Aprovada' : 'Rejeitada'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Solicitada em: {new Date(contest.createdAt || Date.now()).toLocaleString('pt-BR')}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Informações da Avaliação Contestada */}
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-sm text-gray-700 font-medium mb-2">Avaliação Contestada:</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              Avaliação #{contest.evaluationId} • Sessão #{contest.monitoringSessionId}
+                            </span>
+                            <span className={`text-sm font-bold ${
+                              Number(contest.evaluationScore) >= 8 ? 'text-green-600' :
+                              Number(contest.evaluationScore) >= 6 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              Nota: {Number(contest.evaluationScore).toFixed(1)}
+                            </span>
+                          </div>
+                          {contest.evaluationObservations && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              "{contest.evaluationObservations}"
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                          <p className="text-sm text-orange-700 font-medium mb-1">Motivo da Contestação:</p>
+                          <p className="text-sm text-orange-600">{contest.reason}</p>
+                        </div>
+                        
+                        {contest.response && (
+                          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-sm text-blue-700 font-medium mb-1">Resposta do Avaliador:</p>
+                            <p className="text-sm text-blue-600">{contest.response}</p>
+                            {contest.reviewedAt && (
+                              <p className="text-xs text-blue-500 mt-2">
+                                Analisada em: {new Date(contest.reviewedAt).toLocaleString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {contest.status === 'pending' && (
+                          <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <p className="text-sm text-yellow-700">
+                              🕒 Aguardando análise do avaliador...
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {agentContests.length === 0 && (
+                  <div className="col-span-2 text-center py-12">
+                    <AlertTriangle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-muted-foreground">Nenhuma contestação encontrada</h3>
+                    <p className="text-muted-foreground">
+                      Você ainda não solicitou nenhuma contestação de avaliação.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
+
           {/* Aba principal de avaliações */}
-          {activeTab !== "contests" && (
+          {activeTab !== "contests" && activeTab !== "contested" && (
             <TabsContent value={activeTab} className="mt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {filteredEvaluations?.map((evaluation) => (
