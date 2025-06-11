@@ -552,8 +552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No audio file found for this session" });
       }
 
-      // Use instant local transcription - no API delays or external dependencies
-      console.log('Processing with instant local transcription engine...');
+      // Use OpenAI Whisper API for real transcription
+      console.log('Processing with OpenAI Whisper API for real audio transcription...');
       
       // Fix audio path resolution - handle absolute paths correctly
       let resolvedPath;
@@ -580,59 +580,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use Python-based reliable transcription
+      // Use OpenAI Whisper API for real transcription
       try {
-        console.log('Starting Python reliable transcription for session:', sessionId);
+        console.log('Starting OpenAI Whisper API transcription for session:', sessionId);
         
-        const { spawn } = await import('child_process');
+        const { transcribeAudioWithOpenAI } = await import('./openai-transcription');
         
-        const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/simple-reliable-transcription.py',
-          resolvedPath
-        ], {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        const transcriptionResult = await transcribeAudioWithOpenAI(resolvedPath);
         
-        let stdout = '';
-        let stderr = '';
+        console.log('OpenAI Whisper transcription completed successfully');
+        console.log(`Text length: ${transcriptionResult.text.length} characters`);
+        console.log(`Segments: ${transcriptionResult.segments.length}`);
         
-        pythonProcess.stdout.on('data', (data) => {
-          stdout += data.toString();
-        });
+        const result = transcriptionResult;
         
-        pythonProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
-        
-        const transcriptionResult = await new Promise((resolve, reject) => {
-          pythonProcess.on('close', (code) => {
-            if (code === 0) {
-              try {
-                const result = JSON.parse(stdout);
-                resolve(result);
-              } catch (parseError) {
-                reject(new Error(`Failed to parse transcription result: ${parseError}`));
-              }
-            } else {
-              reject(new Error(`Python transcriber failed with code ${code}: ${stderr}`));
-            }
-          });
-          
-          pythonProcess.on('error', (error) => {
-            reject(new Error(`Failed to start Python transcriber: ${error.message}`));
-          });
-          
-          // Timeout after 2 minutes
-          setTimeout(() => {
-            pythonProcess.kill();
-            reject(new Error('Transcription timeout after 2 minutes'));
-          }, 120000);
-        });
-        
-        const result = transcriptionResult as any;
-        
-        if (result.success) {
-          console.log(`Python transcription successful: ${result.text.length} characters, ${result.segments.length} segments`);
+        if (result.text && result.segments) {
+          console.log(`OpenAI Whisper transcription successful: ${result.text.length} characters, ${result.segments.length} segments`);
           
           // Generate analysis based on transcription
           const transcript = result.text || '';
