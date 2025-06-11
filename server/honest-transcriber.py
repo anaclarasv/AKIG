@@ -63,6 +63,7 @@ def analyze_real_audio_content(file_path: str) -> dict:
             total_active_time = len(active_windows) * 0.5
             activity_ratio = total_active_time / duration if duration > 0 else 0
         else:
+            max_energy = 1.0
             active_windows = []
             total_active_time = 0
             activity_ratio = 0
@@ -95,7 +96,7 @@ def analyze_real_audio_content(file_path: str) -> dict:
                     'text': f"Atividade detectada ({start_time:.1f}s-{end_time:.1f}s)",
                     'startTime': start_time,
                     'endTime': end_time,
-                    'confidence': energy_values[window_index] / max_energy if energy_values else 0.5,
+                    'confidence': energy_values[window_index] / max_energy if energy_values and max_energy > 0 else 0.5,
                     'criticalWords': []
                 })
                 segments_created += 1

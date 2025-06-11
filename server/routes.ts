@@ -588,9 +588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const util = await import('util');
         const execFile = util.promisify(spawn);
         
-        // Execute Python transcriber with Whisper local CLI
+        // Execute honest transcriber - no fake dialogues
         const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/whisper-local-transcriber.py',
+          '/home/runner/workspace/server/honest-transcriber.py',
           resolvedPath
         ], {
           stdio: ['pipe', 'pipe', 'pipe']
