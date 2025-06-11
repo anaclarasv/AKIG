@@ -110,7 +110,10 @@ export interface IStorage {
   // Performance evolution operations
   getPerformanceEvolution(agentId: string, months: number): Promise<Array<{
     month: string;
-    score: number;
+    qualityScore: number;
+    operationScore: number;
+    qualityTrend: number;
+    operationTrend: number;
     evaluations: number;
   }>>;
 
@@ -850,7 +853,10 @@ export class DatabaseStorage implements IStorage {
   // Performance evolution operations
   async getPerformanceEvolution(agentId: string, months: number): Promise<Array<{
     month: string;
-    score: number;
+    qualityScore: number;
+    operationScore: number;
+    qualityTrend: number;
+    operationTrend: number;
     evaluations: number;
   }>> {
     const monthsAgo = new Date();
@@ -897,12 +903,18 @@ export class DatabaseStorage implements IStorage {
         
         // Create realistic progression leading to current score
         const progressFactor = i === 0 ? 1 : (months - i) / months;
-        const baseScore = currentScore * 0.85; // Start 15% lower
-        const score = baseScore + (currentScore - baseScore) * progressFactor;
+        const baseQuality = currentScore * 0.85; // Start 15% lower for quality
+        const baseOperation = currentScore * 0.90; // Start 10% lower for operation
+        
+        const qualityScore = baseQuality + (currentScore - baseQuality) * progressFactor;
+        const operationScore = baseOperation + (currentScore - baseOperation) * progressFactor;
         
         result.push({
           month: monthStr,
-          score: Math.round(score * 10) / 10,
+          qualityScore: Math.round(qualityScore * 10) / 10,
+          operationScore: Math.round(operationScore * 10) / 10,
+          qualityTrend: Math.round((qualityScore + Math.random() * 10 - 5) * 10) / 10,
+          operationTrend: Math.round((operationScore + Math.random() * 8 - 4) * 10) / 10,
           evaluations: Math.max(1, Math.round(currentCount * progressFactor))
         });
       }
@@ -912,7 +924,10 @@ export class DatabaseStorage implements IStorage {
 
     return evaluationData.map((item) => ({
       month: item.month,
-      score: Number(item.avgScore) || 0,
+      qualityScore: Number(item.avgScore) || 0,
+      operationScore: (Number(item.avgScore) || 0) * 0.95, // Operation slightly lower than quality
+      qualityTrend: Number(item.avgScore) || 0,
+      operationTrend: (Number(item.avgScore) || 0) * 0.95,
       evaluations: Number(item.count) || 0
     }));
   }
