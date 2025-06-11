@@ -79,9 +79,14 @@ export default function AgentPerformanceChart() {
             </div>
             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
               <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                {Array.isArray(evaluations) ? evaluations.filter((e: any) => e.status === 'signed').length : 0}
+                {Array.isArray(evaluations) ? evaluations.filter((e: any) => e.status === 'pending').length : 0}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Avaliações Assinadas</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Pendentes de Assinatura</p>
+              {Array.isArray(evaluations) && evaluations.filter((e: any) => e.status === 'pending').length > 0 && (
+                <div className="mt-1">
+                  <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+                </div>
+              )}
             </div>
           </div>
 

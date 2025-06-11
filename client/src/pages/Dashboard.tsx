@@ -8,6 +8,7 @@ import EvaluationForm from "@/components/dashboard/EvaluationForm";
 import ActivityTable from "@/components/dashboard/ActivityTable";
 import AgentPerformanceChart from "@/components/dashboard/AgentPerformanceChart";
 import AgentContestPanel from "@/components/dashboard/AgentContestPanel";
+import AgentEvaluationSummary from "@/components/dashboard/AgentEvaluationSummary";
 
 
 export default function Dashboard() {
@@ -45,18 +46,7 @@ export default function Dashboard() {
                 <p className="text-3xl font-bold text-blue-600">{user.virtualCoins || 0}</p>
                 <p className="text-sm text-blue-700 mt-1">Acumuladas no total</p>
               </div>
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
-                <h3 className="font-semibold text-green-900 mb-2">Minhas Avaliações</h3>
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => setLocation('/my-evaluations')}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
-                  >
-                    Ver Minhas Avaliações
-                  </button>
-                  <p className="text-xs text-green-700">Visualizar, assinar e contestar</p>
-                </div>
-              </div>
+              <AgentEvaluationSummary />
             </div>
           </div>
 
