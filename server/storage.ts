@@ -582,12 +582,14 @@ export class DatabaseStorage implements IStorage {
         id: monitoringEvaluations.id,
         monitoringSessionId: monitoringEvaluations.monitoringSessionId,
         evaluatorId: monitoringEvaluations.evaluatorId,
-        totalScore: monitoringEvaluations.totalScore,
-        comments: monitoringEvaluations.comments,
+        finalScore: monitoringEvaluations.finalScore,
+        partialScore: monitoringEvaluations.partialScore,
+        observations: monitoringEvaluations.observations,
+        status: monitoringEvaluations.status,
+        hasCriticalFailure: monitoringEvaluations.hasCriticalFailure,
+        criticalFailureReason: monitoringEvaluations.criticalFailureReason,
         createdAt: monitoringEvaluations.createdAt,
         updatedAt: monitoringEvaluations.updatedAt,
-        agentSignature: monitoringEvaluations.agentSignature,
-        agentSignedAt: monitoringEvaluations.agentSignedAt,
         // Session data
         sessionId: monitoringSessions.id,
         sessionStatus: monitoringSessions.status,
@@ -595,17 +597,9 @@ export class DatabaseStorage implements IStorage {
         sessionCreatedAt: monitoringSessions.createdAt,
         sessionAudioUrl: monitoringSessions.audioUrl,
         sessionCampaignId: monitoringSessions.campaignId,
-        // Agent data
-        agentFirstName: agentUser.firstName,
-        agentLastName: agentUser.lastName,
-        // Evaluator data
-        evaluatorFirstName: evaluatorUser.firstName,
-        evaluatorLastName: evaluatorUser.lastName,
       })
       .from(monitoringEvaluations)
       .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
-      .leftJoin(agentUser, eq(monitoringSessions.agentId, agentUser.id))
-      .leftJoin(evaluatorUser, eq(monitoringEvaluations.evaluatorId, evaluatorUser.id))
       .where(and(
         eq(monitoringSessions.agentId, userId),
         gte(monitoringEvaluations.createdAt, dateLimit)
@@ -617,10 +611,12 @@ export class DatabaseStorage implements IStorage {
       id: evaluation.id,
       monitoringSessionId: evaluation.monitoringSessionId,
       evaluatorId: evaluation.evaluatorId,
-      finalScore: evaluation.totalScore,
-      observations: evaluation.comments,
-      agentSignature: evaluation.agentSignature,
-      agentSignedAt: evaluation.agentSignedAt,
+      finalScore: parseFloat(evaluation.finalScore),
+      partialScore: parseFloat(evaluation.partialScore),
+      observations: evaluation.observations,
+      status: evaluation.status,
+      hasCriticalFailure: evaluation.hasCriticalFailure,
+      criticalFailureReason: evaluation.criticalFailureReason,
       createdAt: evaluation.createdAt,
       updatedAt: evaluation.updatedAt,
       session: {
@@ -632,10 +628,6 @@ export class DatabaseStorage implements IStorage {
         audioUrl: evaluation.sessionAudioUrl,
         createdAt: evaluation.sessionCreatedAt,
         updatedAt: evaluation.sessionCreatedAt,
-      },
-      evaluator: {
-        firstName: evaluation.evaluatorFirstName,
-        lastName: evaluation.evaluatorLastName,
       }
     }));
   }

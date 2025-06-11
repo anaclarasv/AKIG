@@ -69,14 +69,8 @@ export default function MyEvaluationsPage() {
     );
   }
 
-  const calculateOverallScore = (scores: EvaluationScores): number => {
-    const scoresArray = Object.values(scores);
-    if (scoresArray.length === 0) return 0;
-    
-    const totalScore = scoresArray.reduce((sum, item) => sum + item.score, 0);
-    const totalMaxScore = scoresArray.reduce((sum, item) => sum + item.maxScore, 0);
-    
-    return totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+  const calculateOverallScore = (evaluation: any): number => {
+    return evaluation?.finalScore || 0;
   };
 
   const getChannelIcon = (channel: string) => {
@@ -108,13 +102,12 @@ export default function MyEvaluationsPage() {
 
   const overallStats = evaluations ? {
     averageScore: evaluations.reduce((sum, evaluation) => {
-      const scores = evaluation.scores as any;
-      return sum + calculateOverallScore(scores);
+      return sum + calculateOverallScore(evaluation);
     }, 0) / evaluations.length,
     totalEvaluations: evaluations.length,
-    improvement: 5.2, // Calculado comparando períodos
-    strongPoints: ["Comunicação", "Resolução de problemas", "Empatia"],
-    improvementAreas: ["Tempo de resposta", "Conhecimento técnico"]
+    criticalFailures: evaluations.filter(e => e.hasCriticalFailure).length,
+    completedEvaluations: evaluations.filter(e => e.status === 'completed').length,
+    averageScoreDisplay: evaluations.length > 0 ? (evaluations.reduce((sum, evaluation) => sum + calculateOverallScore(evaluation), 0) / evaluations.length).toFixed(1) : '0'
   } : null;
 
   return (
@@ -147,9 +140,9 @@ export default function MyEvaluationsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-300">Pontuação Geral</p>
+                  <p className="text-sm font-medium text-blue-600 dark:text-blue-300">Pontuação Média</p>
                   <p className="text-3xl font-bold text-blue-800 dark:text-blue-100">
-                    {overallStats?.averageScore.toFixed(1) || '0'}%
+                    {overallStats?.averageScoreDisplay || '0'} pts
                   </p>
                 </div>
                 <Award className="w-12 h-12 text-blue-600" />
@@ -165,15 +158,15 @@ export default function MyEvaluationsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-300">Evolução</p>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-300">Avaliações Concluídas</p>
                   <p className="text-3xl font-bold text-green-800 dark:text-green-100 flex items-center gap-2">
-                    +{overallStats?.improvement || 0}%
-                    <TrendingUp className="w-6 h-6" />
+                    {overallStats?.completedEvaluations || 0}
+                    <CheckCircle className="w-6 h-6" />
                   </p>
                 </div>
                 <Target className="w-12 h-12 text-green-600" />
               </div>
-              <p className="text-sm text-green-600 mt-2">vs. período anterior</p>
+              <p className="text-sm text-green-600 mt-2">finalizadas com sucesso</p>
             </CardContent>
           </Card>
 
@@ -221,8 +214,7 @@ export default function MyEvaluationsPage() {
               <CardContent>
                 <div className="space-y-4">
                   {evaluations?.map((evaluation) => {
-                    const scores = evaluation.scores as any;
-                    const overallScore = calculateOverallScore(scores);
+                    const overallScore = calculateOverallScore(evaluation);
                     
                     return (
                       <Card key={evaluation.id} className="border border-border hover:border-primary/20 transition-colors">
@@ -244,42 +236,60 @@ export default function MyEvaluationsPage() {
                                 </div>
                               </div>
                             </div>
-                            <Badge className={getScoreBadgeColor(overallScore)}>
-                              {overallScore.toFixed(1)}%
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge className={getScoreBadgeColor(overallScore)}>
+                                {overallScore.toFixed(1)} pts
+                              </Badge>
+                              {evaluation.hasCriticalFailure && (
+                                <Badge className="bg-red-100 text-red-800 border-red-200">
+                                  <AlertTriangle className="w-3 h-3 mr-1" />
+                                  Falha Crítica
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Status da Avaliação */}
+                          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-foreground">
+                                  <strong>Pontuação:</strong> {evaluation.finalScore} pontos (de 100)
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Status: {evaluation.status === 'completed' ? 'Concluída' : evaluation.status === 'draft' ? 'Rascunho' : 'Assinada'}
+                                </p>
+                              </div>
+                              <Progress value={overallScore} className="w-24 h-2" />
+                            </div>
                           </div>
 
                           {/* Resumo do Atendimento */}
-                          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                          <div className="mb-4 p-3 bg-muted/30 rounded-lg">
                             <p className="text-sm text-foreground">
-                              <strong>Resumo:</strong> {evaluation.observations || "Atendimento ao cliente via telefone com duração de " + (evaluation.session.duration ? Math.floor(evaluation.session.duration / 60) + " minutos" : "tempo não informado")}
+                              <strong>Duração:</strong> {evaluation.session.duration ? Math.floor(evaluation.session.duration / 60) + " minutos" : "Não informado"}
                             </p>
-                          </div>
-
-                          {/* Critérios Avaliados */}
-                          <div className="space-y-2 mb-4">
-                            <h5 className="text-sm font-medium text-foreground">Critérios Avaliados:</h5>
-                            {Object.entries(scores).map(([criteriaId, scoreData]: [string, any]) => (
-                              <div key={criteriaId} className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">{scoreData?.criteriaName || `Critério ${criteriaId}`}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className={getScoreColor((scoreData?.score / scoreData?.maxScore) * 100 || 0)}>
-                                    {scoreData?.score || 0}/{scoreData?.maxScore || 10}
-                                  </span>
-                                  <Progress 
-                                    value={(scoreData?.score / scoreData?.maxScore) * 100 || 0} 
-                                    className="w-16 h-2" 
-                                  />
-                                </div>
-                              </div>
-                            ))}
+                            {evaluation.session.audioUrl && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Áudio disponível para revisão
+                              </p>
+                            )}
                           </div>
 
                           {/* Comentários do Avaliador */}
                           {evaluation.observations && (
                             <div className="border-t pt-3">
                               <p className="text-sm text-muted-foreground">
-                                <strong>Comentário do Avaliador:</strong> {evaluation.observations}
+                                <strong>Observações do Avaliador:</strong> {evaluation.observations}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Falha Crítica */}
+                          {evaluation.hasCriticalFailure && evaluation.criticalFailureReason && (
+                            <div className="border-t pt-3 border-red-200">
+                              <p className="text-sm text-red-600">
+                                <strong>Motivo da Falha Crítica:</strong> {evaluation.criticalFailureReason}
                               </p>
                             </div>
                           )}
