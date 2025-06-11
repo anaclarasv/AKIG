@@ -162,6 +162,67 @@ export const notifications = pgTable("notifications", {
   relatedType: varchar("related_type"), // evaluation, contest, monitoring, etc
 });
 
+// Monitoring Forms - Dynamic evaluation forms with sections and criteria
+export const monitoringForms = pgTable("monitoring_forms", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  companyId: integer("company_id").references(() => companies.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Form Sections - Groups of criteria within a form
+export const formSections = pgTable("form_sections", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").notNull().references(() => monitoringForms.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Form Criteria - Individual evaluation criteria
+export const formCriteria = pgTable("form_criteria", {
+  id: serial("id").primaryKey(),
+  sectionId: integer("section_id").notNull().references(() => formSections.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  weight: decimal("weight", { precision: 5, scale: 2 }).notNull(), // Weight/points for this criteria
+  type: varchar("type").notNull(), // 'sim_nao_na', 'score', 'checkbox'
+  isRequired: boolean("is_required").default(true),
+  isCriticalFailure: boolean("is_critical_failure").default(false), // "ZERA" criteria
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Monitoring Evaluations - Individual evaluations with dynamic criteria responses
+export const monitoringEvaluations = pgTable("monitoring_evaluations", {
+  id: serial("id").primaryKey(),
+  monitoringSessionId: integer("monitoring_session_id").notNull().references(() => monitoringSessions.id),
+  formId: integer("form_id").notNull().references(() => monitoringForms.id),
+  evaluatorId: varchar("evaluator_id").notNull().references(() => users.id),
+  partialScore: decimal("partial_score", { precision: 5, scale: 2 }).notNull(),
+  finalScore: decimal("final_score", { precision: 5, scale: 2 }).notNull(),
+  hasCriticalFailure: boolean("has_critical_failure").default(false),
+  criticalFailureReason: text("critical_failure_reason"),
+  observations: text("observations"),
+  status: varchar("status").notNull().default("draft"), // draft, completed, signed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Evaluation Responses - Individual responses to form criteria
+export const evaluationResponses = pgTable("evaluation_responses", {
+  id: serial("id").primaryKey(),
+  evaluationId: integer("evaluation_id").notNull().references(() => monitoringEvaluations.id, { onDelete: "cascade" }),
+  criteriaId: integer("criteria_id").notNull().references(() => formCriteria.id),
+  response: varchar("response").notNull(), // 'sim', 'nao', 'na', score value, or 'checked'/'unchecked'
+  pointsEarned: decimal("points_earned", { precision: 5, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -214,6 +275,33 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const insertMonitoringFormSchema = createInsertSchema(monitoringForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFormSectionSchema = createInsertSchema(formSections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFormCriteriaSchema = createInsertSchema(formCriteria).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMonitoringEvaluationSchema = createInsertSchema(monitoringEvaluations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEvaluationResponseSchema = createInsertSchema(evaluationResponses).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -233,3 +321,13 @@ export type InsertReward = z.infer<typeof insertRewardSchema>;
 export type RewardPurchase = typeof rewardPurchases.$inferSelect;
 export type EvaluationContest = typeof evaluationContests.$inferSelect;
 export type InsertEvaluationContest = z.infer<typeof insertEvaluationContestSchema>;
+export type MonitoringForm = typeof monitoringForms.$inferSelect;
+export type InsertMonitoringForm = z.infer<typeof insertMonitoringFormSchema>;
+export type FormSection = typeof formSections.$inferSelect;
+export type InsertFormSection = z.infer<typeof insertFormSectionSchema>;
+export type FormCriteria = typeof formCriteria.$inferSelect;
+export type InsertFormCriteria = z.infer<typeof insertFormCriteriaSchema>;
+export type MonitoringEvaluation = typeof monitoringEvaluations.$inferSelect;
+export type InsertMonitoringEvaluation = z.infer<typeof insertMonitoringEvaluationSchema>;
+export type EvaluationResponse = typeof evaluationResponses.$inferSelect;
+export type InsertEvaluationResponse = z.infer<typeof insertEvaluationResponseSchema>;
