@@ -580,46 +580,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use reliable transcription system
+      // Use Python-based reliable transcription
       try {
-        console.log('Starting reliable transcription for session:', sessionId);
+        console.log('Starting Python reliable transcription for session:', sessionId);
         
-        const { transcribeAudioReliable, analyzeReliableTranscription } = await import('./reliable-transcription');
+        const { spawn } = await import('child_process');
         
-        const transcriptionResult = await transcribeAudioReliable(resolvedPath);
+        const pythonProcess = spawn('python3', [
+          '/home/runner/workspace/server/simple-reliable-transcription.py',
+          resolvedPath
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
         
-        if (transcriptionResult.success) {
-          console.log(`Transcription successful: ${transcriptionResult.text.length} characters`);
-          
-          // Analyze the transcription
-          const analysis = analyzeReliableTranscription(transcriptionResult);
-          
-          // Update session with transcription results
-          await storage.updateMonitoringSession(sessionId, {
-            transcription: { 
-              text: transcriptionResult.text,
-              segments: transcriptionResult.segments,
-              totalDuration: transcriptionResult.duration
-            },
-            duration: transcriptionResult.duration,
-            aiAnalysis: analysis,
-            status: 'completed',
-            completedAt: new Date()
+        let stdout = '';
+        let stderr = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        const transcriptionResult = await new Promise((resolve, reject) => {
+          pythonProcess.on('close', (code) => {
+            if (code === 0) {
+              try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+              } catch (parseError) {
+                reject(new Error(`Failed to parse transcription result: ${parseError}`));
+              }
+            } else {
+              reject(new Error(`Python transcriber failed with code ${code}: ${stderr}`));
+            }
           });
           
-          console.log(`Session ${sessionId} updated with reliable transcription and analysis`);
+          pythonProcess.on('error', (error) => {
+            reject(new Error(`Failed to start Python transcriber: ${error.message}`));
+          });
+          
+          // Timeout after 2 minutes
+          setTimeout(() => {
+            pythonProcess.kill();
+            reject(new Error('Transcription timeout after 2 minutes'));
+          }, 120000);
+        });
+        
+        const result = transcriptionResult as any;
+        
+        if (result.success) {
+          console.log(`Python transcription successful: ${result.text.length} characters, ${result.segments.length} segments`);
+          
+          // Generate analysis based on transcription
+          const transcript = result.text || '';
+          const segments = result.segments || [];
+          
+          // Count critical words
+          let criticalCount = 0;
+          segments.forEach((segment: any) => {
+            criticalCount += segment.criticalWords?.length || 0;
+          });
+          
+          // Analyze sentiment
+          const positiveWords = ['obrigado', 'ótimo', 'perfeito', 'excelente'];
+          const negativeWords = ['problema', 'defeito', 'danificado', 'urgente'];
+          
+          let sentiment = 0.7;
+          const lowerText = transcript.toLowerCase();
+          
+          positiveWords.forEach(word => {
+            if (lowerText.includes(word)) sentiment += 0.1;
+          });
+          
+          negativeWords.forEach(word => {
+            if (lowerText.includes(word)) sentiment -= 0.15;
+          });
+          
+          sentiment = Math.max(0.1, Math.min(1.0, sentiment));
+          
+          const aiAnalysis = {
+            sentiment,
+            score: Math.round(sentiment * 10),
+            criticalMoments: segments.filter((seg: any) => seg.criticalWords?.length > 0).map((seg: any) => ({
+              time: seg.startTime,
+              description: `Palavra crítica: ${seg.criticalWords.join(', ')}`,
+              severity: seg.criticalWords.length > 1 ? 'high' : 'medium'
+            })),
+            keyTopics: extractTopics(transcript),
+            recommendations: generateRecommendations(sentiment, criticalCount),
+            processingTime: '< 2s',
+            engine: result.transcription_engine
+          };
+          
+          // Update session with results
+          await storage.updateMonitoringSession(sessionId, {
+            transcription: {
+              text: result.text,
+              segments: result.segments,
+              totalDuration: result.duration
+            },
+            duration: result.duration,
+            aiAnalysis: aiAnalysis,
+            status: 'completed'
+          });
+          
+          console.log(`Session ${sessionId} completed with real audio transcription`);
         } else {
-          console.error(`Transcription failed: ${transcriptionResult.error}`);
+          console.error(`Python transcription failed: ${result.error}`);
           await storage.updateMonitoringSession(sessionId, {
             status: 'error'
           });
         }
       } catch (error) {
-        console.error('Reliable transcription failed:', error);
+        console.error('Python transcription system failed:', error);
         await storage.updateMonitoringSession(sessionId, {
           status: 'error'
         });
         return res.status(500).json({ message: `Transcription failed: ${(error as any).message}` });
+      }
+      
+      function extractTopics(text: string): string[] {
+        const topics = [];
+        const lowerText = text.toLowerCase();
+        
+        if (lowerText.includes('pedido') || lowerText.includes('compra')) topics.push('pedido');
+        if (lowerText.includes('entrega') || lowerText.includes('envio')) topics.push('entrega');
+        if (lowerText.includes('produto') || lowerText.includes('item')) topics.push('produto');
+        if (lowerText.includes('troca') || lowerText.includes('devolução')) topics.push('troca');
+        if (lowerText.includes('problema') || lowerText.includes('defeito')) topics.push('problema');
+        if (lowerText.includes('atendimento')) topics.push('atendimento');
+        
+        return topics.length > 0 ? topics : ['atendimento_geral'];
+      }
+      
+      function generateRecommendations(sentiment: number, criticalCount: number): string[] {
+        const recommendations = [];
+        
+        if (sentiment > 0.8) {
+          recommendations.push('Excelente atendimento - manter padrão');
+        } else if (sentiment > 0.6) {
+          recommendations.push('Atendimento satisfatório');
+        } else {
+          recommendations.push('Atendimento precisa melhorar');
+        }
+        
+        if (criticalCount > 0) {
+          recommendations.push('Palavras críticas detectadas - acompanhar');
+        }
+        
+        return recommendations;
       }
 
       // Return immediately with processing status
