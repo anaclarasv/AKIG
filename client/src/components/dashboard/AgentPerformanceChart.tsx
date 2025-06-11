@@ -17,7 +17,7 @@ export default function AgentPerformanceChart() {
   const [selectedPeriod, setSelectedPeriod] = useState<3 | 6 | 12>(6);
 
   const { data: performanceData, isLoading } = useQuery<PerformanceData[]>({
-    queryKey: [`/api/performance-evolution/${user?.id}`, selectedPeriod],
+    queryKey: [`/api/performance-evolution/${user?.id}?months=${selectedPeriod}`, selectedPeriod],
     enabled: user?.role === 'agent' && !!user?.id,
   });
 
@@ -54,9 +54,18 @@ export default function AgentPerformanceChart() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const monthYear = label; // Format: YYYY-MM
+      const [year, month] = monthYear.split('-');
+      const monthNames = [
+        'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+      ];
+      const monthName = monthNames[parseInt(month) - 1];
+      const formattedDate = `${monthName}/${year}`;
+      
       return (
         <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-          <p className="font-medium">{`${label}`}</p>
+          <p className="font-medium">{formattedDate}</p>
           <p className="text-blue-600">
             {`Nota: ${payload[0].value.toFixed(1)}`}
           </p>
@@ -67,6 +76,17 @@ export default function AgentPerformanceChart() {
       );
     }
     return null;
+  };
+
+  // Format month labels for display
+  const formatMonthLabel = (monthYear: string) => {
+    const [year, month] = monthYear.split('-');
+    const monthNames = [
+      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+    ];
+    const monthName = monthNames[parseInt(month) - 1];
+    return `${monthName}`;
   };
 
   return (
@@ -122,6 +142,7 @@ export default function AgentPerformanceChart() {
                     dataKey="month" 
                     tick={{ fontSize: 12 }}
                     className="text-gray-600 dark:text-gray-400"
+                    tickFormatter={formatMonthLabel}
                   />
                   <YAxis 
                     domain={[0, 100]}
