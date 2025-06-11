@@ -85,6 +85,11 @@ export interface IStorage {
   getUserRewardPurchases(userId: string): Promise<RewardPurchase[]>;
   purchaseReward(userId: string, rewardId: number): Promise<RewardPurchase>;
   
+  // Reward approval system
+  getPendingRewardRequests(): Promise<any[]>;
+  approveRewardRequest(requestId: number, approverId: string, notes?: string): Promise<RewardPurchase>;
+  rejectRewardRequest(requestId: number, approverId: string, rejectionReason: string): Promise<RewardPurchase>;
+  
   // Dashboard metrics
   getDashboardMetrics(companyId?: number): Promise<{
     todayMonitorings: number;

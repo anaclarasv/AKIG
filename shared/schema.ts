@@ -127,14 +127,19 @@ export const rewards = pgTable("rewards", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Reward purchases
+// Reward purchases with approval workflow
 export const rewardPurchases = pgTable("reward_purchases", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   rewardId: integer("reward_id").references(() => rewards.id).notNull(),
   cost: integer("cost").notNull(),
-  status: varchar("status").default("pending"), // pending, delivered, cancelled
-  purchasedAt: timestamp("purchased_at").defaultNow(),
+  status: varchar("status").default("pending"), // pending, approved, rejected, delivered
+  requestedAt: timestamp("requested_at").defaultNow(),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"),
 });
 
 // Evaluation contests

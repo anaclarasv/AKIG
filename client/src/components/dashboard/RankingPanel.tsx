@@ -1,13 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Crown, Coins } from "lucide-react";
+import { Crown, Coins, CheckCircle, Clock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import type { RankingEntry } from "@/types";
 
 export default function RankingPanel() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
   const { data: ranking, isLoading } = useQuery<RankingEntry[]>({
     queryKey: ['/api/ranking'],
+  });
+
+  // Query for pending reward requests for approvers
+  const { data: pendingRequests, isLoading: requestsLoading } = useQuery<any[]>({
+    queryKey: ['/api/reward-requests/pending'],
+    enabled: user?.role === 'admin' || user?.role === 'evaluator',
   });
 
   if (isLoading) {
@@ -83,18 +94,59 @@ export default function RankingPanel() {
           ))}
         </div>
 
-        {/* Virtual Coins Section */}
+        {/* Virtual Coins Section - Different interface based on role */}
         <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-semibold text-foreground">Moedas Virtuais</h4>
-            <Coins className="w-5 h-5 text-yellow-500" />
+            <h4 className="font-semibold text-foreground">
+              {user?.role === 'admin' || user?.role === 'evaluator' ? 'Aprovações de Resgate' : 'Moedas Virtuais'}
+            </h4>
+            {user?.role === 'admin' || user?.role === 'evaluator' ? (
+              <CheckCircle className="w-5 h-5 text-green-500" />
+            ) : (
+              <Coins className="w-5 h-5 text-yellow-500" />
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mb-3">
-            Troque por brindes e recompensas
-          </p>
-          <Button className="w-full akig-bg-primary hover:opacity-90 text-sm font-medium">
-            Ver Loja de Brindes
-          </Button>
+          
+          {/* For Admin/Evaluator - Show pending approvals */}
+          {(user?.role === 'admin' || user?.role === 'evaluator') ? (
+            <>
+              <p className="text-sm text-muted-foreground mb-3">
+                {pendingRequests?.length || 0} solicitações pendentes
+              </p>
+              <div className="flex items-center space-x-2 mb-3">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span className="text-sm text-muted-foreground">
+                  Aguardando sua aprovação
+                </span>
+              </div>
+              <Button 
+                className="w-full akig-bg-primary hover:opacity-90 text-sm font-medium"
+                onClick={() => setLocation('/rewards-approvals')}
+              >
+                Revisar Solicitações
+              </Button>
+            </>
+          ) : (
+            /* For Agent/Supervisor - Show coin exchange */
+            <>
+              <p className="text-sm text-muted-foreground mb-3">
+                {user?.role === 'supervisor' ? 'Solicite resgates para sua equipe' : 'Troque por brindes e recompensas'}
+              </p>
+              <div className="flex items-center justify-center space-x-2 mb-3">
+                <Coins className="w-4 h-4 text-yellow-500" />
+                <span className="text-lg font-bold text-yellow-600">
+                  {user?.virtualCoins || 0}
+                </span>
+                <span className="text-sm text-muted-foreground">moedas</span>
+              </div>
+              <Button 
+                className="w-full akig-bg-primary hover:opacity-90 text-sm font-medium"
+                onClick={() => setLocation('/rewards-store')}
+              >
+                Ver Loja de Brindes
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

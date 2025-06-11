@@ -1709,6 +1709,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reward request approval system endpoints
+  app.get("/api/reward-requests/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      // Only admin and evaluators can view pending requests
+      if (user?.role !== 'admin' && user?.role !== 'evaluator') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const pendingRequests = await storage.getPendingRewardRequests();
+      res.json(pendingRequests);
+    } catch (error) {
+      console.error("Error fetching pending reward requests:", error);
+      res.status(500).json({ message: "Failed to fetch pending reward requests" });
+    }
+  });
+
+  app.post("/api/reward-requests/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role !== 'admin' && user?.role !== 'evaluator') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const approvedRequest = await storage.approveRewardRequest(parseInt(id), user.id, notes);
+      res.json(approvedRequest);
+    } catch (error) {
+      console.error("Error approving reward request:", error);
+      res.status(500).json({ message: "Failed to approve reward request" });
+    }
+  });
+
+  app.post("/api/reward-requests/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { rejectionReason } = req.body;
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role !== 'admin' && user?.role !== 'evaluator') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const rejectedRequest = await storage.rejectRewardRequest(parseInt(id), user.id, rejectionReason);
+      res.json(rejectedRequest);
+    } catch (error) {
+      console.error("Error rejecting reward request:", error);
+      res.status(500).json({ message: "Failed to reject reward request" });
+    }
+  });
+
   // Evaluation contests endpoints
   app.get("/api/evaluation-contests", isAuthenticated, async (req: any, res) => {
     try {
