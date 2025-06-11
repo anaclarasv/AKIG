@@ -1141,14 +1141,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.user.id);
       const { agentId } = req.query;
       
-      // Admin and evaluator can see all contests, agents/supervisors only their own
-      if (['admin', 'evaluator'].includes(user?.role || '')) {
+      // Admin, evaluator and supervisor can see all contests, agents only their own
+      if (['admin', 'evaluator', 'supervisor'].includes(user?.role || '')) {
         const contests = await storage.getAllEvaluationContests();
         res.json(contests);
       } else {
+        // For agents, get their own contests with evaluation details
         const targetAgentId = agentId || req.user.id;
-        const contests = await storage.getEvaluationContests(targetAgentId as string);
-        res.json(contests);
+        const agentContests = await db
+          .select({
+            id: evaluationContests.id,
+            evaluationId: evaluationContests.evaluationId,
+            agentId: evaluationContests.agentId,
+            reason: evaluationContests.reason,
+            status: evaluationContests.status,
+            response: evaluationContests.response,
+            createdAt: evaluationContests.createdAt,
+            reviewedAt: evaluationContests.reviewedAt,
+            evaluationScore: evaluations.finalScore,
+            evaluationObservations: evaluations.observations,
+            monitoringSessionId: evaluations.monitoringSessionId,
+          })
+          .from(evaluationContests)
+          .innerJoin(evaluations, eq(evaluationContests.evaluationId, evaluations.id))
+          .where(eq(evaluationContests.agentId, targetAgentId as string))
+          .orderBy(desc(evaluationContests.createdAt));
+        
+        res.json(agentContests);
       }
     } catch (error) {
       console.error("Error fetching evaluation contests:", error);

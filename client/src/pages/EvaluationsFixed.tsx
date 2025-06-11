@@ -35,10 +35,16 @@ export default function EvaluationsFixed() {
     queryKey: user?.role === 'agent' ? ['/api/evaluations', 'agent', user.id] : ['/api/evaluations'],
   });
 
-  // Fetch evaluation contests for admin and evaluator roles
+  // Fetch evaluation contests for admin, evaluator and supervisor roles
   const { data: contests = [] } = useQuery<any[]>({
     queryKey: ['/api/evaluation-contests'],
-    enabled: ['admin', 'evaluator'].includes(user?.role || ''),
+    enabled: ['admin', 'evaluator', 'supervisor'].includes(user?.role || ''),
+  });
+
+  // Fetch agent's own contests for contested evaluations tab
+  const { data: agentContests = [] } = useQuery<any[]>({
+    queryKey: ['/api/evaluation-contests', 'agent', user?.id],
+    enabled: ['agent', 'supervisor'].includes(user?.role || ''),
   });
 
   // Mutation for signing evaluations
@@ -270,11 +276,11 @@ export default function EvaluationsFixed() {
 
       <div className="mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full ${['admin', 'evaluator'].includes(user?.role || '') ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${['admin', 'evaluator', 'supervisor'].includes(user?.role || '') ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="all">Todas</TabsTrigger>
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
             <TabsTrigger value="signed">Assinadas</TabsTrigger>
-            {['admin', 'evaluator'].includes(user?.role || '') && (
+            {['admin', 'evaluator', 'supervisor'].includes(user?.role || '') && (
               <TabsTrigger value="contests">Contestações</TabsTrigger>
             )}
             {['agent', 'supervisor'].includes(user?.role || '') && (
@@ -282,8 +288,8 @@ export default function EvaluationsFixed() {
             )}
           </TabsList>
 
-          {/* Aba de Contestações para Admin/Evaluator */}
-          {activeTab === "contests" && ['admin', 'evaluator'].includes(user?.role || '') && (
+          {/* Aba de Contestações para Admin/Evaluator/Supervisor */}
+          {activeTab === "contests" && ['admin', 'evaluator', 'supervisor'].includes(user?.role || '') && (
             <TabsContent value="contests" className="mt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {contests.map((contest: any) => (
@@ -304,12 +310,33 @@ export default function EvaluationsFixed() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
+                        {/* Informações da Avaliação Contestada */}
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-sm text-gray-700 font-medium mb-2">Avaliação Contestada:</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              Avaliação #{contest.evaluationId} • Sessão #{contest.monitoringSessionId}
+                            </span>
+                            <span className={`text-sm font-bold ${
+                              Number(contest.evaluationScore) >= 8 ? 'text-green-600' :
+                              Number(contest.evaluationScore) >= 6 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              Nota: {Number(contest.evaluationScore).toFixed(1)}
+                            </span>
+                          </div>
+                          {contest.evaluationObservations && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              "{contest.evaluationObservations}"
+                            </p>
+                          )}
+                        </div>
+
                         <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                           <p className="text-sm text-orange-700 font-medium mb-1">Motivo da Contestação:</p>
                           <p className="text-sm text-orange-600">{contest.reason}</p>
                         </div>
                         
-                        {contest.status === 'pending' && (
+                        {contest.status === 'pending' && ['admin', 'evaluator'].includes(user?.role || '') && (
                           <div className="flex items-center space-x-2 pt-2">
                             <Button 
                               variant="outline" 
@@ -327,6 +354,11 @@ export default function EvaluationsFixed() {
                           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                             <p className="text-sm text-blue-700 font-medium mb-1">Resposta do Avaliador:</p>
                             <p className="text-sm text-blue-600">{contest.response}</p>
+                            {contest.reviewedAt && (
+                              <p className="text-xs text-blue-500 mt-2">
+                                Analisada em: {new Date(contest.reviewedAt).toLocaleString('pt-BR')}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>

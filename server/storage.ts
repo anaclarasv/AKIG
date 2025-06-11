@@ -840,8 +840,21 @@ export class DatabaseStorage implements IStorage {
 
   async getAllEvaluationContests(): Promise<EvaluationContest[]> {
     const contests = await db
-      .select()
+      .select({
+        id: evaluationContests.id,
+        evaluationId: evaluationContests.evaluationId,
+        agentId: evaluationContests.agentId,
+        reason: evaluationContests.reason,
+        status: evaluationContests.status,
+        response: evaluationContests.response,
+        createdAt: evaluationContests.createdAt,
+        reviewedAt: evaluationContests.reviewedAt,
+        evaluationScore: evaluations.finalScore,
+        evaluationObservations: evaluations.observations,
+        monitoringSessionId: evaluations.monitoringSessionId,
+      })
       .from(evaluationContests)
+      .innerJoin(evaluations, eq(evaluationContests.evaluationId, evaluations.id))
       .orderBy(desc(evaluationContests.createdAt));
 
     return contests;
