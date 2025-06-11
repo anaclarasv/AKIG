@@ -283,6 +283,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMonitoringSession(id: number): Promise<void> {
+    // First delete related evaluations to avoid foreign key constraint violation
+    await db.delete(evaluations).where(eq(evaluations.monitoringSessionId, id));
+    // Then delete the monitoring session
     await db.delete(monitoringSessions).where(eq(monitoringSessions.id, id));
   }
 

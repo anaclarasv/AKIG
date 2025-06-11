@@ -906,9 +906,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/evaluation-criteria', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
+      
+      // For admin users, get criteria from all companies, for others use their companyId
+      if (user?.role === 'admin') {
+        const companies = await storage.getCompanies();
+        if (companies.length > 0) {
+          const criteria = await storage.getEvaluationCriteria(companies[0].id);
+          return res.json(criteria);
+        } else {
+          return res.json([]);
+        }
+      }
+      
       if (!user?.companyId) {
         return res.status(400).json({ message: "Company ID required" });
       }
+      
       const criteria = await storage.getEvaluationCriteria(user.companyId);
       res.json(criteria);
     } catch (error) {
