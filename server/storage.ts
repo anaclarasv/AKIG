@@ -579,16 +579,15 @@ export class DatabaseStorage implements IStorage {
 
     const userEvaluations = await db
       .select({
-        id: evaluations.id,
-        monitoringSessionId: evaluations.monitoringSessionId,
-        evaluatorId: evaluations.evaluatorId,
-        scores: evaluations.scores,
-        observations: evaluations.observations,
-        finalScore: evaluations.finalScore,
-        status: evaluations.status,
-        agentSignature: evaluations.agentSignature,
-        createdAt: evaluations.createdAt,
-        updatedAt: evaluations.updatedAt,
+        id: monitoringEvaluations.id,
+        monitoringSessionId: monitoringEvaluations.monitoringSessionId,
+        evaluatorId: monitoringEvaluations.evaluatorId,
+        totalScore: monitoringEvaluations.totalScore,
+        comments: monitoringEvaluations.comments,
+        createdAt: monitoringEvaluations.createdAt,
+        updatedAt: monitoringEvaluations.updatedAt,
+        agentSignature: monitoringEvaluations.agentSignature,
+        agentSignedAt: monitoringEvaluations.agentSignedAt,
         // Session data
         sessionId: monitoringSessions.id,
         sessionStatus: monitoringSessions.status,
@@ -596,25 +595,32 @@ export class DatabaseStorage implements IStorage {
         sessionCreatedAt: monitoringSessions.createdAt,
         sessionAudioUrl: monitoringSessions.audioUrl,
         sessionCampaignId: monitoringSessions.campaignId,
+        // Agent data
+        agentFirstName: agentUser.firstName,
+        agentLastName: agentUser.lastName,
+        // Evaluator data
+        evaluatorFirstName: evaluatorUser.firstName,
+        evaluatorLastName: evaluatorUser.lastName,
       })
-      .from(evaluations)
-      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      .from(monitoringEvaluations)
+      .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+      .leftJoin(agentUser, eq(monitoringSessions.agentId, agentUser.id))
+      .leftJoin(evaluatorUser, eq(monitoringEvaluations.evaluatorId, evaluatorUser.id))
       .where(and(
         eq(monitoringSessions.agentId, userId),
-        gte(evaluations.createdAt, dateLimit)
+        gte(monitoringEvaluations.createdAt, dateLimit)
       ))
-      .orderBy(desc(evaluations.createdAt));
+      .orderBy(desc(monitoringEvaluations.createdAt));
 
     // Transform the data to match the expected interface
     return userEvaluations.map(evaluation => ({
       id: evaluation.id,
       monitoringSessionId: evaluation.monitoringSessionId,
       evaluatorId: evaluation.evaluatorId,
-      scores: evaluation.scores,
-      observations: evaluation.observations,
-      finalScore: evaluation.finalScore,
-      status: evaluation.status,
+      finalScore: evaluation.totalScore,
+      observations: evaluation.comments,
       agentSignature: evaluation.agentSignature,
+      agentSignedAt: evaluation.agentSignedAt,
       createdAt: evaluation.createdAt,
       updatedAt: evaluation.updatedAt,
       session: {
@@ -626,6 +632,10 @@ export class DatabaseStorage implements IStorage {
         audioUrl: evaluation.sessionAudioUrl,
         createdAt: evaluation.sessionCreatedAt,
         updatedAt: evaluation.sessionCreatedAt,
+      },
+      evaluator: {
+        firstName: evaluation.evaluatorFirstName,
+        lastName: evaluation.evaluatorLastName,
       }
     }));
   }
