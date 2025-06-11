@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
 import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
+import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
 
 export default function Monitoring() {
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
@@ -29,6 +30,7 @@ export default function Monitoring() {
     agentId: "",
     campaignId: "",
   });
+  const [showEvaluationForm, setShowEvaluationForm] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -548,6 +550,37 @@ export default function Monitoring() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Dynamic Evaluation Form */}
+          {showEvaluationForm && selectedSessionData.transcription && (
+            <Card className="lg:col-span-3 akig-card-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Ficha de Monitoria Dinâmica</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowEvaluationForm(false)}
+                  >
+                    Fechar Ficha
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <MonitoringEvaluationForm 
+                  monitoringSessionId={selectedSessionData.id}
+                  onEvaluationSaved={(evaluationId) => {
+                    toast({
+                      title: "Avaliação salva",
+                      description: `Ficha de monitoria #${evaluationId} criada com sucesso.`,
+                    });
+                    setShowEvaluationForm(false);
+                    queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     );
@@ -663,6 +696,18 @@ export default function Monitoring() {
                   >
                     {session.status === 'pending' ? 'Acompanhar Transcrição' : 'Ver Detalhes'}
                   </Button>
+                  {(user?.role === 'evaluator' || user?.role === 'admin') && session.transcription && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSession(session.id);
+                        setShowEvaluationForm(true);
+                      }}
+                    >
+                      Avaliar
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm">
                     <Download className="w-4 h-4" />
                   </Button>
