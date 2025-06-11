@@ -45,8 +45,8 @@ interface MonitoringSession {
   id: number;
   agentId: string;
   evaluatorId: string;
-  audioFileName: string;
-  transcriptionText: string;
+  audioUrl: string;
+  transcription: any;
   status: string;
   createdAt: string;
   agent?: {
@@ -122,8 +122,9 @@ export default function MonitoringDetails() {
   };
 
   const startEditingTranscription = () => {
-    if (monitoring?.transcriptionText) {
-      const segments = parseTranscriptionIntoSegments(monitoring.transcriptionText);
+    const transcriptionText = monitoring?.transcription?.text || '';
+    if (transcriptionText) {
+      const segments = parseTranscriptionIntoSegments(transcriptionText);
       setTranscriptionSegments(segments);
     } else {
       setTranscriptionSegments([]);
@@ -294,7 +295,7 @@ export default function MonitoringDetails() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Detalhes da Monitoria #{monitoring.id}</h1>
-          <p className="text-muted-foreground">{monitoring.audioFileName}</p>
+          <p className="text-muted-foreground">{monitoring.audioUrl || "Áudio não disponível"}</p>
         </div>
         <Link href="/monitoring">
           <Button variant="outline">
@@ -402,7 +403,7 @@ export default function MonitoringDetails() {
                 // Modo visualização
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {monitoring.transcriptionText || "Transcrição não disponível"}
+                    {monitoring.transcription?.text || "Transcrição não disponível"}
                   </p>
                 </div>
               ) : (

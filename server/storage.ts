@@ -295,7 +295,40 @@ export class DatabaseStorage implements IStorage {
 
   async getMonitoringSession(id: number): Promise<MonitoringSession | undefined> {
     const [session] = await db.select().from(monitoringSessions).where(eq(monitoringSessions.id, id));
-    return session;
+    
+    if (!session) return undefined;
+
+    // Get agent details
+    let agent = null;
+    if (session.agentId) {
+      const [agentUser] = await db.select().from(users).where(eq(users.id, session.agentId));
+      if (agentUser) {
+        agent = {
+          id: agentUser.id,
+          firstName: agentUser.firstName,
+          lastName: agentUser.lastName,
+        };
+      }
+    }
+
+    // Get evaluator details
+    let evaluator = null;
+    if (session.evaluatorId) {
+      const [evaluatorUser] = await db.select().from(users).where(eq(users.id, session.evaluatorId));
+      if (evaluatorUser) {
+        evaluator = {
+          id: evaluatorUser.id,
+          firstName: evaluatorUser.firstName,
+          lastName: evaluatorUser.lastName,
+        };
+      }
+    }
+
+    return {
+      ...session,
+      agent,
+      evaluator,
+    };
   }
 
   async createMonitoringSession(session: InsertMonitoringSession): Promise<MonitoringSession> {
