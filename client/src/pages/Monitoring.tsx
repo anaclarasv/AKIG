@@ -387,7 +387,7 @@ export default function Monitoring() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Transcrição com IA Local</CardTitle>
-                {(selectedSessionData.status === 'processing' || processingStatuses[selectedSessionData.id] === 'processing') && (
+                {(selectedSessionData.status === 'processing' || processingStatuses[selectedSessionData.id] === 'processing') && !selectedSessionData.transcription?.text && (
                   <div className="space-y-2 mt-2">
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>

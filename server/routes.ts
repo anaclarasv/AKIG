@@ -734,12 +734,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return recommendations;
       }
 
-      // Return immediately with processing status
-      const updatedSession = await storage.getMonitoringSession(sessionId);
+      // Return final session with completed transcription
+      const finalSession = await storage.getMonitoringSession(sessionId);
       res.json({
-        ...updatedSession,
-        status: "processing",
-        message: "Transcription started - processing in background with Whisper"
+        ...finalSession,
+        message: "Transcription completed successfully"
       });
 
     } catch (error) {
