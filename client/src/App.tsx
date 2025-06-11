@@ -20,6 +20,7 @@ import RewardsStore from "@/pages/RewardsStore";
 import LGPDCompliance from "@/pages/LGPDCompliance";
 import MyEvaluations from "@/pages/MyEvaluations";
 import ArchivedSessions from "@/pages/ArchivedSessions";
+import TestEvaluationForm from "@/pages/TestEvaluationForm";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -97,6 +98,11 @@ function Router() {
             <Route path="/archived-sessions" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                 <ArchivedSessions />
+              </ProtectedRoute>
+            )} />
+            <Route path="/test-evaluation" component={() => (
+              <ProtectedRoute allowedRoles={['admin', 'evaluator']}>
+                <TestEvaluationForm />
               </ProtectedRoute>
             )} />
             <Route component={NotFound} />
