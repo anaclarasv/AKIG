@@ -580,14 +580,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use Whisper offline for real transcription
+      // Use AssemblyAI for real audio transcription
       try {
-        console.log('Starting Whisper offline real transcription for session:', sessionId);
+        console.log('Starting AssemblyAI real transcription for session:', sessionId);
         
         const { spawn } = await import('child_process');
         
         const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/whisper-offline-real.py',
+          '/home/runner/workspace/server/assemblyai-transcription.py',
           resolvedPath
         ], {
           stdio: ['pipe', 'pipe', 'pipe']
@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         pythonProcess.stderr.on('data', (data) => {
           stderr += data.toString();
-          console.log('Whisper progress:', data.toString().trim());
+          console.log('AssemblyAI progress:', data.toString().trim());
         });
         
         const transcriptionResult = await new Promise((resolve, reject) => {
@@ -615,24 +615,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 reject(new Error(`Failed to parse transcription result: ${parseError}`));
               }
             } else {
-              reject(new Error(`Whisper transcriber failed with code ${code}: ${stderr}`));
+              reject(new Error(`AssemblyAI transcriber failed with code ${code}: ${stderr}`));
             }
           });
           
           pythonProcess.on('error', (error) => {
-            reject(new Error(`Failed to start Whisper transcriber: ${error.message}`));
+            reject(new Error(`Failed to start AssemblyAI transcriber: ${error.message}`));
           });
           
-          // Timeout after 5 minutes for longer audio files
+          // Timeout after 10 minutes for longer audio files
           setTimeout(() => {
             pythonProcess.kill();
-            reject(new Error('Transcription timeout after 5 minutes'));
-          }, 300000);
+            reject(new Error('Transcription timeout after 10 minutes'));
+          }, 600000);
         });
         
         const result = transcriptionResult as any;
         
-        console.log('Whisper offline transcription completed successfully');
+        console.log('AssemblyAI transcription completed successfully');
         console.log(`Text length: ${result.text.length} characters`);
         console.log(`Segments: ${result.segments.length}`);
         

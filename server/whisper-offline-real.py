@@ -46,8 +46,8 @@ def transcribe_with_whisper_offline(wav_path: str) -> dict:
     try:
         print("Loading Whisper model...", file=sys.stderr)
         
-        # Load Whisper model (small model for faster processing)
-        model = whisper.load_model("small")
+        # Load Whisper model (tiny model for fastest processing)
+        model = whisper.load_model("tiny")
         
         print("Transcribing audio with Whisper...", file=sys.stderr)
         
