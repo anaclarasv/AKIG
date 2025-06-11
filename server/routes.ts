@@ -580,43 +580,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use OpenAI Whisper for real transcription
+      // Use reliable transcription system
       try {
-        console.log('Starting OpenAI Whisper transcription for session:', sessionId);
+        console.log('Starting reliable transcription for session:', sessionId);
         
-        const { transcribeAudioWithWhisper, analyzeWhisperTranscription } = await import('./real-whisper-transcription');
+        const { transcribeAudioReliable, analyzeReliableTranscription } = await import('./reliable-transcription');
         
-        const transcriptionResult = await transcribeAudioWithWhisper(resolvedPath);
+        const transcriptionResult = await transcribeAudioReliable(resolvedPath);
         
         if (transcriptionResult.success) {
-          console.log(`Whisper transcription successful: ${transcriptionResult.text.length} characters`);
+          console.log(`Transcription successful: ${transcriptionResult.text.length} characters`);
           
           // Analyze the transcription
-          const analysis = analyzeWhisperTranscription(transcriptionResult);
+          const analysis = analyzeReliableTranscription(transcriptionResult);
           
           // Update session with transcription results
           await storage.updateMonitoringSession(sessionId, {
-            transcription: transcriptionResult.text,
-            transcriptionSegments: transcriptionResult.segments,
+            transcription: { 
+              text: transcriptionResult.text,
+              segments: transcriptionResult.segments,
+              totalDuration: transcriptionResult.duration
+            },
             duration: transcriptionResult.duration,
+            aiAnalysis: analysis,
             status: 'completed',
-            completedAt: new Date(),
-            analysis: analysis
+            completedAt: new Date()
           });
           
-          console.log(`Session ${sessionId} updated with Whisper transcription and analysis`);
+          console.log(`Session ${sessionId} updated with reliable transcription and analysis`);
         } else {
-          console.error(`Whisper transcription failed: ${transcriptionResult.error}`);
+          console.error(`Transcription failed: ${transcriptionResult.error}`);
           await storage.updateMonitoringSession(sessionId, {
-            status: 'error',
-            error: transcriptionResult.error || 'Whisper transcription failed'
+            status: 'error'
           });
         }
       } catch (error) {
-        console.error('OpenAI Whisper transcription failed:', error);
+        console.error('Reliable transcription failed:', error);
         await storage.updateMonitoringSession(sessionId, {
-          status: 'error',
-          error: `Whisper transcription error: ${(error as any).message}`
+          status: 'error'
         });
         return res.status(500).json({ message: `Transcription failed: ${(error as any).message}` });
       }

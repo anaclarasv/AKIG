@@ -45,14 +45,21 @@ export async function transcribeAudioWithWhisper(audioFilePath: string): Promise
     
     console.log('Calling OpenAI Whisper API...');
     
-    // Call OpenAI Whisper API with timestamps
-    const transcription = await openai.audio.transcriptions.create({
+    // Call OpenAI Whisper API with timeout
+    const transcriptionPromise = openai.audio.transcriptions.create({
       file: audioStream,
       model: "whisper-1",
       language: "pt", // Portuguese
       response_format: "verbose_json",
       timestamp_granularities: ["segment"]
     });
+
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI Whisper API timeout after 60 seconds')), 60000);
+    });
+
+    const transcription = await Promise.race([transcriptionPromise, timeoutPromise]) as any;
 
     console.log('Whisper API response received');
 
