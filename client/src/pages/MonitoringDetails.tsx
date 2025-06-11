@@ -8,11 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, FileText, Signature, Eye, Download, Calendar, Clock, User, Phone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, Signature, Eye, Download, Calendar, Clock, User, Phone, Edit, Save, X, Plus, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+interface TranscriptionSegment {
+  id: string;
+  text: string;
+  speaker: 'agent' | 'customer' | 'unknown';
+  timestamp?: string;
+}
 
 interface EvaluationCriterion {
   id: string;
@@ -67,6 +76,8 @@ export default function MonitoringDetails() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [signatureComment, setSignatureComment] = useState("");
+  const [isEditingTranscription, setIsEditingTranscription] = useState(false);
+  const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([]);
   
   const monitoringId = params?.id;
 
@@ -80,6 +91,100 @@ export default function MonitoringDetails() {
   const { data: evaluation, isLoading: loadingEvaluation } = useQuery<MonitoringEvaluation>({
     queryKey: ["/api/monitoring-evaluations", monitoringId],
     enabled: !!monitoringId,
+  });
+
+  // Funções para gerenciar a transcrição
+  const parseTranscriptionIntoSegments = (text: string): TranscriptionSegment[] => {
+    if (!text) return [];
+    
+    const lines = text.split('\n').filter(line => line.trim());
+    return lines.map((line, index) => {
+      const trimmedLine = line.trim();
+      let speaker: 'agent' | 'customer' | 'unknown' = 'unknown';
+      let cleanText = trimmedLine;
+
+      // Detectar marcadores existentes
+      if (trimmedLine.toLowerCase().includes('[atendente]') || trimmedLine.toLowerCase().includes('atendente:')) {
+        speaker = 'agent';
+        cleanText = trimmedLine.replace(/\[atendente\]|\[ATENDENTE\]|atendente:|Atendente:/gi, '').trim();
+      } else if (trimmedLine.toLowerCase().includes('[cliente]') || trimmedLine.toLowerCase().includes('cliente:')) {
+        speaker = 'customer';
+        cleanText = trimmedLine.replace(/\[cliente\]|\[CLIENTE\]|cliente:|Cliente:/gi, '').trim();
+      }
+
+      return {
+        id: `segment-${index}`,
+        text: cleanText,
+        speaker,
+        timestamp: undefined,
+      };
+    });
+  };
+
+  const startEditingTranscription = () => {
+    if (monitoring?.transcriptionText) {
+      const segments = parseTranscriptionIntoSegments(monitoring.transcriptionText);
+      setTranscriptionSegments(segments);
+    } else {
+      setTranscriptionSegments([]);
+    }
+    setIsEditingTranscription(true);
+  };
+
+  const addNewSegment = () => {
+    const newSegment: TranscriptionSegment = {
+      id: `segment-${Date.now()}`,
+      text: '',
+      speaker: 'unknown',
+    };
+    setTranscriptionSegments([...transcriptionSegments, newSegment]);
+  };
+
+  const updateSegment = (id: string, updates: Partial<TranscriptionSegment>) => {
+    setTranscriptionSegments(segments =>
+      segments.map(segment =>
+        segment.id === id ? { ...segment, ...updates } : segment
+      )
+    );
+  };
+
+  const removeSegment = (id: string) => {
+    setTranscriptionSegments(segments =>
+      segments.filter(segment => segment.id !== id)
+    );
+  };
+
+  // Mutation para salvar a transcrição editada
+  const saveTranscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const updatedText = transcriptionSegments
+        .map(segment => {
+          const speakerLabel = segment.speaker === 'agent' ? '[ATENDENTE]' : 
+                             segment.speaker === 'customer' ? '[CLIENTE]' : '';
+          return speakerLabel ? `${speakerLabel} ${segment.text}` : segment.text;
+        })
+        .join('\n');
+
+      const response = await apiRequest("PATCH", `/api/monitoring-sessions/${monitoringId}`, {
+        transcriptionText: updatedText,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Transcrição salva com sucesso!",
+        description: "As alterações foram aplicadas.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/monitoring-sessions", monitoringId] });
+      setIsEditingTranscription(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar transcrição",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Mutation para assinar a ficha
@@ -254,14 +359,131 @@ export default function MonitoringDetails() {
         <TabsContent value="transcription">
           <Card>
             <CardHeader>
-              <CardTitle>Transcrição do Atendimento</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Transcrição do Atendimento</CardTitle>
+                <div className="flex space-x-2">
+                  {!isEditingTranscription ? (
+                    <Button
+                      onClick={startEditingTranscription}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Editar</span>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={() => setIsEditingTranscription(false)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Cancelar</span>
+                      </Button>
+                      <Button
+                        onClick={() => saveTranscriptionMutation.mutate()}
+                        disabled={saveTranscriptionMutation.isPending}
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Salvar</span>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {monitoring.transcriptionText || "Transcrição não disponível"}
-                </p>
-              </div>
+              {!isEditingTranscription ? (
+                // Modo visualização
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {monitoring.transcriptionText || "Transcrição não disponível"}
+                  </p>
+                </div>
+              ) : (
+                // Modo edição
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      Edite a transcrição e identifique quem é cliente e quem é atendente
+                    </p>
+                    <Button
+                      onClick={addNewSegment}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Adicionar Segmento</span>
+                    </Button>
+                  </div>
+                  
+                  {transcriptionSegments.map((segment, index) => (
+                    <div key={segment.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Segmento {index + 1}
+                          </span>
+                          <Select
+                            value={segment.speaker}
+                            onValueChange={(value: 'agent' | 'customer' | 'unknown') =>
+                              updateSegment(segment.id, { speaker: value })
+                            }
+                          >
+                            <SelectTrigger className="w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unknown">Não definido</SelectItem>
+                              <SelectItem value="agent">Atendente</SelectItem>
+                              <SelectItem value="customer">Cliente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          onClick={() => removeSegment(segment.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <Textarea
+                        value={segment.text}
+                        onChange={(e) => updateSegment(segment.id, { text: e.target.value })}
+                        placeholder="Digite o texto da conversa..."
+                        className="min-h-[80px]"
+                      />
+                      
+                      {segment.speaker !== 'unknown' && (
+                        <div className="flex items-center space-x-2">
+                          <Badge
+                            variant={segment.speaker === 'agent' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {segment.speaker === 'agent' ? 'ATENDENTE' : 'CLIENTE'}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {transcriptionSegments.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Nenhum segmento adicionado.</p>
+                      <p className="text-sm">Clique em "Adicionar Segmento" para começar.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

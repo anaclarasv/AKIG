@@ -865,6 +865,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update transcription text
+  app.patch('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Allow supervisors, evaluators, and agents to edit transcriptions
+      if (!['admin', 'supervisor', 'evaluator', 'agent'].includes(user.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const id = parseInt(req.params.id);
+      const { transcriptionText } = req.body;
+
+      if (transcriptionText === undefined) {
+        return res.status(400).json({ message: "transcriptionText is required" });
+      }
+
+      const session = await storage.getMonitoringSession(id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // For agents, only allow editing their own sessions
+      if (user.role === 'agent' && session.agentId !== user.id) {
+        return res.status(403).json({ message: "Can only edit your own sessions" });
+      }
+
+      // Update the transcription field with the new text
+      const currentTranscription = session.transcription || {};
+      const updatedTranscription = {
+        ...currentTranscription,
+        text: transcriptionText,
+        editedAt: new Date().toISOString(),
+        editedBy: user.id,
+      };
+
+      const updatedSession = await storage.updateMonitoringSession(id, {
+        transcription: updatedTranscription,
+      });
+
+      res.json(updatedSession);
+    } catch (error) {
+      console.error("Error updating transcription:", error);
+      res.status(500).json({ message: "Failed to update transcription" });
+    }
+  });
+
   // Delete monitoring session
   app.delete('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
