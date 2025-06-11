@@ -282,6 +282,10 @@ export class DatabaseStorage implements IStorage {
     return updatedSession;
   }
 
+  async deleteMonitoringSession(id: number): Promise<void> {
+    await db.delete(monitoringSessions).where(eq(monitoringSessions.id, id));
+  }
+
   async getEvaluations(companyId?: number, agentId?: string): Promise<Evaluation[]> {
     if (companyId && agentId) {
       const evaluationsWithSessions = await db

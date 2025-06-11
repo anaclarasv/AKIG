@@ -794,6 +794,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete monitoring session
+  app.delete('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      await storage.deleteMonitoringSession(sessionId);
+      res.json({ message: 'Session deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting monitoring session:', error);
+      res.status(500).json({ message: 'Failed to delete monitoring session' });
+    }
+  });
+
+  // Archive monitoring session
+  app.patch('/api/monitoring-sessions/:id/archive', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      await storage.updateMonitoringSession(sessionId, {
+        status: 'archived'
+      });
+
+      res.json({ message: 'Session archived successfully' });
+    } catch (error) {
+      console.error('Error archiving monitoring session:', error);
+      res.status(500).json({ message: 'Failed to archive monitoring session' });
+    }
+  });
+
   // Evaluations routes
   app.get('/api/evaluations', isAuthenticated, async (req: any, res) => {
     try {

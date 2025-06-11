@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, Volume2, Download, Upload, Plus } from "lucide-react";
+import { Play, Pause, Volume2, Download, Upload, Plus, MoreVertical, Trash2, Archive } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
 import { User } from "@/types";
@@ -91,6 +92,48 @@ export default function Monitoring() {
       toast({
         title: "Erro",
         description: "Falha ao enviar áudio. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete session mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      return await apiRequest('DELETE', `/api/monitoring-sessions/${sessionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Sucesso",
+        description: "Monitoria excluída com sucesso!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir monitoria. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Archive session mutation
+  const archiveMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      return await apiRequest('PATCH', `/api/monitoring-sessions/${sessionId}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Sucesso",
+        description: "Monitoria arquivada com sucesso!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Falha ao arquivar monitoria. Tente novamente.",
         variant: "destructive",
       });
     },
@@ -512,7 +555,35 @@ export default function Monitoring() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Sessão #{session.id}</CardTitle>
-                {getStatusBadge(session.status)}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(session.status)}
+                  {(user?.role === 'admin' || user?.role === 'supervisor') && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => archiveMutation.mutate(session.id)}
+                          disabled={archiveMutation.isPending || session.status === 'archived'}
+                        >
+                          <Archive className="mr-2 h-4 w-4" />
+                          Arquivar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => deleteMutation.mutate(session.id)}
+                          disabled={deleteMutation.isPending}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 Criada em: {new Date(session.createdAt).toLocaleString('pt-BR')}
