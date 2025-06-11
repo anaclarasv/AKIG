@@ -588,9 +588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const util = await import('util');
         const execFile = util.promisify(spawn);
         
-        // Execute Python transcriber
+        // Execute Python transcriber with hybrid audio analysis
         const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/simple-transcriber.py',
+          '/home/runner/workspace/server/hybrid-transcriber.py',
           resolvedPath
         ], {
           stdio: ['pipe', 'pipe', 'pipe']
