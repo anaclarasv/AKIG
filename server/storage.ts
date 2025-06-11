@@ -416,6 +416,7 @@ export class DatabaseStorage implements IStorage {
           signedAt: evaluations.signedAt,
           contestedAt: evaluations.contestedAt,
           contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
           createdAt: evaluations.createdAt,
           updatedAt: evaluations.updatedAt,
         })
@@ -442,6 +443,7 @@ export class DatabaseStorage implements IStorage {
           signedAt: evaluations.signedAt,
           contestedAt: evaluations.contestedAt,
           contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
           createdAt: evaluations.createdAt,
           updatedAt: evaluations.updatedAt,
         })
@@ -465,6 +467,7 @@ export class DatabaseStorage implements IStorage {
           signedAt: evaluations.signedAt,
           contestedAt: evaluations.contestedAt,
           contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
           createdAt: evaluations.createdAt,
           updatedAt: evaluations.updatedAt,
         })
@@ -475,7 +478,22 @@ export class DatabaseStorage implements IStorage {
       return evaluationsWithSessions;
     }
     
-    return await db.select().from(evaluations);
+    return await db.select({
+      id: evaluations.id,
+      monitoringSessionId: evaluations.monitoringSessionId,
+      evaluatorId: evaluations.evaluatorId,
+      scores: evaluations.scores,
+      observations: evaluations.observations,
+      finalScore: evaluations.finalScore,
+      status: evaluations.status,
+      agentSignature: evaluations.agentSignature,
+      signedAt: evaluations.signedAt,
+      contestedAt: evaluations.contestedAt,
+      contestReason: evaluations.contestReason,
+      supervisorComment: evaluations.supervisorComment,
+      createdAt: evaluations.createdAt,
+      updatedAt: evaluations.updatedAt,
+    }).from(evaluations);
   }
 
   async getEvaluation(id: number): Promise<Evaluation | undefined> {
@@ -815,6 +833,15 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(evaluationContests)
       .where(eq(evaluationContests.agentId, agentId))
+      .orderBy(desc(evaluationContests.createdAt));
+
+    return contests;
+  }
+
+  async getAllEvaluationContests(): Promise<EvaluationContest[]> {
+    const contests = await db
+      .select()
+      .from(evaluationContests)
       .orderBy(desc(evaluationContests.createdAt));
 
     return contests;
