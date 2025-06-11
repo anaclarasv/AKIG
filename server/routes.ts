@@ -1545,6 +1545,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Evaluation contests endpoints
+  app.get("/api/evaluation-contests", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role === 'agent') {
+        const contests = await storage.getEvaluationContests(user.id);
+        res.json(contests);
+      } else {
+        const contests = await storage.getAllEvaluationContests();
+        res.json(contests);
+      }
+    } catch (error) {
+      console.error("Error fetching evaluation contests:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation contests" });
+    }
+  });
+
+  app.post("/api/evaluation-contests", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role !== 'agent') {
+        return res.status(403).json({ message: "Only agents can create contests" });
+      }
+
+      const contestData = {
+        ...req.body,
+        agentId: user.id,
+        status: 'pending' as const
+      };
+
+      const contest = await storage.createEvaluationContest(contestData);
+      res.status(201).json(contest);
+    } catch (error) {
+      console.error("Error creating evaluation contest:", error);
+      res.status(500).json({ message: "Failed to create evaluation contest" });
+    }
+  });
+
+  app.patch("/api/evaluation-contests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const contestId = parseInt(req.params.id);
+      
+      // Only supervisors and admins can update contest status
+      if (user?.role !== 'supervisor' && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const contest = await storage.updateEvaluationContest(contestId, req.body);
+      res.json(contest);
+    } catch (error) {
+      console.error("Error updating evaluation contest:", error);
+      res.status(500).json({ message: "Failed to update evaluation contest" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

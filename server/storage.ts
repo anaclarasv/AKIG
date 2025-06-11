@@ -855,20 +855,20 @@ export class DatabaseStorage implements IStorage {
 
     const evaluationData = await db
       .select({
-        month: sql<string>`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`,
-        avgScore: avg(evaluations.finalScore),
-        count: count(evaluations.id)
+        month: sql<string>`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`,
+        avgScore: avg(monitoringEvaluations.finalScore),
+        count: count(monitoringEvaluations.id)
       })
-      .from(evaluations)
-      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      .from(monitoringEvaluations)
+      .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
       .where(
         and(
           eq(monitoringSessions.agentId, agentId),
-          gte(evaluations.createdAt, monthsAgo)
+          gte(monitoringEvaluations.createdAt, monthsAgo)
         )
       )
-      .groupBy(sql`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`)
-      .orderBy(sql`TO_CHAR(${evaluations.createdAt}, 'YYYY-MM')`);
+      .groupBy(sql`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`);
 
     return evaluationData.map((item) => ({
       month: item.month,
