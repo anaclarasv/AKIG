@@ -18,6 +18,7 @@ import EvaluationCriteria from "@/pages/EvaluationCriteria";
 import Campaigns from "@/pages/Campaigns";
 import RewardsStore from "@/pages/RewardsStore";
 import LGPDCompliance from "@/pages/LGPDCompliance";
+import MyEvaluations from "@/pages/MyEvaluations";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -59,6 +60,11 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/evaluations" component={Evaluations} />
+            <Route path="/my-evaluations" component={() => (
+              <ProtectedRoute allowedRoles={['agent']}>
+                <MyEvaluations />
+              </ProtectedRoute>
+            )} />
             <Route path="/evaluation-criteria" component={() => (
               <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                 <EvaluationCriteria />

@@ -346,6 +346,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's evaluations for "My Evaluations" page
+  app.get('/api/my-evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const period = req.query.period || '30'; // days
+      
+      const evaluations = await storage.getUserEvaluations(userId, parseInt(period));
+      res.json(evaluations);
+    } catch (error) {
+      console.error('Error fetching user evaluations:', error);
+      res.status(500).json({ message: 'Failed to fetch evaluations' });
+    }
+  });
+
   // Monitoring sessions routes
   app.get('/api/monitoring-sessions', isAuthenticated, async (req: any, res) => {
     try {

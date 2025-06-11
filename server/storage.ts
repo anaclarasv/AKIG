@@ -394,6 +394,70 @@ export class DatabaseStorage implements IStorage {
     return newCriteria;
   }
 
+  // Get user's evaluations with session data for "My Evaluations" page
+  async getUserEvaluations(userId: string, periodDays: number = 30): Promise<any[]> {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - periodDays);
+
+    const userEvaluations = await db
+      .select({
+        id: evaluations.id,
+        monitoringSessionId: evaluations.monitoringSessionId,
+        evaluatorId: evaluations.evaluatorId,
+        scores: evaluations.scores,
+        observations: evaluations.observations,
+        finalScore: evaluations.finalScore,
+        status: evaluations.status,
+        agentSignature: evaluations.agentSignature,
+        supervisorSignature: evaluations.supervisorSignature,
+        developmentTips: evaluations.developmentTips,
+        createdAt: evaluations.createdAt,
+        updatedAt: evaluations.updatedAt,
+        // Session data
+        sessionId: monitoringSessions.id,
+        sessionStatus: monitoringSessions.status,
+        sessionDuration: monitoringSessions.duration,
+        sessionChannel: monitoringSessions.channel,
+        sessionCreatedAt: monitoringSessions.createdAt,
+        sessionAudioUrl: monitoringSessions.audioUrl,
+        sessionCampaignId: monitoringSessions.campaignId,
+      })
+      .from(evaluations)
+      .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+      .where(and(
+        eq(monitoringSessions.agentId, userId),
+        gte(evaluations.createdAt, dateLimit)
+      ))
+      .orderBy(desc(evaluations.createdAt));
+
+    // Transform the data to match the expected interface
+    return userEvaluations.map(evaluation => ({
+      id: evaluation.id,
+      monitoringSessionId: evaluation.monitoringSessionId,
+      evaluatorId: evaluation.evaluatorId,
+      scores: evaluation.scores,
+      observations: evaluation.observations,
+      finalScore: evaluation.finalScore,
+      status: evaluation.status,
+      agentSignature: evaluation.agentSignature,
+      supervisorSignature: evaluation.supervisorSignature,
+      developmentTips: evaluation.developmentTips,
+      createdAt: evaluation.createdAt,
+      updatedAt: evaluation.updatedAt,
+      session: {
+        id: evaluation.sessionId,
+        agentId: userId,
+        campaignId: evaluation.sessionCampaignId,
+        status: evaluation.sessionStatus,
+        duration: evaluation.sessionDuration,
+        channel: evaluation.sessionChannel,
+        audioUrl: evaluation.sessionAudioUrl,
+        createdAt: evaluation.sessionCreatedAt,
+        updatedAt: evaluation.sessionCreatedAt,
+      }
+    }));
+  }
+
   async updateEvaluationCriteria(id: number, criteria: Partial<InsertEvaluationCriteria>): Promise<EvaluationCriteria> {
     const [updatedCriteria] = await db
       .update(evaluationCriteria)
