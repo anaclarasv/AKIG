@@ -590,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Execute Python transcriber
         const pythonProcess = spawn('python3', [
-          '/home/runner/workspace/server/python-transcriber.py',
+          '/home/runner/workspace/server/simple-transcriber.py',
           resolvedPath
         ], {
           stdio: ['pipe', 'pipe', 'pipe']

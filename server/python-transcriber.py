@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Transcritor de áudio real usando SpeechRecognition
-Baseado na abordagem do QualityCallMonitor
+Baseado na abordagem do QualityCallMonitor - Versão Otimizada
 """
 
 import os
@@ -11,12 +11,9 @@ import tempfile
 import logging
 import speech_recognition as sr
 from pydub import AudioSegment
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import librosa
-import numpy as np
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
+# Configurar logging para ser menos verboso
+logging.basicConfig(level=logging.WARNING)
 
 def convert_to_wav(input_path: str) -> str:
     """Converte arquivo de áudio para WAV otimizado para transcrição"""
