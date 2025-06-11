@@ -109,10 +109,11 @@ export default function Monitoring() {
         description: "Monitoria excluída com sucesso!",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Delete error:', error);
       toast({
         title: "Erro",
-        description: "Falha ao excluir monitoria. Tente novamente.",
+        description: error.message || "Falha ao excluir monitoria. Tente novamente.",
         variant: "destructive",
       });
     },
@@ -130,14 +131,28 @@ export default function Monitoring() {
         description: "Monitoria arquivada com sucesso!",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Archive error:', error);
       toast({
         title: "Erro",
-        description: "Falha ao arquivar monitoria. Tente novamente.",
+        description: error.message || "Falha ao arquivar monitoria. Tente novamente.",
         variant: "destructive",
       });
     },
   });
+
+  // Handler functions with confirmation
+  const handleDeleteSession = (sessionId: number) => {
+    if (window.confirm("Tem certeza que deseja excluir esta monitoria? Esta ação não pode ser desfeita.")) {
+      deleteMutation.mutate(sessionId);
+    }
+  };
+
+  const handleArchiveSession = (sessionId: number) => {
+    if (window.confirm("Tem certeza que deseja arquivar esta monitoria?")) {
+      archiveMutation.mutate(sessionId);
+    }
+  };
 
   // Enhanced transcription mutation with progress monitoring
   const transcribingMutation = useMutation({
@@ -566,14 +581,14 @@ export default function Monitoring() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => archiveMutation.mutate(session.id)}
+                          onClick={() => handleArchiveSession(session.id)}
                           disabled={archiveMutation.isPending || session.status === 'archived'}
                         >
                           <Archive className="mr-2 h-4 w-4" />
                           Arquivar
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => deleteMutation.mutate(session.id)}
+                          onClick={() => handleDeleteSession(session.id)}
                           disabled={deleteMutation.isPending}
                           className="text-red-600 focus:text-red-600"
                         >
