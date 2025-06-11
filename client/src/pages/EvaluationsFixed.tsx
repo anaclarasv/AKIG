@@ -44,7 +44,7 @@ export default function EvaluationsFixed() {
   // Fetch agent's own contests for contested evaluations tab
   const { data: agentContests = [] } = useQuery<any[]>({
     queryKey: ['/api/evaluation-contests'],
-    enabled: ['agent', 'supervisor'].includes(user?.role || ''),
+    enabled: user?.role === 'agent',
   });
 
   // Mutation for signing evaluations
@@ -276,15 +276,21 @@ export default function EvaluationsFixed() {
 
       <div className="mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full ${['admin', 'evaluator', 'supervisor'].includes(user?.role || '') ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${
+            user?.role === 'admin' || user?.role === 'evaluator' ? 'grid-cols-5' :
+            user?.role === 'supervisor' ? 'grid-cols-5' : 'grid-cols-4'
+          }`}>
             <TabsTrigger value="all">Todas</TabsTrigger>
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
             <TabsTrigger value="signed">Assinadas</TabsTrigger>
-            {['admin', 'evaluator', 'supervisor'].includes(user?.role || '') && (
+            {['admin', 'evaluator'].includes(user?.role || '') && (
               <TabsTrigger value="contests">Contestações</TabsTrigger>
             )}
-            {['agent', 'supervisor'].includes(user?.role || '') && (
-              <TabsTrigger value="contested">Contestadas</TabsTrigger>
+            {user?.role === 'supervisor' && (
+              <TabsTrigger value="contests">Contestações</TabsTrigger>
+            )}
+            {user?.role === 'agent' && (
+              <TabsTrigger value="contested">Minhas Contestações</TabsTrigger>
             )}
           </TabsList>
 
@@ -381,8 +387,8 @@ export default function EvaluationsFixed() {
             </TabsContent>
           )}
 
-          {/* Aba de Avaliações Contestadas (Agent/Supervisor) */}
-          {activeTab === "contested" && ['agent', 'supervisor'].includes(user?.role || '') && (
+          {/* Aba de Avaliações Contestadas (Agent) */}
+          {activeTab === "contested" && user?.role === 'agent' && (
             <TabsContent value="contested" className="mt-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {agentContests.map((contest: any) => (
