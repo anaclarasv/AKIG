@@ -147,13 +147,13 @@ export default function AgentPerformanceChart() {
             <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">Avaliações de Operação</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">Total de Avaliações</p>
                   <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
-                    {averageOperation.toFixed(1)}
+                    {chartData.reduce((sum, item) => sum + item.evaluations, 0)}
                   </p>
                 </div>
                 <div className="text-sm text-blue-600 dark:text-blue-300">
-                  {chartData.reduce((sum, item) => sum + item.evaluations, 0)} total
+                  últimos {selectedPeriod} meses
                 </div>
               </div>
             </div>
@@ -225,17 +225,7 @@ export default function AgentPerformanceChart() {
                     name="Avaliações de Qualidade"
                   />
                   
-                  {/* Linha de Tendência de Operação - azul tracejada */}
-                  <Line 
-                    type="monotone" 
-                    dataKey="operationTrend" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3}
-                    strokeDasharray="8 4"
-                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }}
-                    name="Avaliações de Operação"
-                  />
+
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -257,11 +247,7 @@ export default function AgentPerformanceChart() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-6 h-1 bg-yellow-500 rounded-full"></div>
-              <span className="text-gray-700 dark:text-gray-300">Avaliações de Qualidade</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-1 bg-blue-500 rounded-full border-2 border-dashed border-blue-500 bg-transparent"></div>
-              <span className="text-gray-700 dark:text-gray-300">Avaliações de Operação</span>
+              <span className="text-gray-700 dark:text-gray-300">Tendência de Qualidade</span>
             </div>
             <div className="flex items-center gap-2 text-xs opacity-70">
               <div className="w-3 h-1 bg-green-500 rounded"></div>
