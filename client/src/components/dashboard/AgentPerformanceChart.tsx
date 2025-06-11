@@ -1,37 +1,44 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, BarChart3, Activity } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+interface PerformanceData {
+  month: string;
+  score: number;
+  evaluations: number;
+}
+
 export default function AgentPerformanceChart() {
   const { user } = useAuth();
+  const [selectedPeriod, setSelectedPeriod] = useState<3 | 6 | 12>(6);
 
-  const { data: evaluations = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/my-evaluations'],
-    enabled: user?.role === 'agent',
+  const { data: performanceData, isLoading } = useQuery<PerformanceData[]>({
+    queryKey: [`/api/performance-evolution/${user?.id}`, selectedPeriod],
+    enabled: user?.role === 'agent' && !!user?.id,
   });
 
   if (isLoading) {
     return (
       <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
         <CardContent className="pt-6">
-          <div className="animate-pulse h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="animate-pulse h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </CardContent>
       </Card>
     );
   }
 
-  const totalEvaluations = Array.isArray(evaluations) ? evaluations.length : 0;
-  const averageScore = totalEvaluations > 0 
-    ? evaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.finalScore || 0), 0) / totalEvaluations 
+  const chartData = performanceData || [];
+  const averageScore = chartData.length > 0 
+    ? chartData.reduce((sum, item) => sum + item.score, 0) / chartData.length 
     : 0;
 
-  const recentEvaluations = Array.isArray(evaluations) ? evaluations.slice(-5) : [];
-  const previousAverage = recentEvaluations.length > 1 
-    ? recentEvaluations.slice(0, -1).reduce((sum: number, evaluation: any) => sum + (evaluation.finalScore || 0), 0) / (recentEvaluations.length - 1)
-    : 0;
-  
-  const trend = averageScore - previousAverage;
+  const recentScore = chartData.length > 0 ? chartData[chartData.length - 1].score : 0;
+  const previousScore = chartData.length > 1 ? chartData[chartData.length - 2].score : 0;
+  const trend = recentScore - previousScore;
 
   const getTrendIcon = () => {
     if (trend > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
@@ -45,20 +52,54 @@ export default function AgentPerformanceChart() {
     return "text-gray-600";
   };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+          <p className="font-medium">{`${label}`}</p>
+          <p className="text-blue-600">
+            {`Nota: ${payload[0].value.toFixed(1)}`}
+          </p>
+          <p className="text-gray-600 text-sm">
+            {`${payload[0].payload.evaluations} avaliação(ões)`}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-blue-600" />
-          Evolução de Desempenho
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
+            Evolução de Desempenho
+          </CardTitle>
+          
+          {/* Period Filter Buttons */}
+          <div className="flex gap-1">
+            {[3, 6, 12].map((period) => (
+              <Button
+                key={period}
+                variant={selectedPeriod === period ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedPeriod(period as 3 | 6 | 12)}
+                className="text-xs px-3 py-1"
+              >
+                {period}m
+              </Button>
+            ))}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Current Performance */}
+          {/* Performance Summary */}
           <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
             <div>
-              <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">Média Geral</p>
+              <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">Média dos Últimos {selectedPeriod} Meses</p>
               <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
                 {averageScore.toFixed(1)} pts
               </p>
@@ -71,56 +112,57 @@ export default function AgentPerformanceChart() {
             </div>
           </div>
 
-          {/* Statistics */}
+          {/* Performance Chart */}
+          {chartData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fontSize: 12 }}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12 }}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey="score" 
+                    fill="#3B82F6"
+                    radius={[4, 4, 0, 0]}
+                    className="hover:opacity-80"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Dados de desempenho não disponíveis</p>
+                <p className="text-sm">Complete algumas avaliações para ver seu progresso</p>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-              <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{totalEvaluations}</p>
+              <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                {chartData.reduce((sum, item) => sum + item.evaluations, 0)}
+              </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">Total de Avaliações</p>
             </div>
             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
               <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                {Array.isArray(evaluations) ? evaluations.filter((e: any) => e.status === 'pending').length : 0}
+                {recentScore.toFixed(1)}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Pendentes de Assinatura</p>
-              {Array.isArray(evaluations) && evaluations.filter((e: any) => e.status === 'pending').length > 0 && (
-                <div className="mt-1">
-                  <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-                </div>
-              )}
+              <p className="text-xs text-gray-600 dark:text-gray-400">Última Nota</p>
             </div>
           </div>
-
-          {/* Recent Evaluations */}
-          {recentEvaluations.length > 0 ? (
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400">Últimas Avaliações</h4>
-              <div className="space-y-2">
-                {recentEvaluations.slice(-3).map((evaluation: any, index: number) => (
-                  <div key={evaluation.id || index} className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded">
-                    <span className="text-sm font-medium">#{evaluation.id || 'N/A'}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold">{(evaluation.finalScore || 0).toFixed(1)} pts</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        evaluation.status === 'signed' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                      }`}>
-                        {evaluation.status === 'signed' ? 'Assinada' : 'Pendente'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">Nenhuma avaliação encontrada</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Seus dados de desempenho aparecerão aqui após as primeiras avaliações
-              </p>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
