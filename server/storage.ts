@@ -108,6 +108,7 @@ export interface IStorage {
 
   // Evaluation contest operations
   getEvaluationContests(agentId: string): Promise<EvaluationContest[]>;
+  getAllEvaluationContests(): Promise<EvaluationContest[]>;
   createEvaluationContest(contest: InsertEvaluationContest): Promise<EvaluationContest>;
   updateEvaluationContest(id: number, contest: Partial<InsertEvaluationContest>): Promise<EvaluationContest>;
 

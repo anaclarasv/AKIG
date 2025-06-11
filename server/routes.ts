@@ -1138,14 +1138,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evaluation contests endpoints
   app.get("/api/evaluation-contests", isAuthenticated, async (req, res) => {
     try {
+      const user = await storage.getUser(req.user.id);
       const { agentId } = req.query;
       
-      if (!agentId) {
-        return res.status(400).json({ message: "Agent ID required" });
+      // Admin and evaluator can see all contests, agents/supervisors only their own
+      if (['admin', 'evaluator'].includes(user?.role || '')) {
+        const contests = await storage.getAllEvaluationContests();
+        res.json(contests);
+      } else {
+        const targetAgentId = agentId || req.user.id;
+        const contests = await storage.getEvaluationContests(targetAgentId as string);
+        res.json(contests);
       }
-
-      const contests = await storage.getEvaluationContests(agentId as string);
-      res.json(contests);
     } catch (error) {
       console.error("Error fetching evaluation contests:", error);
       res.status(500).json({ message: "Failed to fetch evaluation contests" });

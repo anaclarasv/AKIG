@@ -60,7 +60,7 @@ function Router() {
                 <Monitoring />
               </ProtectedRoute>
             )} />
-            <Route path="/evaluations" component={Evaluations} />
+            <Route path="/evaluations" component={EvaluationsFixed} />
             <Route path="/my-evaluations" component={() => (
               <ProtectedRoute allowedRoles={['agent']}>
                 <MyEvaluations />
