@@ -161,67 +161,79 @@ export default function AgentPerformanceChart() {
 
           {/* Performance Chart */}
           {chartData.length > 0 ? (
-            <div className="h-80 bg-gradient-to-b from-green-50/50 to-yellow-50/50 dark:from-green-900/10 dark:to-yellow-900/10 p-4 rounded-lg">
+            <div className="h-80 bg-gradient-to-b from-green-50/20 to-yellow-50/20 dark:from-green-900/10 dark:to-yellow-900/10 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  {/* Zonas de Performance */}
+                  {/* Zonas de Performance com gradientes */}
                   <defs>
                     <linearGradient id="excellentZone" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.1}/>
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.15}/>
                       <stop offset="100%" stopColor="#10B981" stopOpacity={0.05}/>
                     </linearGradient>
                     <linearGradient id="goodZone" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.1}/>
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.15}/>
                       <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.05}/>
+                    </linearGradient>
+                    <linearGradient id="improvementZone" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EF4444" stopOpacity={0.15}/>
+                      <stop offset="100%" stopColor="#EF4444" stopOpacity={0.05}/>
                     </linearGradient>
                   </defs>
                   
-                  {/* Linhas de referência */}
-                  <ReferenceLine y={90} stroke="#10B981" strokeDasharray="5 5" label={{ value: "Excelente", position: "insideTopRight" }} />
-                  <ReferenceLine y={70} stroke="#F59E0B" strokeDasharray="5 5" label={{ value: "Bom", position: "insideTopRight" }} />
-                  <ReferenceLine y={50} stroke="#EF4444" strokeDasharray="5 5" label={{ value: "A melhorar", position: "insideTopRight" }} />
+                  {/* Linhas de referência para zonas de performance */}
+                  <ReferenceLine y={90} stroke="#10B981" strokeDasharray="8 4" strokeWidth={1.5} />
+                  <ReferenceLine y={70} stroke="#F59E0B" strokeDasharray="8 4" strokeWidth={1.5} />
+                  <ReferenceLine y={50} stroke="#EF4444" strokeDasharray="8 4" strokeWidth={1.5} />
                   
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" className="opacity-40" />
+                  
                   <XAxis 
                     dataKey="month" 
-                    tick={{ fontSize: 12 }}
-                    className="text-gray-600 dark:text-gray-400"
+                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    axisLine={{ stroke: '#D1D5DB' }}
+                    tickLine={{ stroke: '#D1D5DB' }}
                     tickFormatter={formatMonthLabel}
                   />
+                  
                   <YAxis 
                     domain={[0, 100]}
-                    tick={{ fontSize: 12 }}
-                    className="text-gray-600 dark:text-gray-400"
+                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    axisLine={{ stroke: '#D1D5DB' }}
+                    tickLine={{ stroke: '#D1D5DB' }}
                   />
+                  
                   <Tooltip content={<CustomTooltip />} />
                   
-                  {/* Barras de Qualidade */}
+                  {/* Barras de Qualidade - principal */}
                   <Bar 
                     dataKey="qualityScore" 
                     fill="#F97316"
-                    radius={[4, 4, 0, 0]}
+                    radius={[3, 3, 0, 0]}
                     name="Notas de Qualidade"
-                    fillOpacity={0.8}
+                    fillOpacity={0.9}
+                    maxBarSize={40}
                   />
                   
-                  {/* Linha de Tendência de Qualidade */}
+                  {/* Linha de Tendência de Qualidade - amarela */}
                   <Line 
                     type="monotone" 
                     dataKey="qualityTrend" 
                     stroke="#EAB308" 
-                    strokeWidth={3}
-                    dot={{ fill: '#EAB308', strokeWidth: 2, r: 4 }}
+                    strokeWidth={4}
+                    dot={{ fill: '#EAB308', strokeWidth: 3, r: 5 }}
+                    activeDot={{ r: 7, fill: '#EAB308', strokeWidth: 2, stroke: '#fff' }}
                     name="Avaliações de Qualidade"
                   />
                   
-                  {/* Linha de Tendência de Operação */}
+                  {/* Linha de Tendência de Operação - azul tracejada */}
                   <Line 
                     type="monotone" 
                     dataKey="operationTrend" 
                     stroke="#3B82F6" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
+                    strokeWidth={3}
+                    strokeDasharray="8 4"
+                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }}
                     name="Avaliações de Operação"
                   />
                 </ComposedChart>
@@ -238,18 +250,26 @@ export default function AgentPerformanceChart() {
           )}
 
           {/* Legenda */}
-          <div className="flex flex-wrap gap-4 justify-center text-sm">
+          <div className="flex flex-wrap gap-6 justify-center text-sm bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-orange-500 rounded"></div>
-              <span>Notas de Qualidade</span>
+              <div className="w-4 h-4 bg-orange-500 rounded-sm"></div>
+              <span className="text-gray-700 dark:text-gray-300">Notas de Qualidade</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-2 bg-yellow-500 rounded"></div>
-              <span>Avaliações de Qualidade</span>
+              <div className="w-6 h-1 bg-yellow-500 rounded-full"></div>
+              <span className="text-gray-700 dark:text-gray-300">Avaliações de Qualidade</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-2 bg-blue-500 rounded border-2 border-dashed"></div>
-              <span>Avaliações de Operação</span>
+              <div className="w-6 h-1 bg-blue-500 rounded-full border-2 border-dashed border-blue-500 bg-transparent"></div>
+              <span className="text-gray-700 dark:text-gray-300">Avaliações de Operação</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs opacity-70">
+              <div className="w-3 h-1 bg-green-500 rounded"></div>
+              <span>90+ Excelente</span>
+              <div className="w-3 h-1 bg-yellow-500 rounded"></div>
+              <span>70+ Bom</span>
+              <div className="w-3 h-1 bg-red-500 rounded"></div>
+              <span>50+ A melhorar</span>
             </div>
           </div>
         </div>
