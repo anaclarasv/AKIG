@@ -378,6 +378,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get archived monitoring sessions (must come before /:id route)
+  app.get('/api/monitoring-sessions/archived', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId || undefined);
+      const archivedSessions = await storage.getArchivedMonitoringSessions(companyId);
+      res.json(archivedSessions);
+    } catch (error) {
+      console.error("Error fetching archived monitoring sessions:", error);
+      res.status(500).json({ message: "Failed to fetch archived monitoring sessions" });
+    }
+  });
+
+  // Get deleted monitoring sessions  
+  app.get('/api/monitoring-sessions/deleted', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const companyId = user?.role === 'admin' ? undefined : (user?.companyId || undefined);
+      const deletedSessions = await storage.getDeletedMonitoringSessions(companyId);
+      res.json(deletedSessions);
+    } catch (error) {
+      console.error("Error fetching deleted monitoring sessions:", error);
+      res.status(500).json({ message: "Failed to fetch deleted monitoring sessions" });
+    }
+  });
+
   app.get('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -911,39 +945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get archived monitoring sessions
-  app.get('/api/monitoring-sessions/archived', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!['admin', 'supervisor'].includes(user?.role || '')) {
-        return res.status(403).json({ message: "Access denied" });
-      }
 
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
-      const archivedSessions = await storage.getArchivedMonitoringSessions(companyId);
-      res.json(archivedSessions);
-    } catch (error) {
-      console.error("Error fetching archived monitoring sessions:", error);
-      res.status(500).json({ message: "Failed to fetch archived monitoring sessions" });
-    }
-  });
-
-  // Get deleted monitoring sessions  
-  app.get('/api/monitoring-sessions/deleted', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      if (!['admin', 'supervisor'].includes(user?.role || '')) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const companyId = user?.role === 'admin' ? undefined : user?.companyId;
-      const deletedSessions = await storage.getDeletedMonitoringSessions(companyId);
-      res.json(deletedSessions);
-    } catch (error) {
-      console.error("Error fetching deleted monitoring sessions:", error);
-      res.status(500).json({ message: "Failed to fetch deleted monitoring sessions" });
-    }
-  });
 
   // Evaluations routes
   app.get('/api/evaluations', isAuthenticated, async (req: any, res) => {

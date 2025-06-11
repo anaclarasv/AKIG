@@ -76,6 +76,7 @@ export default function Sidebar() {
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
           { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
+          { name: 'Arquivadas', href: '/archived-sessions', icon: Archive },
         ];
       case 'evaluator':
         return [
