@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 export default function AgentContestPanel() {
   const { user } = useAuth();
 
-  const { data: evaluations = [], isLoading } = useQuery({
+  const { data: evaluations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/my-evaluations'],
     enabled: user?.role === 'agent',
   });
@@ -24,9 +24,9 @@ export default function AgentContestPanel() {
     );
   }
 
-  const signedEvaluations = evaluations.filter((evaluation: any) => evaluation.status === 'signed');
-  const pendingEvaluations = evaluations.filter((evaluation: any) => evaluation.status === 'pending');
-  const totalEvaluations = evaluations.length;
+  const signedEvaluations = Array.isArray(evaluations) ? evaluations.filter((evaluation: any) => evaluation.status === 'signed') : [];
+  const pendingEvaluations = Array.isArray(evaluations) ? evaluations.filter((evaluation: any) => evaluation.status === 'pending') : [];
+  const totalEvaluations = Array.isArray(evaluations) ? evaluations.length : 0;
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
