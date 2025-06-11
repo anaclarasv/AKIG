@@ -64,43 +64,49 @@ export default function AgentContestPanel() {
           <div className="space-y-3">
             <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400">Ações Disponíveis</h4>
             
-            {signedEvaluations.length > 0 ? (
-              <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                      Você pode contestar avaliações assinadas
-                    </p>
-                    <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
-                      {signedEvaluations.length} avaliação(ões) disponível(eis) para contestação
-                    </p>
-                  </div>
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Acesse suas avaliações completas
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                    Visualizar detalhes, assinar e contestar avaliações
+                  </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-3 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/30"
-                  onClick={() => {
-                    window.location.href = '/my-evaluations';
-                  }}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Ver Minhas Avaliações
-                </Button>
               </div>
-            ) : (
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Nenhuma avaliação assinada ainda
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      As contestações estarão disponíveis após você assinar suas avaliações
-                    </p>
-                  </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-3 text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                onClick={() => {
+                  window.location.href = '/my-evaluations';
+                }}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Ir para Minhas Avaliações
+              </Button>
+            </div>
+            
+            {signedEvaluations.length > 0 && (
+              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-600" />
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    {signedEvaluations.length} avaliação(ões) disponível(eis) para contestação
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {pendingEvaluations.length > 0 && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-yellow-600" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    {pendingEvaluations.length} avaliação(ões) aguardando sua assinatura
+                  </p>
                 </div>
               </div>
             )}

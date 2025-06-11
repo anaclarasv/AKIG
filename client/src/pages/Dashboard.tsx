@@ -46,9 +46,16 @@ export default function Dashboard() {
                 <p className="text-sm text-blue-700 mt-1">Acumuladas no total</p>
               </div>
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
-                <h3 className="font-semibold text-green-900 mb-2">Status</h3>
-                <p className="text-lg font-semibold text-green-600">Ativo</p>
-                <p className="text-sm text-green-700 mt-1">Pronto para avaliações</p>
+                <h3 className="font-semibold text-green-900 mb-2">Minhas Avaliações</h3>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => setLocation('/my-evaluations')}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Ver Minhas Avaliações
+                  </button>
+                  <p className="text-xs text-green-700">Visualizar, assinar e contestar</p>
+                </div>
               </div>
             </div>
           </div>
@@ -59,11 +66,7 @@ export default function Dashboard() {
             <AgentContestPanel />
           </div>
 
-          {/* Evaluation Section */}
-          <div>
-            <h2 className="text-xl font-semibold text-foreground mb-4">Formulário de Avaliação</h2>
-            <EvaluationForm />
-          </div>
+
         </div>
       </div>
     );
