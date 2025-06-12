@@ -1670,6 +1670,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team ranking endpoint for supervisors
+  app.get("/api/team-ranking", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role !== 'supervisor') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const teamRanking = await storage.getTeamRanking(user.id);
+      res.json(teamRanking);
+    } catch (error) {
+      console.error("Error fetching team ranking:", error);
+      res.status(500).json({ message: "Failed to fetch team ranking" });
+    }
+  });
+
+  // Team performance evolution endpoint for supervisors
+  app.get("/api/team-performance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      if (user?.role !== 'supervisor') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const months = parseInt(req.query.months as string) || 6;
+      const teamPerformance = await storage.getTeamPerformanceEvolution(user.id, months);
+      res.json(teamPerformance);
+    } catch (error) {
+      console.error("Error fetching team performance:", error);
+      res.status(500).json({ message: "Failed to fetch team performance" });
+    }
+  });
+
   // Monitoring Evaluations endpoints
   app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
     try {

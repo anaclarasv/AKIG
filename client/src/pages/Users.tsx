@@ -47,6 +47,7 @@ export default function Users() {
     lastName: "",
     role: "agent",
     companyId: "",
+    supervisorId: "",
     virtualCoins: 0,
     isActive: true
   });
@@ -63,6 +64,12 @@ export default function Users() {
   // Fetch companies for dropdown
   const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
+  });
+
+  // Fetch supervisors for dropdown
+  const { data: supervisors = [] } = useQuery<User[]>({
+    queryKey: ['/api/users'],
+    select: (data) => data.filter(user => user.role === 'supervisor'),
   });
 
   // Create user mutation

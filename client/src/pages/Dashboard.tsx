@@ -9,6 +9,8 @@ import ActivityTable from "@/components/dashboard/ActivityTable";
 import AgentPerformanceChart from "@/components/dashboard/AgentPerformanceChart";
 import AgentContestPanel from "@/components/dashboard/AgentContestPanel";
 import AgentEvaluationSummary from "@/components/dashboard/AgentEvaluationSummary";
+import TeamRankingPanel from "@/components/dashboard/TeamRankingPanel";
+import TeamPerformanceChart from "@/components/dashboard/TeamPerformanceChart";
 
 
 export default function Dashboard() {
@@ -84,7 +86,13 @@ export default function Dashboard() {
           <RankingPanel />
         </div>
 
-        {canViewEvaluationForm && <EvaluationForm />}
+        {/* Team Management Section for Supervisors */}
+        {user?.role === 'supervisor' && (
+          <div className="mt-8 space-y-6">
+            <TeamRankingPanel />
+            <TeamPerformanceChart />
+          </div>
+        )}
         {canViewActivities && <ActivityTable />}
       </div>
     </div>
