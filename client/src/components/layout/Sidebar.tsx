@@ -72,10 +72,8 @@ export default function Sidebar() {
           ...baseNavigation,
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
-          { name: 'Critérios', href: '/evaluation-criteria', icon: Settings },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
-          { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
           { name: 'Arquivadas', href: '/archived-sessions', icon: Archive },
         ];
       case 'evaluator':

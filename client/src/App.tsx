@@ -78,7 +78,7 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/evaluation-criteria" component={() => (
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <EvaluationCriteria />
               </ProtectedRoute>
             )} />
@@ -89,7 +89,7 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/campaigns" component={() => (
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <Campaigns />
               </ProtectedRoute>
             )} />
