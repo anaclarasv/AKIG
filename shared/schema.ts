@@ -26,7 +26,7 @@ export const sessions = pgTable(
 );
 
 // User storage table for username/password authentication
-export const users = pgTable("users", {
+export const users: any = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   username: varchar("username").unique().notNull(),
   password: varchar("password").notNull(),
