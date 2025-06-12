@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import KeywordAnalysisPanel from "@/components/monitoring/KeywordAnalysisPanel";
 
 interface TranscriptionSegment {
   id: string;

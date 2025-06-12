@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
+import { KeywordDetector, type AnalysisResult } from "./keyword-detection";
 
 // Initialize OpenAI with API key
 const openai = new OpenAI({
@@ -64,8 +65,23 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
     // Detect critical words
     const criticalWords = detectCriticalWords(transcription.text);
 
-    // Analyze sentiment and generate recommendations
-    const analysis = analyzeTranscriptionContent(transcription.text, criticalWords);
+    // Advanced keyword detection and analysis
+    const keywordAnalysis = KeywordDetector.analyzeTranscriptionSegments(processedSegments);
+    
+    // Legacy analysis for compatibility
+    const legacyAnalysis = analyzeTranscriptionContent(transcription.text, criticalWords);
+    
+    // Enhanced analysis with keyword detection
+    const enhancedAnalysis = {
+      ...legacyAnalysis,
+      keywordAnalysis,
+      temperatureScore: keywordAnalysis.overallScore,
+      qualityLevel: keywordAnalysis.sentiment,
+      detectedCategories: keywordAnalysis.detections,
+      recommendations: keywordAnalysis.recommendations,
+      criticalIssues: keywordAnalysis.criticalIssues,
+      detailedReport: KeywordDetector.generateDetailedReport(keywordAnalysis)
+    };
 
     return {
       text: transcription.text,
@@ -73,7 +89,7 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
       duration: duration,
       confidence: 0.95, // OpenAI Whisper typically has high confidence
       transcription_engine: "openai_whisper",
-      analysis: analysis
+      analysis: enhancedAnalysis
     };
 
   } catch (error: any) {
