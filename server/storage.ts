@@ -1241,7 +1241,7 @@ export class DatabaseStorage implements IStorage {
         rewardId: rewardPurchases.rewardId,
         cost: rewardPurchases.cost,
         status: rewardPurchases.status,
-        requestedAt: rewardPurchases.requestedAt,
+        requestedAt: sql<Date>`reward_purchases.purchased_at`,
         userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
         userEmail: users.email,
         rewardName: rewards.name,
@@ -1251,7 +1251,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(rewardPurchases.userId, users.id))
       .innerJoin(rewards, eq(rewardPurchases.rewardId, rewards.id))
       .where(eq(rewardPurchases.status, 'pending'))
-      .orderBy(rewardPurchases.requestedAt);
+      .orderBy(sql`reward_purchases.purchased_at DESC`);
 
     return requests;
   }
