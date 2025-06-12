@@ -934,7 +934,58 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getTeamPerformanceEvolution(supervisorId: string, months: number): Promise<Array<{
+    month: string;
+    averageScore: number;
+    evaluationCount: number;
+    trend: number;
+  }>> {
+    const monthsAgo = new Date();
+    monthsAgo.setMonth(monthsAgo.getMonth() - months);
 
+    const teamAgents = await db.select({ id: users.id }).from(users).where(and(
+      eq(users.role, "agent"),
+      eq(users.supervisorId, supervisorId),
+      eq(users.isActive, true)
+    ));
+
+    const agentIds = teamAgents.map(agent => agent.id);
+
+    if (agentIds.length === 0) {
+      return [];
+    }
+
+    const evaluationData = await db
+      .select({
+        month: sql<string>`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`,
+        avgScore: avg(monitoringEvaluations.finalScore),
+        count: count(monitoringEvaluations.id)
+      })
+      .from(monitoringEvaluations)
+      .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+      .where(
+        and(
+          inArray(monitoringSessions.agentId, agentIds),
+          gte(monitoringEvaluations.createdAt, monthsAgo)
+        )
+      )
+      .groupBy(sql`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${monitoringEvaluations.createdAt}, 'YYYY-MM')`);
+
+    return evaluationData.map((data, index) => {
+      const prevData = index > 0 ? evaluationData[index - 1] : null;
+      const currentScore = Number(data.avgScore) || 0;
+      const prevScore = prevData ? Number(prevData.avgScore) || 0 : currentScore;
+      const trend = prevScore > 0 ? ((currentScore - prevScore) / prevScore) * 100 : 0;
+
+      return {
+        month: data.month,
+        averageScore: Math.round(currentScore * 10) / 10,
+        evaluationCount: Number(data.count) || 0,
+        trend: Math.round(trend * 10) / 10,
+      };
+    });
+  }
 
   // Performance evolution operations
   async getPerformanceEvolution(agentId: string, months: number): Promise<Array<{
