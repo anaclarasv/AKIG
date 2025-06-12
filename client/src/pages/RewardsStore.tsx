@@ -53,7 +53,7 @@ export default function RewardsStore() {
       if (!response.ok) throw new Error('Failed to fetch rewards');
       return response.json();
     },
-    enabled: !!companyIdForQuery && !!user,
+    enabled: !!user, // Simplified condition - let the server handle company logic
   });
 
   const { data: userPurchases } = useQuery<RewardPurchase[]>({

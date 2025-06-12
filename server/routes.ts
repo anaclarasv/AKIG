@@ -1141,15 +1141,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Admin and evaluator can specify companyId via query parameter
         const queryCompanyId = req.query.companyId;
         if (!queryCompanyId) {
-          return res.status(400).json({ message: "Company ID required" });
+          // For admin/evaluator without companyId, get first available company
+          const companies = await storage.getCompanies();
+          if (companies.length === 0) {
+            return res.status(400).json({ message: "No companies available" });
+          }
+          companyId = companies[0].id;
+        } else {
+          companyId = parseInt(queryCompanyId);
         }
-        companyId = parseInt(queryCompanyId);
       } else {
         // Other roles use their assigned companyId
         if (!user?.companyId) {
-          return res.status(400).json({ message: "Company ID required" });
+          // If user doesn't have companyId, get first available company
+          const companies = await storage.getCompanies();
+          if (companies.length === 0) {
+            return res.status(400).json({ message: "No companies available" });
+          }
+          companyId = companies[0].id;
+        } else {
+          companyId = user.companyId;
         }
-        companyId = user.companyId;
       }
       
       const rewards = await storage.getRewards(companyId);
