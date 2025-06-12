@@ -29,7 +29,7 @@ import {
   MoreHorizontal,
   UserPlus
 } from "lucide-react";
-import type { User, Company } from "@/types";
+import type { User, Company } from "@shared/schema";
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
