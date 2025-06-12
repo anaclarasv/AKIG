@@ -181,13 +181,40 @@ export default function Users() {
   };
 
   const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.username) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!editingUser && !formData.password) {
+      toast({
+        title: "Erro",
+        description: "Senha é obrigatória para novos usuários",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare data for submission
+    const submitData = {
+      ...formData,
+      companyId: formData.companyId || undefined,
+      supervisorId: formData.supervisorId || undefined,
+      virtualCoins: parseInt(formData.virtualCoins.toString()) || 0,
+    };
+
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
-        data: formData
+        data: submitData
       });
     } else {
-      createUserMutation.mutate(formData);
+      createUserMutation.mutate(submitData);
     }
   };
 

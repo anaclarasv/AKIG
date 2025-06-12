@@ -91,26 +91,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only admins can create users" });
       }
       
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      // Validate required fields
+      const { username, email, password, firstName, lastName, role } = req.body;
+      if (!username || !email || !password || !firstName || !lastName || !role) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Hash password (import hashPassword function)
+      // Hash password
       const { scrypt, randomBytes } = await import("crypto");
       const { promisify } = await import("util");
       const scryptAsync = promisify(scrypt);
       
       const salt = randomBytes(16).toString("hex");
-      const buf = (await scryptAsync(req.body.password, salt, 64)) as Buffer;
+      const buf = (await scryptAsync(password, salt, 64)) as Buffer;
       const hashedPassword = `${buf.toString("hex")}.${salt}`;
 
-      const user = await storage.createUser({
-        ...req.body,
+      // Prepare user data with proper types
+      const userData = {
+        username,
+        email,
         password: hashedPassword,
-        virtualCoins: 0,
-        isActive: true,
-      });
+        firstName,
+        lastName,
+        role,
+        companyId: req.body.companyId ? parseInt(req.body.companyId) : null,
+        supervisorId: req.body.supervisorId || null,
+        virtualCoins: parseInt(req.body.virtualCoins) || 0,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        profileImageUrl: req.body.profileImageUrl || null,
+      };
+
+      const user = await storage.createUser(userData as any);
 
       res.status(201).json({
         id: user.id,
@@ -120,12 +136,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         role: user.role,
         companyId: user.companyId,
+        supervisorId: user.supervisorId,
         virtualCoins: user.virtualCoins,
         isActive: user.isActive
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating user:", error);
-      res.status(500).json({ message: "Failed to create user" });
+      res.status(500).json({ 
+        message: "Failed to create user",
+        error: error.message || "Unknown error"
+      });
     }
   });
 
