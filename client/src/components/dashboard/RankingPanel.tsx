@@ -139,12 +139,9 @@ export default function RankingPanel() {
                 </span>
                 <span className="text-sm text-muted-foreground">moedas</span>
               </div>
-              <Button 
-                className="w-full akig-bg-primary hover:opacity-90 text-sm font-medium"
-                onClick={() => setLocation('/rewards-store')}
-              >
-                Ver Loja de Brindes
-              </Button>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                Acesse a loja através do menu lateral
+              </p>
             </>
           )}
         </div>
