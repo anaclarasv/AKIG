@@ -11,6 +11,7 @@ import AgentContestPanel from "@/components/dashboard/AgentContestPanel";
 import AgentEvaluationSummary from "@/components/dashboard/AgentEvaluationSummary";
 import TeamRankingPanel from "@/components/dashboard/TeamRankingPanel";
 import TeamPerformanceChart from "@/components/dashboard/TeamPerformanceChart";
+import SupervisorBonusPanel from "@/components/dashboard/SupervisorBonusPanel";
 
 
 export default function Dashboard() {
@@ -89,6 +90,7 @@ export default function Dashboard() {
         {/* Team Management Section for Supervisors */}
         {user?.role === 'supervisor' && (
           <div className="mt-8 space-y-6">
+            <SupervisorBonusPanel />
             <TeamRankingPanel />
             <TeamPerformanceChart />
           </div>
