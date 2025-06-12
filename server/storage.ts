@@ -1254,7 +1254,7 @@ export class DatabaseStorage implements IStorage {
         rewardId: rewardPurchases.rewardId,
         cost: rewardPurchases.cost,
         status: rewardPurchases.status,
-        requestedAt: sql<Date>`reward_purchases.purchased_at`,
+        requestedAt: rewardPurchases.purchasedAt,
         userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
         userEmail: users.email,
         rewardName: rewards.name,

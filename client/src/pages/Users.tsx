@@ -505,11 +505,13 @@ export default function Users() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Nenhum supervisor</SelectItem>
-                    {supervisors.map((supervisor) => (
-                      <SelectItem key={supervisor.id} value={supervisor.id}>
-                        {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
-                      </SelectItem>
-                    ))}
+                    {supervisors
+                      .filter(supervisor => supervisor.id && supervisor.firstName && supervisor.lastName)
+                      .map((supervisor) => (
+                        <SelectItem key={supervisor.id} value={supervisor.id}>
+                          {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
