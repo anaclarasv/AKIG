@@ -397,33 +397,33 @@ export default function Monitoring() {
                 </div>
               )}
               
-              {selectedSessionData.aiAnalysis && (
+              {selectedSessionData.transcription?.analysis && (
                 <div className="space-y-3">
                   <h4 className="font-medium">Análise IA</h4>
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="p-2 bg-red-50 rounded">
                       <p className="text-red-600 font-semibold text-sm">
-                        {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
+                        {selectedSessionData.transcription.analysis.criticas || 0}
                       </p>
-                      <p className="text-xs text-red-700">Palavras Críticas</p>
+                      <p className="text-xs text-red-700">Expressões Críticas</p>
                     </div>
                     <div className="p-2 bg-amber-50 rounded">
                       <p className="text-amber-600 font-semibold text-sm">
-                        {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
+                        {selectedSessionData.transcription.analysis.neutras || 0}
                       </p>
-                      <p className="text-xs text-amber-700">Silêncio Total</p>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded">
-                      <p className="text-blue-600 font-semibold text-sm">
-                        {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
-                      </p>
-                      <p className="text-xs text-blue-700">Tom Médio</p>
+                      <p className="text-xs text-amber-700">Expressões Neutras</p>
                     </div>
                     <div className="p-2 bg-green-50 rounded">
                       <p className="text-green-600 font-semibold text-sm">
-                        {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
+                        {selectedSessionData.transcription.analysis.positivas || 0}
                       </p>
-                      <p className="text-xs text-green-700">Sentimento</p>
+                      <p className="text-xs text-green-700">Expressões Positivas</p>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <p className="text-gray-600 font-semibold text-sm">
+                        {selectedSessionData.transcription.analysis.silencioSegundos || 0}s
+                      </p>
+                      <p className="text-xs text-gray-700">Silêncio total</p>
                     </div>
                   </div>
                 </div>
