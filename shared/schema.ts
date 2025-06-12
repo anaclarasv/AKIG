@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").notNull().default("agent"), // admin, supervisor, evaluator, agent
   companyId: integer("company_id").references(() => companies.id),
+  supervisorId: varchar("supervisor_id").references(() => users.id), // For agents to reference their supervisor
   virtualCoins: integer("virtual_coins").default(0),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
