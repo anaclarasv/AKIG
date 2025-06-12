@@ -61,6 +61,8 @@ export default function Sidebar() {
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Critérios', href: '/evaluation-criteria', icon: Settings },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
+          { name: 'Aprovação de Resgates', href: '/reward-approval', icon: Shield },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
           { name: 'Campanhas', href: '/campaigns', icon: Megaphone },
           { name: 'Empresas', href: '/companies', icon: Building },
@@ -82,7 +84,6 @@ export default function Sidebar() {
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
-          { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
           { name: 'Aprovação de Resgates', href: '/reward-approval', icon: Shield },
         ];
       case 'agent':

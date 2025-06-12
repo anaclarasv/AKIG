@@ -279,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (user?.role !== 'admin') {
+      if (!['admin', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
       const companies = await storage.getCompanies();

@@ -100,7 +100,7 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/companies" component={() => (
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'evaluator']}>
                 <Companies />
               </ProtectedRoute>
             )} />
