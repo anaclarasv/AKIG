@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
-import { KeywordDetector, type AnalysisResult } from "./keyword-detection";
+import { ExpressionAnalyzer, type ExpressionAnalysis } from "./expression-analyzer";
 
 // Initialize OpenAI with API key
 const openai = new OpenAI({
@@ -21,10 +21,16 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
   confidence: number;
   transcription_engine: string;
   analysis: {
-    sentiment: number;
-    criticalWords: string[];
-    topics: string[];
-    recommendations: string[];
+    criticas: number;      // expressões negativas + baixo calão (vermelho)
+    neutras: number;       // expressões neutras (amarelo) 
+    positivas: number;     // expressões positivas (verde)
+    silencioSegundos: number; // tempo de silêncio em segundos
+    detectedExpressions: {
+      criticas: string[];
+      neutras: string[];
+      positivas: string[];
+      baixoCalao: string[];
+    };
   };
 }> {
   try {
@@ -62,26 +68,12 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
     // Calculate duration
     const duration = transcription.duration || calculateDurationFromSegments(processedSegments);
 
-    // Detect critical words
-    const criticalWords = detectCriticalWords(transcription.text);
-
-    // Advanced keyword detection and analysis
-    const keywordAnalysis = KeywordDetector.analyzeTranscriptionSegments(processedSegments);
-    
-    // Legacy analysis for compatibility
-    const legacyAnalysis = analyzeTranscriptionContent(transcription.text, criticalWords);
-    
-    // Enhanced analysis with keyword detection
-    const enhancedAnalysis = {
-      ...legacyAnalysis,
-      keywordAnalysis,
-      temperatureScore: keywordAnalysis.overallScore,
-      qualityLevel: keywordAnalysis.sentiment,
-      detectedCategories: keywordAnalysis.detections,
-      recommendations: keywordAnalysis.recommendations,
-      criticalIssues: keywordAnalysis.criticalIssues,
-      detailedReport: KeywordDetector.generateDetailedReport(keywordAnalysis)
-    };
+    // Análise de expressões baseada no arquivo CSV fornecido
+    const expressionAnalysis = ExpressionAnalyzer.analyzeTranscription(
+      transcription.text,
+      processedSegments,
+      duration
+    );
 
     return {
       text: transcription.text,
@@ -89,7 +81,7 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
       duration: duration,
       confidence: 0.95, // OpenAI Whisper typically has high confidence
       transcription_engine: "openai_whisper",
-      analysis: enhancedAnalysis
+      analysis: expressionAnalysis
     };
 
   } catch (error: any) {
@@ -167,15 +159,6 @@ function detectSpeaker(text: string, index: number): string {
       return 'Atendente';
     }
   }
-  
-  // Keywords that suggest customer
-  const customerKeywords = [
-    'estou ligando', 'preciso de',
-    'tenho um problema', 'gostaria de',
-    'recebi', 'comprei',
-    'não funciona', 'está quebrado',
-    'quero reclamar', 'estou insatisfeit'
-  ];
   
   // Check for customer keywords
   for (const keyword of customerKeywords) {
