@@ -1251,7 +1251,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(rewardPurchases.userId, users.id))
       .innerJoin(rewards, eq(rewardPurchases.rewardId, rewards.id))
       .where(eq(rewardPurchases.status, 'pending'))
-      .orderBy(desc(rewardPurchases.purchasedAt));
+      .orderBy(rewardPurchases.requestedAt);
 
     return requests;
   }
