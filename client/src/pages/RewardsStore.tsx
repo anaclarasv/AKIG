@@ -38,8 +38,8 @@ export default function RewardsStore() {
     enabled: user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator',
   });
 
-  // For agents, use their companyId; for admins/evaluators, use selectedCompanyId or default to first company
-  const companyIdForQuery = user?.role === 'agent' ? user.companyId : selectedCompanyId || (companies?.[0]?.id.toString() || "");
+  // For agents, use their companyId; for admins/evaluators, use selectedCompanyId
+  const companyIdForQuery = user?.role === 'agent' ? user.companyId?.toString() : selectedCompanyId;
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ['/api/rewards', companyIdForQuery],
