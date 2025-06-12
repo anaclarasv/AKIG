@@ -25,6 +25,17 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Companies table for multi-tenant architecture (moved before users)
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  logoUrl: varchar("logo_url"),
+  domain: varchar("domain"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // User storage table for username/password authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
@@ -43,15 +54,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Companies table for multi-tenant architecture
-export const companies = pgTable("companies", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  logoUrl: varchar("logo_url"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+
 
 // Campaigns table
 export const campaigns = pgTable("campaigns", {

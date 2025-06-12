@@ -48,6 +48,7 @@ interface MonitoringSession {
   evaluatorId: string;
   audioUrl: string;
   transcription: any;
+  analysis?: any; // Campo para análise de IA
   status: string;
   createdAt: string;
   agent?: {
@@ -351,8 +352,9 @@ export default function MonitoringDetails() {
       </Card>
 
       <Tabs defaultValue="transcription" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="transcription">Transcrição</TabsTrigger>
+          <TabsTrigger value="analysis">Análise IA</TabsTrigger>
           <TabsTrigger value="evaluation">Ficha de Avaliação</TabsTrigger>
           {canSign && <TabsTrigger value="signature">Assinatura</TabsTrigger>}
         </TabsList>
@@ -488,6 +490,11 @@ export default function MonitoringDetails() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Aba de Análise IA */}
+        <TabsContent value="analysis">
+          <KeywordAnalysisPanel analysis={monitoring?.analysis} />
         </TabsContent>
 
         {/* Aba da Avaliação */}
