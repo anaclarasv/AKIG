@@ -604,7 +604,7 @@ export default function Monitoring() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => handleArchiveSession(session.id)}
-                          disabled={archiveMutation.isPending || session.status === 'archived'}
+                          disabled={archiveMutation.isPending}
                         >
                           <Archive className="mr-2 h-4 w-4" />
                           Arquivar

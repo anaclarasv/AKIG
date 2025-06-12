@@ -47,7 +47,6 @@ export default function Users() {
     lastName: "",
     role: "agent",
     companyId: "",
-    supervisorId: "",
     virtualCoins: 0,
     isActive: true
   });
@@ -151,7 +150,6 @@ export default function Users() {
       lastName: "",
       role: "agent",
       companyId: "",
-      supervisorId: "",
       virtualCoins: 0,
       isActive: true
     });
@@ -167,7 +165,7 @@ export default function Users() {
       lastName: userToEdit.lastName,
       role: userToEdit.role,
       companyId: userToEdit.companyId?.toString() || "",
-      supervisorId: userToEdit.supervisorId || "",
+
       virtualCoins: userToEdit.virtualCoins || 0,
       isActive: userToEdit.isActive
     });
