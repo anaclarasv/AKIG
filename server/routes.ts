@@ -1137,8 +1137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.user.id);
       let companyId: number;
       
-      if (user?.role === 'admin') {
-        // Admin can specify companyId via query parameter
+      if (user?.role === 'admin' || user?.role === 'evaluator') {
+        // Admin and evaluator can specify companyId via query parameter
         const queryCompanyId = req.query.companyId;
         if (!queryCompanyId) {
           return res.status(400).json({ message: "Company ID required" });
@@ -1163,7 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/rewards', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
-      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+      if (!['admin', 'supervisor', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
       const validatedData = insertRewardSchema.parse(req.body);

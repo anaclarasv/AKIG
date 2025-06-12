@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/Header";
@@ -35,16 +35,16 @@ export default function RewardsStore() {
 
   const { data: companies } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
-    enabled: user?.role === 'admin' || user?.role === 'supervisor',
+    enabled: user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator',
   });
 
-  // For agents, use their companyId; for others, use selectedCompanyId
-  const companyIdForQuery = user?.role === 'agent' ? user.companyId : selectedCompanyId;
+  // For agents, use their companyId; for admins/evaluators, use selectedCompanyId or default to first company
+  const companyIdForQuery = user?.role === 'agent' ? user.companyId : selectedCompanyId || (companies?.[0]?.id.toString() || "");
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ['/api/rewards', companyIdForQuery],
     queryFn: async () => {
-      const url = user?.role === 'admin' && companyIdForQuery 
+      const url = (user?.role === 'admin' || user?.role === 'evaluator') && companyIdForQuery 
         ? `/api/rewards?companyId=${companyIdForQuery}`
         : '/api/rewards';
       const response = await fetch(url, {
@@ -225,20 +225,29 @@ export default function RewardsStore() {
   };
 
   const isAdmin = user?.role === 'admin';
+  const isEvaluator = user?.role === 'evaluator';
+  const canManageRewards = isAdmin || isEvaluator;
+
+  // Auto-select first company if none selected
+  useEffect(() => {
+    if (canManageRewards && companies && companies.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(companies[0].id.toString());
+    }
+  }, [companies, selectedCompanyId, canManageRewards]);
 
   return (
     <div className="p-6">
       <Header 
         title="Loja de Recompensas"
-        subtitle={isAdmin ? "Gerenciar recompensas do sistema" : `Suas moedas virtuais: ${user?.virtualCoins || 0}`}
-        action={isAdmin && selectedCompanyId ? {
+        subtitle={canManageRewards ? "Gerenciar recompensas do sistema" : `Suas moedas virtuais: ${user?.virtualCoins || 0}`}
+        action={canManageRewards && selectedCompanyId ? {
           label: "Nova Recompensa",
           onClick: handleNewReward
         } : undefined}
       />
 
       <div className="mt-6">
-        {isAdmin && (
+        {canManageRewards && (
           <Card className="akig-card-shadow mb-6">
             <CardHeader>
               <CardTitle>Selecionar Empresa</CardTitle>
