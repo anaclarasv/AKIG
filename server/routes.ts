@@ -506,74 +506,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            console.log('Starting real local Whisper transcription...');
+            console.log('Starting OpenAI Whisper transcription...');
             
-            // Use node-whisper for real local transcription
-            const nodeWhisper = (await import('node-whisper')).default;
-            const fs = await import('fs');
-            
-            if (!fs.existsSync(audioFile.path)) {
-              throw new Error(`Audio file not found: ${audioFile.path}`);
-            }
+            const { transcribeAudioWithOpenAI } = await import('./openai-transcription');
             
             console.log(`Processing audio file: ${audioFile.path}`);
             
-            const options = {
-              modelName: "base",
-              language: 'pt',
-              word_timestamps: true,
-              gen_file_txt: true
-            };
+            const result = await transcribeAudioWithOpenAI(audioFile.path);
             
-            const result = await nodeWhisper(audioFile.path, options);
-            const transcript = typeof result === 'string' ? result : result.txt || '';
-            
-            if (!transcript || transcript.length === 0) {
+            if (!result || !result.text) {
               throw new Error('No transcription text generated');
             }
             
-            console.log('Real transcription result:', transcript.substring(0, 200));
+            console.log('Transcription result:', result.text.substring(0, 200));
             
-            // Process the real transcript into segments
-            const words = transcript.split(' ');
-            const segmentSize = Math.max(10, Math.floor(words.length / 5));
-            const segments = [];
-            
-            for (let i = 0; i < words.length; i += segmentSize) {
-              const segmentWords = words.slice(i, i + segmentSize);
-              const segmentText = segmentWords.join(' ');
-              const startTime = (i / words.length) * 60; // Estimate timing
-              const endTime = Math.min(((i + segmentSize) / words.length) * 60, 60);
-              
-              segments.push({
-                id: `segment_${i / segmentSize}`,
-                speaker: i % 2 === 0 ? 'agent' : 'client',
-                text: segmentText,
-                startTime,
-                endTime,
-                confidence: 0.9,
-                criticalWords: segmentText.toLowerCase().includes('problema') || 
-                             segmentText.toLowerCase().includes('reclamação') ? ['problema'] : []
-              });
-            }
-            
-            transcriptionResult = {
-              text: transcript,
-              segments,
-              duration: 60
-            };
-            
-            // Simple analysis based on real content
-            const sentiment = transcript.toLowerCase().includes('obrigado') || 
-                            transcript.toLowerCase().includes('satisfeito') ? 0.8 : 0.5;
-            
-            aiAnalysis = {
-              sentiment,
-              keyTopics: ['atendimento'],
-              criticalMoments: [],
-              recommendations: ['Revisar protocolos de atendimento'],
-              score: Math.round(sentiment * 10)
-            };
+            transcriptionResult = result;
+            aiAnalysis = result.analysis;
             
           } catch (error) {
             console.error('Real transcription failed:', (error as any).message);
@@ -581,14 +529,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           const transcriptionData = {
+            text: transcriptionResult.text,
             segments: transcriptionResult.segments || [],
-            totalDuration: transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 23
+            duration: transcriptionResult.duration || 60,
+            analysis: aiAnalysis
           };
 
           // Update session with transcription and analysis
           await storage.updateMonitoringSession(session.id, {
             transcription: transcriptionData,
-            aiAnalysis,
             status: 'completed'
           });
 
