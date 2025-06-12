@@ -1528,7 +1528,7 @@ export class DatabaseStorage implements IStorage {
     const evaluationStats = await db
       .select({
         agentId: monitoringSessions.agentId,
-        averageScore: avg(monitoringEvaluations.finalScore),
+        averageScore: sql<number>`AVG(${monitoringEvaluations.finalScore}::numeric)`,
         evaluationCount: count(monitoringEvaluations.id),
       })
       .from(monitoringEvaluations)
@@ -1587,7 +1587,7 @@ export class DatabaseStorage implements IStorage {
     const monthlyData = await db
       .select({
         month: sql<string>`DATE_TRUNC('month', ${monitoringEvaluations.createdAt})`,
-        averageScore: avg(monitoringEvaluations.totalScore),
+        averageScore: sql<number>`AVG(${monitoringEvaluations.finalScore}::numeric)`,
         evaluationCount: count(monitoringEvaluations.id),
       })
       .from(monitoringEvaluations)

@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Nome de usuário é obrigatório"),
@@ -18,6 +19,8 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -33,13 +36,17 @@ export default function AuthPage() {
       return response.json();
     },
     onSuccess: () => {
-      // Force page reload to ensure proper session handling
+      // Invalidate user query to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
       toast({
         title: "Login realizado com sucesso!",
         description: "Redirecionando para o dashboard...",
       });
+      
+      // Navigate to dashboard after successful login
       setTimeout(() => {
-        window.location.reload();
+        setLocation("/");
       }, 500);
     },
     onError: (error: Error) => {
