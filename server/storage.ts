@@ -1528,7 +1528,7 @@ export class DatabaseStorage implements IStorage {
     const evaluationStats = await db
       .select({
         agentId: monitoringSessions.agentId,
-        averageScore: avg(monitoringEvaluations.totalScore),
+        averageScore: avg(monitoringEvaluations.finalScore),
         evaluationCount: count(monitoringEvaluations.id),
       })
       .from(monitoringEvaluations)
