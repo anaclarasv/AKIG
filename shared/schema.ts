@@ -73,7 +73,6 @@ export const monitoringSessions = pgTable("monitoring_sessions", {
   campaignId: integer("campaign_id").references(() => campaigns.id).notNull(),
   audioUrl: varchar("audio_url"),
   transcription: jsonb("transcription"), // AI transcription data
-  analysis: jsonb("analysis"), // Campo para análise de IA
   duration: integer("duration"), // in seconds
   criticalMoments: jsonb("critical_moments"), // timestamps of critical moments
   aiAnalysis: jsonb("ai_analysis"), // AI analysis results
@@ -211,7 +210,8 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   type: varchar("type").default("info"), // info, success, warning, error
   isRead: boolean("is_read").default(false),
-  actionUrl: varchar("action_url"),
+  relatedId: integer("related_id"),
+  relatedType: varchar("related_type"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
