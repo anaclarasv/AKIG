@@ -495,23 +495,21 @@ export class DatabaseStorage implements IStorage {
     if (companyId && agentId) {
       const evaluationsWithSessions = await db
         .select({
-          id: evaluations.id,
-          monitoringSessionId: evaluations.monitoringSessionId,
-          evaluatorId: evaluations.evaluatorId,
-          scores: evaluations.scores,
-          observations: evaluations.observations,
-          finalScore: evaluations.finalScore,
-          status: evaluations.status,
-          agentSignature: evaluations.agentSignature,
-          signedAt: evaluations.signedAt,
-          contestedAt: evaluations.contestedAt,
-          contestReason: evaluations.contestReason,
-          supervisorComment: evaluations.supervisorComment,
-          createdAt: evaluations.createdAt,
-          updatedAt: evaluations.updatedAt,
+          id: monitoringEvaluations.id,
+          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
+          evaluatorId: monitoringEvaluations.evaluatorId,
+          totalScore: monitoringEvaluations.totalScore,
+          evaluationData: monitoringEvaluations.evaluationData,
+          agentSignature: monitoringEvaluations.agentSignature,
+          signedAt: monitoringEvaluations.signedAt,
+          contestedAt: monitoringEvaluations.contestedAt,
+          contestReason: monitoringEvaluations.contestReason,
+          supervisorComment: monitoringEvaluations.supervisorComment,
+          createdAt: monitoringEvaluations.createdAt,
+          updatedAt: monitoringEvaluations.updatedAt,
         })
-        .from(evaluations)
-        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+        .from(monitoringEvaluations)
+        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(and(
           eq(campaigns.companyId, companyId),
@@ -522,23 +520,21 @@ export class DatabaseStorage implements IStorage {
     } else if (companyId) {
       const evaluationsWithSessions = await db
         .select({
-          id: evaluations.id,
-          monitoringSessionId: evaluations.monitoringSessionId,
-          evaluatorId: evaluations.evaluatorId,
-          scores: evaluations.scores,
-          observations: evaluations.observations,
-          finalScore: evaluations.finalScore,
-          status: evaluations.status,
-          agentSignature: evaluations.agentSignature,
-          signedAt: evaluations.signedAt,
-          contestedAt: evaluations.contestedAt,
-          contestReason: evaluations.contestReason,
-          supervisorComment: evaluations.supervisorComment,
-          createdAt: evaluations.createdAt,
-          updatedAt: evaluations.updatedAt,
+          id: monitoringEvaluations.id,
+          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
+          evaluatorId: monitoringEvaluations.evaluatorId,
+          totalScore: monitoringEvaluations.totalScore,
+          evaluationData: monitoringEvaluations.evaluationData,
+          agentSignature: monitoringEvaluations.agentSignature,
+          signedAt: monitoringEvaluations.signedAt,
+          contestedAt: monitoringEvaluations.contestedAt,
+          contestReason: monitoringEvaluations.contestReason,
+          supervisorComment: monitoringEvaluations.supervisorComment,
+          createdAt: monitoringEvaluations.createdAt,
+          updatedAt: monitoringEvaluations.updatedAt,
         })
-        .from(evaluations)
-        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+        .from(monitoringEvaluations)
+        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(eq(campaigns.companyId, companyId));
       
@@ -546,23 +542,21 @@ export class DatabaseStorage implements IStorage {
     } else if (agentId) {
       const evaluationsWithSessions = await db
         .select({
-          id: evaluations.id,
-          monitoringSessionId: evaluations.monitoringSessionId,
-          evaluatorId: evaluations.evaluatorId,
-          scores: evaluations.scores,
-          observations: evaluations.observations,
-          finalScore: evaluations.finalScore,
-          status: evaluations.status,
-          agentSignature: evaluations.agentSignature,
-          signedAt: evaluations.signedAt,
-          contestedAt: evaluations.contestedAt,
-          contestReason: evaluations.contestReason,
-          supervisorComment: evaluations.supervisorComment,
-          createdAt: evaluations.createdAt,
-          updatedAt: evaluations.updatedAt,
+          id: monitoringEvaluations.id,
+          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
+          evaluatorId: monitoringEvaluations.evaluatorId,
+          totalScore: monitoringEvaluations.totalScore,
+          evaluationData: monitoringEvaluations.evaluationData,
+          agentSignature: monitoringEvaluations.agentSignature,
+          agentSignedAt: monitoringEvaluations.agentSignedAt,
+          contestedAt: monitoringEvaluations.contestedAt,
+          contestReason: monitoringEvaluations.contestReason,
+          comments: monitoringEvaluations.comments,
+          createdAt: monitoringEvaluations.createdAt,
+          updatedAt: monitoringEvaluations.updatedAt,
         })
-        .from(evaluations)
-        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
+        .from(monitoringEvaluations)
+        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
         .where(eq(monitoringSessions.agentId, agentId));
       
       return evaluationsWithSessions;
@@ -849,7 +843,7 @@ export class DatabaseStorage implements IStorage {
     ));
 
     // Get all evaluations to calculate average scores
-    const allEvaluations = await db.select().from(evaluations);
+    const allEvaluations = await db.select().from(monitoringEvaluations);
     const allMonitoringSessions = await db.select().from(monitoringSessions);
 
     // Calculate average score for each agent
@@ -863,7 +857,7 @@ export class DatabaseStorage implements IStorage {
       
       // Calculate average score
       const validScores = userEvaluations
-        .map(evaluation => Number(evaluation.finalScore))
+        .map(evaluation => Number(evaluation.totalScore))
         .filter(score => !isNaN(score) && score > 0);
       const averageScore = validScores.length > 0 ? 
         validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
