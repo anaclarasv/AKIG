@@ -30,6 +30,13 @@ import {
   type InsertRewardPurchase,
   type CoinTransaction,
   type InsertCoinTransaction,
+  type UpsertUser,
+  type Evaluation,
+  type InsertEvaluation,
+  type EvaluationCriteria,
+  type InsertEvaluationCriteria,
+  type EvaluationContest,
+  type InsertEvaluationContest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists, inArray, isNotNull } from "drizzle-orm";

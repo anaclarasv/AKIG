@@ -263,6 +263,15 @@ export type ContestParticipant = typeof contestParticipants.$inferSelect;
 export type InsertContestParticipant = typeof contestParticipants.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+export type EvaluationCriteria = typeof evaluationCriteria.$inferSelect;
+export type InsertEvaluationCriteria = typeof evaluationCriteria.$inferInsert;
+
+// Aliases for backward compatibility
+export type Evaluation = MonitoringEvaluation;
+export type InsertEvaluation = InsertMonitoringEvaluation;
+export type EvaluationContest = Contest;
+export type InsertEvaluationContest = InsertContest;
+export type UpsertUser = InsertUser;
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -284,6 +293,18 @@ export const insertMonitoringSessionSchema = createInsertSchema(monitoringSessio
 });
 
 export const insertMonitoringEvaluationSchema = createInsertSchema(monitoringEvaluations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMonitoringFormSchema = createInsertSchema(monitoringForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEvaluationCriteriaSchema = createInsertSchema(evaluationCriteria).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -322,3 +343,6 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
 });
+
+// Alias for backward compatibility
+export const insertEvaluationSchema = insertMonitoringEvaluationSchema;
