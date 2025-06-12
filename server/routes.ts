@@ -1578,11 +1578,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monitoring Forms endpoints
   app.get("/api/monitoring-forms/active", isAuthenticated, async (req, res) => {
     try {
-      const form = await storage.getActiveMonitoringForm();
-      res.json(form);
+      const sections = await storage.getFormSectionsWithCriteria();
+      res.json(sections);
     } catch (error) {
       console.error("Error fetching active monitoring form:", error);
       res.status(500).json({ message: "Failed to fetch monitoring form" });
+    }
+  });
+
+  // Create monitoring evaluation
+  app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
+    try {
+      const { monitoringSessionId, evaluationData, totalScore, comments } = req.body;
+      
+      const evaluation = await storage.createMonitoringEvaluation({
+        monitoringSessionId,
+        evaluatorId: req.user!.id,
+        evaluationData,
+        totalScore,
+        comments
+      });
+
+      res.status(201).json(evaluation);
+    } catch (error) {
+      console.error("Error creating monitoring evaluation:", error);
+      res.status(500).json({ message: "Failed to create evaluation" });
+    }
+  });
+
+  // Get evaluation for monitoring session
+  app.get("/api/monitoring-sessions/:id/evaluation", isAuthenticated, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const evaluation = await storage.getEvaluationBySessionId(sessionId);
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error fetching evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation" });
+    }
+  });
+
+  // Sign evaluation digitally
+  app.post("/api/monitoring-evaluations/:id/sign", isAuthenticated, async (req, res) => {
+    try {
+      const evaluationId = parseInt(req.params.id);
+      const { signature } = req.body;
+      
+      const evaluation = await storage.signEvaluation(evaluationId, req.user!.id, signature);
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error signing evaluation:", error);
+      res.status(500).json({ message: "Failed to sign evaluation" });
     }
   });
 

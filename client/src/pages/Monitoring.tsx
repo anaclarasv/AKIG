@@ -19,6 +19,7 @@ import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess
 import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
 import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
+import DynamicEvaluationForm from "@/components/monitoring/DynamicEvaluationForm";
 
 export default function Monitoring() {
   const [selectedSession, setSelectedSession] = useState<number | null>(null);

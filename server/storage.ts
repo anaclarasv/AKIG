@@ -10,6 +10,8 @@ import {
   notifications,
   monitoringForms,
   monitoringEvaluations,
+  formSections,
+  formCriteria,
   coinTransactions,
   contestParticipants,
   type User,
@@ -1306,6 +1308,65 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedRequest;
+  }
+
+  // Get form sections with criteria for evaluation
+  async getFormSectionsWithCriteria(): Promise<any[]> {
+    const sections = await db
+      .select()
+      .from(formSections)
+      .orderBy(formSections.orderIndex);
+
+    const sectionsWithCriteria = await Promise.all(
+      sections.map(async (section) => {
+        const criteria = await db
+          .select()
+          .from(formCriteria)
+          .where(eq(formCriteria.sectionId, section.id))
+          .orderBy(formCriteria.orderIndex);
+
+        return {
+          ...section,
+          criteria
+        };
+      })
+    );
+
+    return sectionsWithCriteria;
+  }
+
+  // Create monitoring evaluation
+  async createMonitoringEvaluation(evaluation: InsertMonitoringEvaluation): Promise<MonitoringEvaluation> {
+    const [newEvaluation] = await db
+      .insert(monitoringEvaluations)
+      .values(evaluation)
+      .returning();
+
+    return newEvaluation;
+  }
+
+  // Get evaluation by session ID
+  async getEvaluationBySessionId(sessionId: number): Promise<MonitoringEvaluation | undefined> {
+    const [evaluation] = await db
+      .select()
+      .from(monitoringEvaluations)
+      .where(eq(monitoringEvaluations.monitoringSessionId, sessionId));
+
+    return evaluation;
+  }
+
+  // Sign evaluation digitally
+  async signEvaluation(evaluationId: number, userId: string, signature: string): Promise<MonitoringEvaluation> {
+    const [updatedEvaluation] = await db
+      .update(monitoringEvaluations)
+      .set({
+        agentSignature: signature,
+        agentSignedAt: new Date()
+      })
+      .where(eq(monitoringEvaluations.id, evaluationId))
+      .returning();
+
+    return updatedEvaluation;
   }
 
   async getActiveMonitoringForm(): Promise<any> {

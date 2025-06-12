@@ -215,6 +215,33 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Form sections for dynamic monitoring forms
+export const formSections = pgTable("form_sections", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").references(() => monitoringForms.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  orderIndex: integer("order_index").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Form criteria for evaluation
+export const formCriteria = pgTable("form_criteria", {
+  id: serial("id").primaryKey(),
+  sectionId: integer("section_id").references(() => formSections.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: varchar("type").notNull(), // evaluation, signature, etc
+  criterionType: varchar("criterion_type").default("checkbox"), // checkbox, radio, text
+  options: jsonb("options"),
+  maxScore: integer("max_score").default(10),
+  weight: decimal("weight", { precision: 5, scale: 2 }).notNull().default("1.00"),
+  isRequired: boolean("is_required").default(false),
+  isCritical: boolean("is_critical").default(false), // ZERA criteria
+  orderIndex: integer("order_index").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // LGPD compliance logs
 export const lgpdLogs = pgTable("lgpd_logs", {
   id: serial("id").primaryKey(),
