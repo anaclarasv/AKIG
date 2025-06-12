@@ -84,6 +84,7 @@ export default function Sidebar() {
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Aprovação de Resgates', href: '/reward-approval', icon: Gift },
         ];
       case 'agent':
         return [

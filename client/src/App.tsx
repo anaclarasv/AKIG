@@ -17,6 +17,7 @@ import Users from "@/pages/Users";
 import EvaluationCriteria from "@/pages/EvaluationCriteria";
 import Campaigns from "@/pages/Campaigns";
 import RewardsStore from "@/pages/RewardsStore";
+import RewardApproval from "@/pages/RewardApproval";
 import LGPDCompliance from "@/pages/LGPDCompliance";
 import MyEvaluations from "@/pages/MyEvaluations";
 import ArchivedSessions from "@/pages/ArchivedSessions";
@@ -93,6 +94,11 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/rewards" component={RewardsStore} />
+            <Route path="/reward-approval" component={() => (
+              <ProtectedRoute allowedRoles={['admin', 'evaluator']}>
+                <RewardApproval />
+              </ProtectedRoute>
+            )} />
             <Route path="/companies" component={() => (
               <ProtectedRoute allowedRoles={['admin']}>
                 <Companies />

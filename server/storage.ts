@@ -149,6 +149,11 @@ export interface IStorage {
   getMonitoringEvaluations(sessionId?: number): Promise<any[]>;
   updateMonitoringEvaluation(id: number, updates: any): Promise<any>;
   getEvaluationResponse(evaluationId: number, criterionId: number): Promise<any>;
+  
+  // Reward approval system
+  getPendingRewardRequests(): Promise<any[]>;
+  approveRewardRequest(requestId: number, approverId: string, notes?: string): Promise<RewardPurchase>;
+  rejectRewardRequest(requestId: number, approverId: string, rejectionReason: string): Promise<RewardPurchase>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1096,6 +1101,77 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return user;
+  }
+
+  // Reward approval system methods
+  async getPendingRewardRequests(): Promise<any[]> {
+    const requests = await db
+      .select({
+        id: rewardPurchases.id,
+        userId: rewardPurchases.userId,
+        rewardId: rewardPurchases.rewardId,
+        cost: rewardPurchases.cost,
+        status: rewardPurchases.status,
+        requestedAt: rewardPurchases.requestedAt,
+        userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
+        userEmail: users.email,
+        rewardName: rewards.name,
+        rewardDescription: rewards.description,
+      })
+      .from(rewardPurchases)
+      .innerJoin(users, eq(rewardPurchases.userId, users.id))
+      .innerJoin(rewards, eq(rewardPurchases.rewardId, rewards.id))
+      .where(eq(rewardPurchases.status, 'pending'))
+      .orderBy(desc(rewardPurchases.requestedAt));
+
+    return requests;
+  }
+
+  async approveRewardRequest(requestId: number, approverId: string, notes?: string): Promise<RewardPurchase> {
+    const [updatedRequest] = await db
+      .update(rewardPurchases)
+      .set({
+        status: 'approved',
+        approvedBy: approverId,
+        approvedAt: new Date(),
+        notes: notes || null,
+      })
+      .where(eq(rewardPurchases.id, requestId))
+      .returning();
+
+    return updatedRequest;
+  }
+
+  async rejectRewardRequest(requestId: number, approverId: string, rejectionReason: string): Promise<RewardPurchase> {
+    // First get the request to restore user coins
+    const [request] = await db
+      .select()
+      .from(rewardPurchases)
+      .where(eq(rewardPurchases.id, requestId));
+
+    if (request) {
+      // Restore user's virtual coins
+      await db
+        .update(users)
+        .set({
+          virtualCoins: sql`${users.virtualCoins} + ${request.cost}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, request.userId));
+    }
+
+    const [updatedRequest] = await db
+      .update(rewardPurchases)
+      .set({
+        status: 'rejected',
+        approvedBy: approverId,
+        approvedAt: new Date(),
+        rejectionReason,
+      })
+      .where(eq(rewardPurchases.id, requestId))
+      .returning();
+
+    return updatedRequest;
   }
 
   async getActiveMonitoringForm(): Promise<any> {
