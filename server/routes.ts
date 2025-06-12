@@ -1744,6 +1744,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Monthly team performance bonus calculation
+  app.post("/api/admin/calculate-team-bonuses", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      
+      // Only admin can trigger team bonus calculation
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.updateSupervisorTeamBonus();
+      res.json({ message: "Team bonuses calculated successfully" });
+    } catch (error) {
+      console.error("Error calculating team bonuses:", error);
+      res.status(500).json({ message: "Failed to calculate team bonuses" });
+    }
+  });
+
   // Reward request approval system endpoints
   app.get("/api/reward-requests/pending", isAuthenticated, async (req: any, res) => {
     try {

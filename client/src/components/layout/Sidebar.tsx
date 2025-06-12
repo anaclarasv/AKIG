@@ -75,6 +75,7 @@ export default function Sidebar() {
           { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
+          { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
           { name: 'Relatórios', href: '/reports', icon: FileBarChart },
           { name: 'Arquivadas', href: '/archived-sessions', icon: Archive },
         ];

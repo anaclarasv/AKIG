@@ -1495,6 +1495,63 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  // Update virtual coins for team performance bonus
+  async updateSupervisorTeamBonus(): Promise<void> {
+    const supervisors = await db.select().from(users).where(eq(users.role, "supervisor"));
+
+    for (const supervisor of supervisors) {
+      const teamAgents = await db.select({ id: users.id }).from(users).where(and(
+        eq(users.role, "agent"),
+        eq(users.supervisorId, supervisor.id),
+        eq(users.isActive, true)
+      ));
+
+      if (teamAgents.length === 0) continue;
+
+      const agentIds = teamAgents.map(agent => agent.id);
+
+      // Calculate team average score from last month
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+      const teamPerformance = await db
+        .select({
+          avgScore: avg(monitoringEvaluations.finalScore),
+          count: count(monitoringEvaluations.id)
+        })
+        .from(monitoringEvaluations)
+        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+        .where(
+          and(
+            inArray(monitoringSessions.agentId, agentIds),
+            gte(monitoringEvaluations.createdAt, lastMonth)
+          )
+        );
+
+      if (teamPerformance.length > 0 && teamPerformance[0].count > 0) {
+        const avgScore = Number(teamPerformance[0].avgScore) || 0;
+        const evaluationCount = Number(teamPerformance[0].count) || 0;
+
+        // Calculate bonus: 1 coin per evaluation + bonus based on team performance
+        let bonus = evaluationCount; // Base: 1 coin per team evaluation
+        
+        if (avgScore >= 90) bonus += evaluationCount * 2; // Excellent team: +2 per evaluation
+        else if (avgScore >= 80) bonus += evaluationCount * 1; // Good team: +1 per evaluation
+        else if (avgScore >= 70) bonus += Math.floor(evaluationCount * 0.5); // Fair team: +0.5 per evaluation
+
+        if (bonus > 0) {
+          await db
+            .update(users)
+            .set({
+              virtualCoins: sql`COALESCE(${users.virtualCoins}, 0) + ${bonus}`,
+              updatedAt: new Date()
+            })
+            .where(eq(users.id, supervisor.id));
+        }
+      }
+    }
+  }
+
 
 
 

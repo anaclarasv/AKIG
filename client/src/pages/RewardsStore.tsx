@@ -38,8 +38,8 @@ export default function RewardsStore() {
     enabled: user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator',
   });
 
-  // For agents, use their companyId; for admins/evaluators, use selectedCompanyId
-  const companyIdForQuery = user?.role === 'agent' ? user.companyId?.toString() : selectedCompanyId;
+  // For agents and supervisors, use their companyId; for admins/evaluators, use selectedCompanyId
+  const companyIdForQuery = (user?.role === 'agent' || user?.role === 'supervisor') ? user.companyId?.toString() : selectedCompanyId;
 
   const { data: rewards, isLoading } = useQuery<Reward[]>({
     queryKey: ['/api/rewards', companyIdForQuery],
@@ -58,7 +58,7 @@ export default function RewardsStore() {
 
   const { data: userPurchases } = useQuery<RewardPurchase[]>({
     queryKey: ['/api/user/purchases'],
-    enabled: !!user && user.role !== 'admin',
+    enabled: !!user && ['agent', 'supervisor'].includes(user.role || ''),
   });
 
   const createMutation = useMutation({
@@ -239,7 +239,7 @@ export default function RewardsStore() {
     <div className="p-6">
       <Header 
         title="Loja de Recompensas"
-        subtitle={canManageRewards ? "Gerenciar recompensas do sistema" : `Suas moedas virtuais: ${user?.virtualCoins || 0}`}
+        subtitle={canManageRewards ? "Gerenciar recompensas do sistema" : `Suas moedas virtuais: ${user?.virtualCoins || 0} ${user?.role === 'supervisor' ? '(incluindo bônus de equipe)' : ''}`}
         action={canManageRewards && selectedCompanyId ? {
           label: "Nova Recompensa",
           onClick: handleNewReward
