@@ -748,7 +748,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get all data from database
     const allMonitorings = await db.select().from(monitoringSessions);
-    const allEvaluations = await db.select().from(evaluations);
+    const allEvaluations = await db.select().from(monitoringEvaluations);
     const allUsers = await db.select().from(users);
 
     // MONITORIAS HOJE vs ONTEM
