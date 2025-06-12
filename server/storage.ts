@@ -3,18 +3,19 @@ import {
   companies,
   campaigns,
   monitoringSessions,
+  evaluations,
   evaluationCriteria,
   rewards,
   rewardPurchases,
-  contests,
+  evaluationContests,
   notifications,
   monitoringForms,
-  monitoringEvaluations,
   formSections,
   formCriteria,
-  coinTransactions,
-  contestParticipants,
+  monitoringEvaluations,
+  evaluationResponses,
   type User,
+  type UpsertUser,
   type InsertUser,
   type Company,
   type InsertCompany,
@@ -22,23 +23,15 @@ import {
   type InsertCampaign,
   type MonitoringSession,
   type InsertMonitoringSession,
-  type MonitoringEvaluation,
-  type InsertMonitoringEvaluation,
-  type Reward,
-  type InsertReward,
-  type Contest,
-  type InsertContest,
-  type RewardPurchase,
-  type InsertRewardPurchase,
-  type CoinTransaction,
-  type InsertCoinTransaction,
-  type UpsertUser,
   type Evaluation,
   type InsertEvaluation,
   type EvaluationCriteria,
   type InsertEvaluationCriteria,
+  type Reward,
+  type InsertReward,
   type EvaluationContest,
   type InsertEvaluationContest,
+  type RewardPurchase,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, avg, sql, gte, lt, isNull, exists, inArray, isNotNull } from "drizzle-orm";
@@ -495,21 +488,23 @@ export class DatabaseStorage implements IStorage {
     if (companyId && agentId) {
       const evaluationsWithSessions = await db
         .select({
-          id: monitoringEvaluations.id,
-          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
-          evaluatorId: monitoringEvaluations.evaluatorId,
-          totalScore: monitoringEvaluations.totalScore,
-          evaluationData: monitoringEvaluations.evaluationData,
-          agentSignature: monitoringEvaluations.agentSignature,
-          signedAt: monitoringEvaluations.signedAt,
-          contestedAt: monitoringEvaluations.contestedAt,
-          contestReason: monitoringEvaluations.contestReason,
-          supervisorComment: monitoringEvaluations.supervisorComment,
-          createdAt: monitoringEvaluations.createdAt,
-          updatedAt: monitoringEvaluations.updatedAt,
+          id: evaluations.id,
+          monitoringSessionId: evaluations.monitoringSessionId,
+          evaluatorId: evaluations.evaluatorId,
+          scores: evaluations.scores,
+          observations: evaluations.observations,
+          finalScore: evaluations.finalScore,
+          status: evaluations.status,
+          agentSignature: evaluations.agentSignature,
+          signedAt: evaluations.signedAt,
+          contestedAt: evaluations.contestedAt,
+          contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
+          createdAt: evaluations.createdAt,
+          updatedAt: evaluations.updatedAt,
         })
-        .from(monitoringEvaluations)
-        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+        .from(evaluations)
+        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(and(
           eq(campaigns.companyId, companyId),
@@ -520,21 +515,23 @@ export class DatabaseStorage implements IStorage {
     } else if (companyId) {
       const evaluationsWithSessions = await db
         .select({
-          id: monitoringEvaluations.id,
-          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
-          evaluatorId: monitoringEvaluations.evaluatorId,
-          totalScore: monitoringEvaluations.totalScore,
-          evaluationData: monitoringEvaluations.evaluationData,
-          agentSignature: monitoringEvaluations.agentSignature,
-          signedAt: monitoringEvaluations.signedAt,
-          contestedAt: monitoringEvaluations.contestedAt,
-          contestReason: monitoringEvaluations.contestReason,
-          supervisorComment: monitoringEvaluations.supervisorComment,
-          createdAt: monitoringEvaluations.createdAt,
-          updatedAt: monitoringEvaluations.updatedAt,
+          id: evaluations.id,
+          monitoringSessionId: evaluations.monitoringSessionId,
+          evaluatorId: evaluations.evaluatorId,
+          scores: evaluations.scores,
+          observations: evaluations.observations,
+          finalScore: evaluations.finalScore,
+          status: evaluations.status,
+          agentSignature: evaluations.agentSignature,
+          signedAt: evaluations.signedAt,
+          contestedAt: evaluations.contestedAt,
+          contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
+          createdAt: evaluations.createdAt,
+          updatedAt: evaluations.updatedAt,
         })
-        .from(monitoringEvaluations)
-        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+        .from(evaluations)
+        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
         .innerJoin(campaigns, eq(monitoringSessions.campaignId, campaigns.id))
         .where(eq(campaigns.companyId, companyId));
       
@@ -542,21 +539,23 @@ export class DatabaseStorage implements IStorage {
     } else if (agentId) {
       const evaluationsWithSessions = await db
         .select({
-          id: monitoringEvaluations.id,
-          monitoringSessionId: monitoringEvaluations.monitoringSessionId,
-          evaluatorId: monitoringEvaluations.evaluatorId,
-          totalScore: monitoringEvaluations.totalScore,
-          evaluationData: monitoringEvaluations.evaluationData,
-          agentSignature: monitoringEvaluations.agentSignature,
-          agentSignedAt: monitoringEvaluations.agentSignedAt,
-          contestedAt: monitoringEvaluations.contestedAt,
-          contestReason: monitoringEvaluations.contestReason,
-          comments: monitoringEvaluations.comments,
-          createdAt: monitoringEvaluations.createdAt,
-          updatedAt: monitoringEvaluations.updatedAt,
+          id: evaluations.id,
+          monitoringSessionId: evaluations.monitoringSessionId,
+          evaluatorId: evaluations.evaluatorId,
+          scores: evaluations.scores,
+          observations: evaluations.observations,
+          finalScore: evaluations.finalScore,
+          status: evaluations.status,
+          agentSignature: evaluations.agentSignature,
+          signedAt: evaluations.signedAt,
+          contestedAt: evaluations.contestedAt,
+          contestReason: evaluations.contestReason,
+          supervisorComment: evaluations.supervisorComment,
+          createdAt: evaluations.createdAt,
+          updatedAt: evaluations.updatedAt,
         })
-        .from(monitoringEvaluations)
-        .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+        .from(evaluations)
+        .innerJoin(monitoringSessions, eq(evaluations.monitoringSessionId, monitoringSessions.id))
         .where(eq(monitoringSessions.agentId, agentId));
       
       return evaluationsWithSessions;
@@ -744,7 +743,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get all data from database
     const allMonitorings = await db.select().from(monitoringSessions);
-    const allEvaluations = await db.select().from(monitoringEvaluations);
+    const allEvaluations = await db.select().from(evaluations);
     const allUsers = await db.select().from(users);
 
     // MONITORIAS HOJE vs ONTEM
@@ -843,7 +842,7 @@ export class DatabaseStorage implements IStorage {
     ));
 
     // Get all evaluations to calculate average scores
-    const allEvaluations = await db.select().from(monitoringEvaluations);
+    const allEvaluations = await db.select().from(evaluations);
     const allMonitoringSessions = await db.select().from(monitoringSessions);
 
     // Calculate average score for each agent
@@ -857,7 +856,7 @@ export class DatabaseStorage implements IStorage {
       
       // Calculate average score
       const validScores = userEvaluations
-        .map(evaluation => Number(evaluation.totalScore))
+        .map(evaluation => Number(evaluation.finalScore))
         .filter(score => !isNaN(score) && score > 0);
       const averageScore = validScores.length > 0 ? 
         validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
@@ -1302,65 +1301,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedRequest;
-  }
-
-  // Get form sections with criteria for evaluation
-  async getFormSectionsWithCriteria(): Promise<any[]> {
-    const sections = await db
-      .select()
-      .from(formSections)
-      .orderBy(formSections.orderIndex);
-
-    const sectionsWithCriteria = await Promise.all(
-      sections.map(async (section) => {
-        const criteria = await db
-          .select()
-          .from(formCriteria)
-          .where(eq(formCriteria.sectionId, section.id))
-          .orderBy(formCriteria.orderIndex);
-
-        return {
-          ...section,
-          criteria
-        };
-      })
-    );
-
-    return sectionsWithCriteria;
-  }
-
-  // Create monitoring evaluation
-  async createMonitoringEvaluation(evaluation: InsertMonitoringEvaluation): Promise<MonitoringEvaluation> {
-    const [newEvaluation] = await db
-      .insert(monitoringEvaluations)
-      .values(evaluation)
-      .returning();
-
-    return newEvaluation;
-  }
-
-  // Get evaluation by session ID
-  async getEvaluationBySessionId(sessionId: number): Promise<MonitoringEvaluation | undefined> {
-    const [evaluation] = await db
-      .select()
-      .from(monitoringEvaluations)
-      .where(eq(monitoringEvaluations.monitoringSessionId, sessionId));
-
-    return evaluation;
-  }
-
-  // Sign evaluation digitally
-  async signEvaluation(evaluationId: number, userId: string, signature: string): Promise<MonitoringEvaluation> {
-    const [updatedEvaluation] = await db
-      .update(monitoringEvaluations)
-      .set({
-        agentSignature: signature,
-        agentSignedAt: new Date()
-      })
-      .where(eq(monitoringEvaluations.id, evaluationId))
-      .returning();
-
-    return updatedEvaluation;
   }
 
   async getActiveMonitoringForm(): Promise<any> {

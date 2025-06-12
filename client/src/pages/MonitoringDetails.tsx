@@ -16,7 +16,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-
 interface TranscriptionSegment {
   id: string;
   text: string;
@@ -48,7 +47,6 @@ interface MonitoringSession {
   evaluatorId: string;
   audioUrl: string;
   transcription: any;
-  analysis?: any; // Campo para análise de IA
   status: string;
   createdAt: string;
   agent?: {
@@ -490,8 +488,6 @@ export default function MonitoringDetails() {
             </CardContent>
           </Card>
         </TabsContent>
-
-
 
         {/* Aba da Avaliação */}
         <TabsContent value="evaluation">

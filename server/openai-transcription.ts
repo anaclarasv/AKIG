@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
-import { ExpressionAnalyzer, type ExpressionAnalysis } from "./expression-analyzer";
 
 // Initialize OpenAI with API key
 const openai = new OpenAI({
@@ -21,16 +20,10 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
   confidence: number;
   transcription_engine: string;
   analysis: {
-    criticas: number;      // expressões negativas + baixo calão (vermelho)
-    neutras: number;       // expressões neutras (amarelo) 
-    positivas: number;     // expressões positivas (verde)
-    silencioSegundos: number; // tempo de silêncio em segundos
-    detectedExpressions: {
-      criticas: string[];
-      neutras: string[];
-      positivas: string[];
-      baixoCalao: string[];
-    };
+    sentiment: number;
+    criticalWords: string[];
+    topics: string[];
+    recommendations: string[];
   };
 }> {
   try {
@@ -68,12 +61,11 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
     // Calculate duration
     const duration = transcription.duration || calculateDurationFromSegments(processedSegments);
 
-    // Análise de expressões baseada no arquivo CSV fornecido
-    const expressionAnalysis = ExpressionAnalyzer.analyzeTranscription(
-      transcription.text,
-      processedSegments,
-      duration
-    );
+    // Detect critical words
+    const criticalWords = detectCriticalWords(transcription.text);
+
+    // Analyze sentiment and generate recommendations
+    const analysis = analyzeTranscriptionContent(transcription.text, criticalWords);
 
     return {
       text: transcription.text,
@@ -81,7 +73,7 @@ export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<
       duration: duration,
       confidence: 0.95, // OpenAI Whisper typically has high confidence
       transcription_engine: "openai_whisper",
-      analysis: expressionAnalysis
+      analysis: analysis
     };
 
   } catch (error: any) {
@@ -159,6 +151,15 @@ function detectSpeaker(text: string, index: number): string {
       return 'Atendente';
     }
   }
+  
+  // Keywords that suggest customer
+  const customerKeywords = [
+    'estou ligando', 'preciso de',
+    'tenho um problema', 'gostaria de',
+    'recebi', 'comprei',
+    'não funciona', 'está quebrado',
+    'quero reclamar', 'estou insatisfeit'
+  ];
   
   // Check for customer keywords
   for (const keyword of customerKeywords) {

@@ -19,7 +19,6 @@ import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess
 import { User } from "@/types";
 import type { MonitoringSession, Campaign } from "@/types";
 import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
-import DynamicEvaluationForm from "@/components/monitoring/DynamicEvaluationForm";
 
 export default function Monitoring() {
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
@@ -398,33 +397,33 @@ export default function Monitoring() {
                 </div>
               )}
               
-              {selectedSessionData.transcription?.analysis && (
+              {selectedSessionData.aiAnalysis && (
                 <div className="space-y-3">
                   <h4 className="font-medium">Análise IA</h4>
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="p-2 bg-red-50 rounded">
                       <p className="text-red-600 font-semibold text-sm">
-                        {selectedSessionData.transcription.analysis.criticas || 0}
+                        {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
                       </p>
-                      <p className="text-xs text-red-700">Expressões Críticas</p>
+                      <p className="text-xs text-red-700">Palavras Críticas</p>
                     </div>
                     <div className="p-2 bg-amber-50 rounded">
                       <p className="text-amber-600 font-semibold text-sm">
-                        {selectedSessionData.transcription.analysis.neutras || 0}
+                        {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
                       </p>
-                      <p className="text-xs text-amber-700">Expressões Neutras</p>
+                      <p className="text-xs text-amber-700">Silêncio Total</p>
+                    </div>
+                    <div className="p-2 bg-blue-50 rounded">
+                      <p className="text-blue-600 font-semibold text-sm">
+                        {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
+                      </p>
+                      <p className="text-xs text-blue-700">Tom Médio</p>
                     </div>
                     <div className="p-2 bg-green-50 rounded">
                       <p className="text-green-600 font-semibold text-sm">
-                        {selectedSessionData.transcription.analysis.positivas || 0}
+                        {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
                       </p>
-                      <p className="text-xs text-green-700">Expressões Positivas</p>
-                    </div>
-                    <div className="p-2 bg-gray-50 rounded">
-                      <p className="text-gray-600 font-semibold text-sm">
-                        {selectedSessionData.transcription.analysis.silencioSegundos || 0}s
-                      </p>
-                      <p className="text-xs text-gray-700">Silêncio total</p>
+                      <p className="text-xs text-green-700">Sentimento</p>
                     </div>
                   </div>
                 </div>
@@ -538,8 +537,6 @@ export default function Monitoring() {
                   </div>
                 )}
               </div>
-              
-
             </CardContent>
           </Card>
 
@@ -832,33 +829,6 @@ export default function Monitoring() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Dynamic Evaluation Form Dialog */}
-      {selectedSession && (
-        <Dialog open={showEvaluationForm} onOpenChange={setShowEvaluationForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Ficha de Avaliação - Monitoria #{selectedSession}</DialogTitle>
-              <DialogDescription>
-                Complete a avaliação da sessão de monitoramento seguindo os critérios estabelecidos.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <DynamicEvaluationForm 
-              monitoringSessionId={selectedSession}
-              onEvaluationComplete={() => {
-                setShowEvaluationForm(false);
-                setSelectedSession(null);
-                queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-                toast({
-                  title: "Avaliação Concluída",
-                  description: "A ficha de avaliação foi salva com sucesso!",
-                });
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

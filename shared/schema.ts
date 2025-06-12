@@ -25,17 +25,6 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Companies table for multi-tenant architecture
-export const companies = pgTable("companies", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  logoUrl: varchar("logo_url"),
-  domain: varchar("domain"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // User storage table for username/password authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
@@ -49,6 +38,16 @@ export const users = pgTable("users", {
   companyId: integer("company_id").references(() => companies.id),
   supervisorId: varchar("supervisor_id").references(() => users.id), // For agents to reference their supervisor
   virtualCoins: integer("virtual_coins").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Companies table for multi-tenant architecture
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  logoUrl: varchar("logo_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -97,210 +96,142 @@ export const evaluationCriteria = pgTable("evaluation_criteria", {
   maxScore: integer("max_score").default(10),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Monitoring forms for dynamic evaluation templates
-export const monitoringForms = pgTable("monitoring_forms", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  name: varchar("name").notNull(),
-  version: varchar("version").default("1.0"),
-  formData: jsonb("form_data").notNull(), // Dynamic form structure
-  isActive: boolean("is_active").default(true),
-  isDefault: boolean("is_default").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Monitoring evaluations
-export const monitoringEvaluations = pgTable("monitoring_evaluations", {
+// Evaluations table
+export const evaluations = pgTable("evaluations", {
   id: serial("id").primaryKey(),
   monitoringSessionId: integer("monitoring_session_id").references(() => monitoringSessions.id).notNull(),
   evaluatorId: varchar("evaluator_id").references(() => users.id).notNull(),
-  formId: integer("form_id").references(() => monitoringForms.id),
-  evaluationData: jsonb("evaluation_data").notNull(), // Dynamic evaluation responses
-  totalScore: decimal("total_score", { precision: 5, scale: 2 }),
-  comments: text("comments"),
-  agentSignature: text("agent_signature"), // Digital signature content
-  agentSignedAt: timestamp("agent_signed_at"),
+  scores: jsonb("scores"), // criteria scores
+  observations: text("observations"),
+  finalScore: decimal("final_score", { precision: 4, scale: 2 }),
+  status: varchar("status").default("pending"), // pending, signed, contested
+  agentSignature: varchar("agent_signature"),
+  signedAt: timestamp("signed_at"),
   contestedAt: timestamp("contested_at"),
   contestReason: text("contest_reason"),
-  contestResolvedAt: timestamp("contest_resolved_at"),
-  contestResolvedBy: varchar("contest_resolved_by").references(() => users.id),
-  contestResolution: text("contest_resolution"),
+  supervisorComment: text("supervisor_comment"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Rewards store products
+// Rewards and gamification
 export const rewards = pgTable("rewards", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name").notNull(),
   description: text("description"),
+  cost: integer("cost").notNull(), // cost in virtual coins
   imageUrl: varchar("image_url"),
-  cost: integer("cost").notNull(), // in virtual coins
-  category: varchar("category"),
   isActive: boolean("is_active").default(true),
-  stock: integer("stock"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Reward purchases/redemptions
+// Reward purchases with approval workflow
 export const rewardPurchases = pgTable("reward_purchases", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   rewardId: integer("reward_id").references(() => rewards.id).notNull(),
   cost: integer("cost").notNull(),
-  status: varchar("status").default("pending"), // pending, approved, denied, delivered
-  adminNotes: text("admin_notes"),
+  status: varchar("status").default("pending"), // pending, approved, rejected, delivered
+  requestedAt: timestamp("requested_at").defaultNow(),
   approvedBy: varchar("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
   deliveredAt: timestamp("delivered_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  notes: text("notes"),
 });
 
-// Coin transactions for audit trail
-export const coinTransactions = pgTable("coin_transactions", {
+// Evaluation contests
+export const evaluationContests = pgTable("evaluation_contests", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  amount: integer("amount").notNull(), // positive for earning, negative for spending
-  type: varchar("type").notNull(), // evaluation_bonus, reward_purchase, manual_adjustment
-  referenceId: integer("reference_id"), // ID of related record (evaluation, purchase, etc)
-  description: text("description"),
-  createdBy: varchar("created_by").references(() => users.id),
+  evaluationId: integer("evaluation_id").references(() => evaluations.id).notNull(),
+  agentId: varchar("agent_id").notNull(),
+  reason: text("reason").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, approved, rejected
+  response: text("response"),
   createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
 });
 
-// Contests/campaigns for gamification
-export const contests = pgTable("contests", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  name: varchar("name").notNull(),
-  description: text("description"),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  prizes: jsonb("prizes"), // Array of prize objects
-  rules: text("rules"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Contest participants
-export const contestParticipants = pgTable("contest_participants", {
-  id: serial("id").primaryKey(),
-  contestId: integer("contest_id").references(() => contests.id).notNull(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  score: decimal("score", { precision: 10, scale: 2 }).default("0"),
-  rank: integer("rank"),
-  isEligible: boolean("is_eligible").default(true),
-  joinedAt: timestamp("joined_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Notifications for users
+// Notifications
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: varchar("user_id").notNull(),
   title: varchar("title").notNull(),
   message: text("message").notNull(),
-  type: varchar("type").default("info"), // info, success, warning, error
+  type: varchar("type").notNull().default("info"), // info, success, warning, error
   isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
   relatedId: integer("related_id"),
-  relatedType: varchar("related_type"),
-  createdAt: timestamp("created_at").defaultNow(),
+  relatedType: varchar("related_type"), // evaluation, contest, monitoring, etc
 });
 
-// Form sections for dynamic monitoring forms
-export const formSections = pgTable("form_sections", {
+// Monitoring Forms - Dynamic evaluation forms with sections and criteria
+export const monitoringForms = pgTable("monitoring_forms", {
   id: serial("id").primaryKey(),
-  formId: integer("form_id").references(() => monitoringForms.id),
   name: varchar("name").notNull(),
   description: text("description"),
-  orderIndex: integer("order_index").notNull().default(1),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Form criteria for evaluation
-export const formCriteria = pgTable("form_criteria", {
-  id: serial("id").primaryKey(),
-  sectionId: integer("section_id").references(() => formSections.id).notNull(),
-  name: varchar("name").notNull(),
-  description: text("description"),
-  type: varchar("type").notNull(), // evaluation, signature, etc
-  criterionType: varchar("criterion_type").default("checkbox"), // checkbox, radio, text
-  options: jsonb("options"),
-  maxScore: integer("max_score").default(10),
-  weight: decimal("weight", { precision: 5, scale: 2 }).notNull().default("1.00"),
-  isRequired: boolean("is_required").default(false),
-  isCritical: boolean("is_critical").default(false), // ZERA criteria
-  orderIndex: integer("order_index").notNull().default(1),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// LGPD compliance logs
-export const lgpdLogs = pgTable("lgpd_logs", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id),
-  action: varchar("action").notNull(), // data_export, data_deletion, consent_granted, consent_revoked
-  details: jsonb("details"),
-  ipAddress: varchar("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Data retention policies
-export const dataRetentionPolicies = pgTable("data_retention_policies", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  dataType: varchar("data_type").notNull(), // monitoring_sessions, evaluations, etc
-  retentionPeriodDays: integer("retention_period_days").notNull(),
-  autoDelete: boolean("auto_delete").default(false),
+  companyId: integer("company_id").references(() => companies.id),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Type definitions
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-export type Company = typeof companies.$inferSelect;
-export type InsertCompany = typeof companies.$inferInsert;
-export type MonitoringSession = typeof monitoringSessions.$inferSelect;
-export type InsertMonitoringSession = typeof monitoringSessions.$inferInsert;
-export type MonitoringEvaluation = typeof monitoringEvaluations.$inferSelect;
-export type InsertMonitoringEvaluation = typeof monitoringEvaluations.$inferInsert;
-export type MonitoringForm = typeof monitoringForms.$inferSelect;
-export type InsertMonitoringForm = typeof monitoringForms.$inferInsert;
-export type Campaign = typeof campaigns.$inferSelect;
-export type InsertCampaign = typeof campaigns.$inferInsert;
-export type Reward = typeof rewards.$inferSelect;
-export type InsertReward = typeof rewards.$inferInsert;
-export type RewardPurchase = typeof rewardPurchases.$inferSelect;
-export type InsertRewardPurchase = typeof rewardPurchases.$inferInsert;
-export type CoinTransaction = typeof coinTransactions.$inferSelect;
-export type InsertCoinTransaction = typeof coinTransactions.$inferInsert;
-export type Contest = typeof contests.$inferSelect;
-export type InsertContest = typeof contests.$inferInsert;
-export type ContestParticipant = typeof contestParticipants.$inferSelect;
-export type InsertContestParticipant = typeof contestParticipants.$inferInsert;
-export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = typeof notifications.$inferInsert;
-export type EvaluationCriteria = typeof evaluationCriteria.$inferSelect;
-export type InsertEvaluationCriteria = typeof evaluationCriteria.$inferInsert;
+// Form Sections - Groups of criteria within a form
+export const formSections = pgTable("form_sections", {
+  id: serial("id").primaryKey(),
+  formId: integer("form_id").notNull().references(() => monitoringForms.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
-// Aliases for backward compatibility
-export type Evaluation = MonitoringEvaluation;
-export type InsertEvaluation = InsertMonitoringEvaluation;
-export type EvaluationContest = Contest;
-export type InsertEvaluationContest = InsertContest;
-export type UpsertUser = InsertUser;
+// Form Criteria - Individual evaluation criteria
+export const formCriteria = pgTable("form_criteria", {
+  id: serial("id").primaryKey(),
+  sectionId: integer("section_id").notNull().references(() => formSections.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  weight: decimal("weight", { precision: 5, scale: 2 }).notNull(), // Weight/points for this criteria
+  type: varchar("type").notNull(), // 'sim_nao_na', 'score', 'checkbox'
+  isRequired: boolean("is_required").default(true),
+  isCriticalFailure: boolean("is_critical_failure").default(false), // "ZERA" criteria
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
-// Zod schemas for validation
+// Monitoring Evaluations - Individual evaluations with dynamic criteria responses
+export const monitoringEvaluations = pgTable("monitoring_evaluations", {
+  id: serial("id").primaryKey(),
+  monitoringSessionId: integer("monitoring_session_id").notNull().references(() => monitoringSessions.id),
+  formId: integer("form_id").notNull().references(() => monitoringForms.id),
+  evaluatorId: varchar("evaluator_id").notNull().references(() => users.id),
+  partialScore: decimal("partial_score", { precision: 5, scale: 2 }).notNull(),
+  finalScore: decimal("final_score", { precision: 5, scale: 2 }).notNull(),
+  hasCriticalFailure: boolean("has_critical_failure").default(false),
+  criticalFailureReason: text("critical_failure_reason"),
+  observations: text("observations"),
+  status: varchar("status").notNull().default("draft"), // draft, completed, signed
+  agentSignature: varchar("agent_signature"),
+  agentSignedAt: timestamp("agent_signed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Evaluation Responses - Individual responses to form criteria
+export const evaluationResponses = pgTable("evaluation_responses", {
+  id: serial("id").primaryKey(),
+  evaluationId: integer("evaluation_id").notNull().references(() => monitoringEvaluations.id, { onDelete: "cascade" }),
+  criteriaId: integer("criteria_id").notNull().references(() => formCriteria.id),
+  response: varchar("response").notNull(), // 'sim', 'nao', 'na', score value, or 'checked'/'unchecked'
+  pointsEarned: decimal("points_earned", { precision: 5, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -313,19 +244,19 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   updatedAt: true,
 });
 
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertMonitoringSessionSchema = createInsertSchema(monitoringSessions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const insertMonitoringEvaluationSchema = createInsertSchema(monitoringEvaluations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertMonitoringFormSchema = createInsertSchema(monitoringForms).omit({
+export const insertEvaluationSchema = createInsertSchema(evaluations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -334,36 +265,17 @@ export const insertMonitoringFormSchema = createInsertSchema(monitoringForms).om
 export const insertEvaluationCriteriaSchema = createInsertSchema(evaluationCriteria).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCampaignSchema = createInsertSchema(campaigns).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertRewardSchema = createInsertSchema(rewards).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
 });
 
-export const insertRewardPurchaseSchema = createInsertSchema(rewardPurchases).omit({
+export const insertEvaluationContestSchema = createInsertSchema(evaluationContests).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCoinTransactionSchema = createInsertSchema(coinTransactions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertContestSchema = createInsertSchema(contests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+  reviewedAt: true,
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
@@ -371,5 +283,59 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
-// Alias for backward compatibility
-export const insertEvaluationSchema = insertMonitoringEvaluationSchema;
+export const insertMonitoringFormSchema = createInsertSchema(monitoringForms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFormSectionSchema = createInsertSchema(formSections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFormCriteriaSchema = createInsertSchema(formCriteria).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMonitoringEvaluationSchema = createInsertSchema(monitoringEvaluations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEvaluationResponseSchema = createInsertSchema(evaluationResponses).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Export types
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type MonitoringSession = typeof monitoringSessions.$inferSelect;
+export type InsertMonitoringSession = z.infer<typeof insertMonitoringSessionSchema>;
+export type Evaluation = typeof evaluations.$inferSelect;
+export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+export type EvaluationCriteria = typeof evaluationCriteria.$inferSelect;
+export type InsertEvaluationCriteria = z.infer<typeof insertEvaluationCriteriaSchema>;
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+export type RewardPurchase = typeof rewardPurchases.$inferSelect;
+export type EvaluationContest = typeof evaluationContests.$inferSelect;
+export type InsertEvaluationContest = z.infer<typeof insertEvaluationContestSchema>;
+export type MonitoringForm = typeof monitoringForms.$inferSelect;
+export type InsertMonitoringForm = z.infer<typeof insertMonitoringFormSchema>;
+export type FormSection = typeof formSections.$inferSelect;
+export type InsertFormSection = z.infer<typeof insertFormSectionSchema>;
+export type FormCriteria = typeof formCriteria.$inferSelect;
+export type InsertFormCriteria = z.infer<typeof insertFormCriteriaSchema>;
+export type MonitoringEvaluation = typeof monitoringEvaluations.$inferSelect;
+export type InsertMonitoringEvaluation = z.infer<typeof insertMonitoringEvaluationSchema>;
+export type EvaluationResponse = typeof evaluationResponses.$inferSelect;
+export type InsertEvaluationResponse = z.infer<typeof insertEvaluationResponseSchema>;

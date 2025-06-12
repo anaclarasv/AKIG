@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { db } from "./db";
-import { contests } from "@shared/schema";
+import { evaluations, evaluationContests } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./auth";
 import { analyzeTranscription } from "./openai";
@@ -17,7 +17,8 @@ import {
   insertCompanySchema,
   insertCampaignSchema,
   insertMonitoringSessionSchema,
-  insertMonitoringEvaluationSchema,
+  insertEvaluationSchema,
+  insertEvaluationCriteriaSchema,
   insertRewardSchema,
 } from "@shared/schema";
 
@@ -506,22 +507,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let aiAnalysis;
           
           try {
-            console.log('Starting OpenAI Whisper transcription...');
+            console.log('Starting real local Whisper transcription...');
             
-            const { transcribeAudioWithOpenAI } = await import('./openai-transcription');
+            // Use node-whisper for real local transcription
+            const nodeWhisper = (await import('node-whisper')).default;
+            const fs = await import('fs');
+            
+            if (!fs.existsSync(audioFile.path)) {
+              throw new Error(`Audio file not found: ${audioFile.path}`);
+            }
             
             console.log(`Processing audio file: ${audioFile.path}`);
             
-            const result = await transcribeAudioWithOpenAI(audioFile.path);
+            const options = {
+              modelName: "base",
+              language: 'pt',
+              word_timestamps: true,
+              gen_file_txt: true
+            };
             
-            if (!result || !result.text) {
+            const result = await nodeWhisper(audioFile.path, options);
+            const transcript = typeof result === 'string' ? result : result.txt || '';
+            
+            if (!transcript || transcript.length === 0) {
               throw new Error('No transcription text generated');
             }
             
-            console.log('Transcription result:', result.text.substring(0, 200));
+            console.log('Real transcription result:', transcript.substring(0, 200));
             
-            transcriptionResult = result;
-            aiAnalysis = result.analysis;
+            // Process the real transcript into segments
+            const words = transcript.split(' ');
+            const segmentSize = Math.max(10, Math.floor(words.length / 5));
+            const segments = [];
+            
+            for (let i = 0; i < words.length; i += segmentSize) {
+              const segmentWords = words.slice(i, i + segmentSize);
+              const segmentText = segmentWords.join(' ');
+              const startTime = (i / words.length) * 60; // Estimate timing
+              const endTime = Math.min(((i + segmentSize) / words.length) * 60, 60);
+              
+              segments.push({
+                id: `segment_${i / segmentSize}`,
+                speaker: i % 2 === 0 ? 'agent' : 'client',
+                text: segmentText,
+                startTime,
+                endTime,
+                confidence: 0.9,
+                criticalWords: segmentText.toLowerCase().includes('problema') || 
+                             segmentText.toLowerCase().includes('reclamação') ? ['problema'] : []
+              });
+            }
+            
+            transcriptionResult = {
+              text: transcript,
+              segments,
+              duration: 60
+            };
+            
+            // Simple analysis based on real content
+            const sentiment = transcript.toLowerCase().includes('obrigado') || 
+                            transcript.toLowerCase().includes('satisfeito') ? 0.8 : 0.5;
+            
+            aiAnalysis = {
+              sentiment,
+              keyTopics: ['atendimento'],
+              criticalMoments: [],
+              recommendations: ['Revisar protocolos de atendimento'],
+              score: Math.round(sentiment * 10)
+            };
             
           } catch (error) {
             console.error('Real transcription failed:', (error as any).message);
@@ -529,15 +582,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           const transcriptionData = {
-            text: transcriptionResult.text,
             segments: transcriptionResult.segments || [],
-            duration: transcriptionResult.duration || 60,
-            analysis: aiAnalysis
+            totalDuration: transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 23
           };
 
           // Update session with transcription and analysis
           await storage.updateMonitoringSession(session.id, {
             transcription: transcriptionData,
+            aiAnalysis,
             status: 'completed'
           });
 
@@ -1578,57 +1630,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monitoring Forms endpoints
   app.get("/api/monitoring-forms/active", isAuthenticated, async (req, res) => {
     try {
-      const sections = await storage.getFormSectionsWithCriteria();
-      res.json(sections);
+      const form = await storage.getActiveMonitoringForm();
+      res.json(form);
     } catch (error) {
       console.error("Error fetching active monitoring form:", error);
       res.status(500).json({ message: "Failed to fetch monitoring form" });
-    }
-  });
-
-  // Create monitoring evaluation
-  app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
-    try {
-      const { monitoringSessionId, evaluationData, totalScore, comments } = req.body;
-      
-      const evaluation = await storage.createMonitoringEvaluation({
-        monitoringSessionId,
-        evaluatorId: req.user!.id,
-        evaluationData,
-        totalScore,
-        comments
-      });
-
-      res.status(201).json(evaluation);
-    } catch (error) {
-      console.error("Error creating monitoring evaluation:", error);
-      res.status(500).json({ message: "Failed to create evaluation" });
-    }
-  });
-
-  // Get evaluation for monitoring session
-  app.get("/api/monitoring-sessions/:id/evaluation", isAuthenticated, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const evaluation = await storage.getEvaluationBySessionId(sessionId);
-      res.json(evaluation);
-    } catch (error) {
-      console.error("Error fetching evaluation:", error);
-      res.status(500).json({ message: "Failed to fetch evaluation" });
-    }
-  });
-
-  // Sign evaluation digitally
-  app.post("/api/monitoring-evaluations/:id/sign", isAuthenticated, async (req, res) => {
-    try {
-      const evaluationId = parseInt(req.params.id);
-      const { signature } = req.body;
-      
-      const evaluation = await storage.signEvaluation(evaluationId, req.user!.id, signature);
-      res.json(evaluation);
-    } catch (error) {
-      console.error("Error signing evaluation:", error);
-      res.status(500).json({ message: "Failed to sign evaluation" });
     }
   });
 
