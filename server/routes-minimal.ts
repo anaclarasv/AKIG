@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
@@ -24,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Basic routes for monitoring system
-  app.get('/api/auth/user', isAuthenticated, async (req, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -74,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Audio upload
-  app.post('/api/monitoring/upload', isAuthenticated, upload.single('audio'), async (req, res) => {
+  app.post('/api/monitoring/upload', isAuthenticated, upload.single('audio'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -85,11 +86,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await storage.createMonitoringSession({
         agentId: req.body.agentId || userId,
+        campaignId: req.body.campaignId || 1,
         evaluatorId: userId,
         audioUrl,
         status: 'pending',
-        transcription: null,
-        analysis: null
+        transcription: null
       });
 
       res.json(session);
