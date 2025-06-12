@@ -538,6 +538,26 @@ export default function Monitoring() {
                   </div>
                 )}
               </div>
+              
+              {/* Show Evaluation Button after transcription is complete */}
+              {selectedSessionData.transcription?.segments?.length && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-green-800">Transcrição Concluída</h4>
+                      <p className="text-sm text-green-600">Agora você pode preencher a ficha de avaliação</p>
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setShowEvaluationForm(true);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Preencher Ficha de Avaliação
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -830,6 +850,33 @@ export default function Monitoring() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dynamic Evaluation Form Dialog */}
+      {selectedSession && (
+        <Dialog open={showEvaluationForm} onOpenChange={setShowEvaluationForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Ficha de Avaliação - Monitoria #{selectedSession}</DialogTitle>
+              <DialogDescription>
+                Complete a avaliação da sessão de monitoramento seguindo os critérios estabelecidos.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <DynamicEvaluationForm 
+              monitoringSessionId={selectedSession}
+              onEvaluationComplete={() => {
+                setShowEvaluationForm(false);
+                setSelectedSession(null);
+                queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+                toast({
+                  title: "Avaliação Concluída",
+                  description: "A ficha de avaliação foi salva com sucesso!",
+                });
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
