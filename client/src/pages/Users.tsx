@@ -512,11 +512,13 @@ export default function Users() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Nenhuma</SelectItem>
-                    {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id.toString()}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
+                    {companies && companies.length > 0 ? companies
+                      .filter(company => company?.id && company?.name)
+                      .map((company) => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      )) : null}
                   </SelectContent>
                 </Select>
               </div>
@@ -532,13 +534,13 @@ export default function Users() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Nenhum supervisor</SelectItem>
-                    {supervisors
-                      .filter(supervisor => supervisor.id && supervisor.firstName && supervisor.lastName)
+                    {supervisors && supervisors.length > 0 ? supervisors
+                      .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
                       .map((supervisor) => (
-                        <SelectItem key={supervisor.id} value={supervisor.id}>
+                        <SelectItem key={supervisor.id} value={supervisor.id || ""}>
                           {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
                         </SelectItem>
-                      ))}
+                      )) : null}
                   </SelectContent>
                 </Select>
               </div>
