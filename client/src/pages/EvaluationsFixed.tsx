@@ -645,10 +645,10 @@ export default function EvaluationsFixed() {
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Pontuação Final</Label>
                 <p className={`text-lg font-bold ${
-                  selectedEvaluation && selectedEvaluation.finalScore >= 8 ? 'text-green-600' :
-                  selectedEvaluation && selectedEvaluation.finalScore >= 6 ? 'text-yellow-600' : 'text-red-600'
+                  selectedEvaluation && Number(selectedEvaluation.finalScore) >= 8 ? 'text-green-600' :
+                  selectedEvaluation && Number(selectedEvaluation.finalScore) >= 6 ? 'text-yellow-600' : 'text-red-600'
                 }`}>
-                  {selectedEvaluation?.finalScore.toFixed(1)} pts
+                  {selectedEvaluation?.finalScore ? Number(selectedEvaluation.finalScore).toFixed(1) : '0.0'} pts
                 </p>
               </div>
               <div>
