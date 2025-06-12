@@ -539,25 +539,7 @@ export default function Monitoring() {
                 )}
               </div>
               
-              {/* Show Evaluation Button after transcription is complete */}
-              {selectedSessionData.transcription?.segments?.length && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-green-800">Transcrição Concluída</h4>
-                      <p className="text-sm text-green-600">Agora você pode preencher a ficha de avaliação</p>
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        setShowEvaluationForm(true);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Preencher Ficha de Avaliação
-                    </Button>
-                  </div>
-                </div>
-              )}
+
             </CardContent>
           </Card>
 
