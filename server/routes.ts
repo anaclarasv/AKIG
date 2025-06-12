@@ -1187,6 +1187,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/rewards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'evaluator'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const rewardId = parseInt(req.params.id);
+      const validatedData = insertRewardSchema.partial().parse(req.body);
+      const reward = await storage.updateReward(rewardId, validatedData);
+      res.json(reward);
+    } catch (error) {
+      console.error("Error updating reward:", error);
+      res.status(500).json({ message: "Failed to update reward" });
+    }
+  });
+
+  app.delete('/api/rewards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'evaluator'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const rewardId = parseInt(req.params.id);
+      await storage.deleteReward(rewardId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting reward:", error);
+      res.status(500).json({ message: "Failed to delete reward" });
+    }
+  });
+
   app.post('/api/rewards/:id/purchase', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
