@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { db } from "./db";
-import { evaluations, evaluationContests } from "@shared/schema";
+import { contests } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./auth";
 import { analyzeTranscription } from "./openai";
@@ -17,8 +17,7 @@ import {
   insertCompanySchema,
   insertCampaignSchema,
   insertMonitoringSessionSchema,
-  insertEvaluationSchema,
-  insertEvaluationCriteriaSchema,
+  insertMonitoringEvaluationSchema,
   insertRewardSchema,
 } from "@shared/schema";
 

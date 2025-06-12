@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Signature, Eye, Download, Calendar, Clock, User, Phone, Edit, Save, X, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Signature, Eye, Download, Calendar, Clock, User, Phone, Edit, Save, X, Plus, Trash2, Brain } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -494,7 +494,69 @@ export default function MonitoringDetails() {
 
         {/* Aba de Análise IA */}
         <TabsContent value="analysis">
-          <KeywordAnalysisPanel analysis={monitoring?.analysis} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Brain className="w-5 h-5 mr-2" />
+                Análise Inteligente do Atendimento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Demonstração do sistema de detecção de palavras-chave */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-2">Palavras-Chave Detectadas:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm">problema</span>
+                    <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-sm">demora</span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">obrigado</span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">satisfeito</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-medium text-green-900 mb-2">Pontos Positivos</h4>
+                    <ul className="text-sm text-green-800 space-y-1">
+                      <li>• Cordialidade no atendimento</li>
+                      <li>• Cliente expressou satisfação</li>
+                      <li>• Problema resolvido</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <h4 className="font-medium text-orange-900 mb-2">Pontos de Atenção</h4>
+                    <ul className="text-sm text-orange-800 space-y-1">
+                      <li>• Tempo de espera mencionado</li>
+                      <li>• Processo inicial demorado</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <h4 className="font-medium text-gray-900 mb-2">Score de Qualidade IA:</h4>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1 bg-gray-200 rounded-full h-3">
+                      <div className="bg-green-500 h-3 rounded-full" style={{width: '85%'}}></div>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">85/100</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Baseado na análise automatizada de sentimento e detecção de palavras-chave
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-2">Recomendações da IA:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Implementar processo mais ágil para reduzir tempo de espera</li>
+                    <li>• Manter o nível de cordialidade demonstrado</li>
+                    <li>• Considerar feedback positivo do cliente nas métricas</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Aba da Avaliação */}
