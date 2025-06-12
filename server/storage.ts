@@ -1496,6 +1496,128 @@ export class DatabaseStorage implements IStorage {
 
     return updated;
   }
+
+  // Team ranking for supervisors
+  async getTeamRanking(supervisorId: string): Promise<Array<{
+    userId: string;
+    firstName: string;
+    lastName: string;
+    averageScore: number;
+    virtualCoins: number;
+    evaluationCount: number;
+    rank: number;
+  }>> {
+    // Get team members for this supervisor
+    const teamMembers = await db
+      .select({
+        userId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        virtualCoins: users.virtualCoins,
+      })
+      .from(users)
+      .where(eq(users.supervisorId, supervisorId));
+
+    if (teamMembers.length === 0) {
+      return [];
+    }
+
+    const teamMemberIds = teamMembers.map(member => member.userId);
+
+    // Get evaluation scores for team members
+    const evaluationStats = await db
+      .select({
+        agentId: monitoringSessions.agentId,
+        averageScore: avg(monitoringEvaluations.totalScore),
+        evaluationCount: count(monitoringEvaluations.id),
+      })
+      .from(monitoringEvaluations)
+      .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+      .where(inArray(monitoringSessions.agentId, teamMemberIds))
+      .groupBy(monitoringSessions.agentId);
+
+    // Combine team member data with evaluation stats
+    const teamRanking = teamMembers.map(member => {
+      const stats = evaluationStats.find(stat => stat.agentId === member.userId);
+      return {
+        userId: member.userId,
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
+        averageScore: stats ? Number(stats.averageScore) || 0 : 0,
+        virtualCoins: member.virtualCoins || 0,
+        evaluationCount: stats ? Number(stats.evaluationCount) || 0 : 0,
+        rank: 0 // Will be calculated below
+      };
+    });
+
+    // Sort by average score and assign ranks
+    teamRanking.sort((a, b) => b.averageScore - a.averageScore);
+    teamRanking.forEach((member, index) => {
+      member.rank = index + 1;
+    });
+
+    return teamRanking;
+  }
+
+  // Team performance evolution for supervisors
+  async getTeamPerformanceEvolution(supervisorId: string, months: number): Promise<Array<{
+    month: string;
+    averageScore: number;
+    evaluationCount: number;
+    trend: number;
+  }>> {
+    // Get team members for this supervisor
+    const teamMembers = await db
+      .select({ userId: users.id })
+      .from(users)
+      .where(eq(users.supervisorId, supervisorId));
+
+    if (teamMembers.length === 0) {
+      return [];
+    }
+
+    const teamMemberIds = teamMembers.map(member => member.userId);
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    // Get monthly performance data
+    const monthlyData = await db
+      .select({
+        month: sql<string>`DATE_TRUNC('month', ${monitoringEvaluations.createdAt})`,
+        averageScore: avg(monitoringEvaluations.totalScore),
+        evaluationCount: count(monitoringEvaluations.id),
+      })
+      .from(monitoringEvaluations)
+      .innerJoin(monitoringSessions, eq(monitoringEvaluations.monitoringSessionId, monitoringSessions.id))
+      .where(
+        and(
+          inArray(monitoringSessions.agentId, teamMemberIds),
+          gte(monitoringEvaluations.createdAt, startDate),
+          lt(monitoringEvaluations.createdAt, endDate)
+        )
+      )
+      .groupBy(sql`DATE_TRUNC('month', ${monitoringEvaluations.createdAt})`)
+      .orderBy(sql`DATE_TRUNC('month', ${monitoringEvaluations.createdAt})`);
+
+    // Format the data and calculate trends
+    const formattedData = monthlyData.map((data, index) => {
+      const currentScore = Number(data.averageScore) || 0;
+      const previousScore = index > 0 ? Number(monthlyData[index - 1].averageScore) || 0 : currentScore;
+      const trend = previousScore > 0 ? ((currentScore - previousScore) / previousScore) * 100 : 0;
+
+      return {
+        month: data.month.substring(0, 7), // Format as YYYY-MM
+        averageScore: currentScore,
+        evaluationCount: Number(data.evaluationCount) || 0,
+        trend: trend
+      };
+    });
+
+    return formattedData;
+  }
 }
 
 export const storage = new DatabaseStorage();

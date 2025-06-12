@@ -151,6 +151,7 @@ export default function Users() {
       lastName: "",
       role: "agent",
       companyId: "",
+      supervisorId: "",
       virtualCoins: 0,
       isActive: true
     });
@@ -166,6 +167,7 @@ export default function Users() {
       lastName: userToEdit.lastName,
       role: userToEdit.role,
       companyId: userToEdit.companyId?.toString() || "",
+      supervisorId: userToEdit.supervisorId || "",
       virtualCoins: userToEdit.virtualCoins || 0,
       isActive: userToEdit.isActive
     });
@@ -492,6 +494,26 @@ export default function Users() {
                 </Select>
               </div>
             </div>
+
+            {/* Supervisor Selection for Agents */}
+            {formData.role === 'agent' && (
+              <div>
+                <Label htmlFor="supervisor">Supervisor</Label>
+                <Select value={formData.supervisorId} onValueChange={(value) => setFormData(prev => ({ ...prev, supervisorId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um supervisor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum supervisor</SelectItem>
+                    {supervisors.map((supervisor) => (
+                      <SelectItem key={supervisor.id} value={supervisor.id}>
+                        {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center space-x-2">
               <Switch
