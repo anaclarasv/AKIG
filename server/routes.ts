@@ -296,15 +296,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Companies routes
+  // Companies routes with statistics
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!['admin', 'evaluator'].includes(user?.role || '')) {
         return res.status(403).json({ message: "Access denied" });
       }
+      
       const companies = await storage.getCompanies();
-      res.json(companies);
+      
+      // Add statistics for each company
+      const companiesWithStats = await Promise.all(
+        companies.map(async (company) => {
+          const campaigns = await storage.getCampaigns(company.id);
+          const users = await storage.getAllUsers();
+          const activeUsers = users.filter(u => 
+            u.companyId === company.id && 
+            u.isActive && 
+            u.role === 'agent'
+          );
+          
+          return {
+            ...company,
+            campaignCount: campaigns.length,
+            activeUserCount: activeUsers.length
+          };
+        })
+      );
+      
+      res.json(companiesWithStats);
     } catch (error) {
       console.error("Error fetching companies:", error);
       res.status(500).json({ message: "Failed to fetch companies" });

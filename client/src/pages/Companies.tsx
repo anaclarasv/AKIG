@@ -175,12 +175,12 @@ export default function Companies() {
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-3 bg-muted rounded-lg">
                         <Users className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-                        <p className="text-sm font-medium">0</p>
+                        <p className="text-sm font-medium">{company.activeUserCount || 0}</p>
                         <p className="text-xs text-muted-foreground">Usuários</p>
                       </div>
                       <div className="p-3 bg-muted rounded-lg">
                         <BarChart3 className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                        <p className="text-sm font-medium">0</p>
+                        <p className="text-sm font-medium">{company.campaignCount || 0}</p>
                         <p className="text-xs text-muted-foreground">Campanhas</p>
                       </div>
                     </div>

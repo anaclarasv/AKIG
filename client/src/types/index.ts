@@ -14,6 +14,8 @@ export interface Company {
   name: string;
   logoUrl?: string;
   isActive: boolean;
+  campaignCount?: number;
+  activeUserCount?: number;
 }
 
 export interface Campaign {
