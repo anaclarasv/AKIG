@@ -497,36 +497,35 @@ export default function Users() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="role">Role</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um papel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                    <SelectItem value="evaluator">Avaliador</SelectItem>
-                    <SelectItem value="agent">Agente</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                >
+                  <option value="">Selecione um papel</option>
+                  <option value="admin">Admin</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="evaluator">Avaliador</option>
+                  <option value="agent">Agente</option>
+                </select>
               </div>
               
               <div>
                 <Label htmlFor="company">Empresa</Label>
-                <Select value={formData.companyId} onValueChange={(value) => setFormData(prev => ({ ...prev, companyId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
-                    {companies && companies.length > 0 ? companies
-                      .filter(company => company?.id && company?.name)
-                      .map((company) => (
-                        <SelectItem key={company.id} value={company.id.toString()}>
-                          {company.name}
-                        </SelectItem>
-                      )) : null}
-                  </SelectContent>
-                </Select>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={formData.companyId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, companyId: e.target.value }))}
+                >
+                  <option value="">Nenhuma</option>
+                  {companies && companies.length > 0 ? companies
+                    .filter(company => company?.id && company?.name)
+                    .map((company) => (
+                      <option key={company.id} value={company.id.toString()}>
+                        {company.name}
+                      </option>
+                    )) : null}
+                </select>
               </div>
             </div>
 
@@ -534,21 +533,20 @@ export default function Users() {
             {formData.role === 'agent' && (
               <div>
                 <Label htmlFor="supervisor">Supervisor</Label>
-                <Select value={formData.supervisorId} onValueChange={(value) => setFormData(prev => ({ ...prev, supervisorId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um supervisor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Nenhum supervisor</SelectItem>
-                    {supervisors && supervisors.length > 0 ? supervisors
-                      .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
-                      .map((supervisor) => (
-                        <SelectItem key={supervisor.id} value={supervisor.id || ""}>
-                          {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
-                        </SelectItem>
-                      )) : null}
-                  </SelectContent>
-                </Select>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={formData.supervisorId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, supervisorId: e.target.value }))}
+                >
+                  <option value="">Nenhum supervisor</option>
+                  {supervisors && supervisors.length > 0 ? supervisors
+                    .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
+                    .map((supervisor) => (
+                      <option key={supervisor.id} value={supervisor.id || ""}>
+                        {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
+                      </option>
+                    )) : null}
+                </select>
               </div>
             )}
 

@@ -64,7 +64,13 @@ const SafeSelectItem = React.forwardRef<
   }
 >(({ className, children, value, ...props }, ref) => {
   // Garantir que value nunca seja undefined/null
-  const safeValue = value || "";
+  const safeValue = value ?? "";
+  
+  // Validação extra para garantir que value existe
+  if (value === undefined || value === null) {
+    console.warn('SafeSelectItem: value prop é obrigatório e não pode ser undefined/null');
+    return null;
+  }
   
   return (
     <SelectPrimitive.Item
