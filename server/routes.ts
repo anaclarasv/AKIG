@@ -10,6 +10,7 @@ import { evaluations, evaluationContests } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./auth";
 import { analyzeTranscription } from "./openai";
+import { transcribeAudioWithAssemblyAI, analyzeTranscription as analyzeAssemblyAI } from "./assemblyai-service";
 // import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
@@ -515,89 +516,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await storage.createMonitoringSession(sessionData);
 
-      // Process transcription in background
+      // Process transcription in background using AssemblyAI
       setImmediate(async () => {
         try {
-          console.log('Starting transcription for session:', session.id);
-          
-          // Instant processing - no delays
-          console.log('Processing audio instantly...');
+          console.log('Starting AssemblyAI transcription for session:', session.id);
           
           let transcriptionResult;
           let aiAnalysis;
           
           try {
-            console.log('Starting real local Whisper transcription...');
+            console.log('Starting AssemblyAI transcription...');
             
-            // Use node-whisper for real local transcription
-            const nodeWhisper = (await import('node-whisper')).default;
-            const fs = await import('fs');
+            // Use AssemblyAI for professional transcription
+            transcriptionResult = await transcribeAudioWithAssemblyAI(audioFile.path);
+            console.log('AssemblyAI transcription completed successfully');
             
-            if (!fs.existsSync(audioFile.path)) {
-              throw new Error(`Audio file not found: ${audioFile.path}`);
-            }
-            
-            console.log(`Processing audio file: ${audioFile.path}`);
-            
-            const options = {
-              modelName: "base",
-              language: 'pt',
-              word_timestamps: true,
-              gen_file_txt: true
-            };
-            
-            const result = await nodeWhisper(audioFile.path, options);
-            const transcript = typeof result === 'string' ? result : result.txt || '';
-            
-            if (!transcript || transcript.length === 0) {
-              throw new Error('No transcription text generated');
-            }
-            
-            console.log('Real transcription result:', transcript.substring(0, 200));
-            
-            // Process the real transcript into segments
-            const words = transcript.split(' ');
-            const segmentSize = Math.max(10, Math.floor(words.length / 5));
-            const segments = [];
-            
-            for (let i = 0; i < words.length; i += segmentSize) {
-              const segmentWords = words.slice(i, i + segmentSize);
-              const segmentText = segmentWords.join(' ');
-              const startTime = (i / words.length) * 60; // Estimate timing
-              const endTime = Math.min(((i + segmentSize) / words.length) * 60, 60);
-              
-              segments.push({
-                id: `segment_${i / segmentSize}`,
-                speaker: i % 2 === 0 ? 'agent' : 'client',
-                text: segmentText,
-                startTime,
-                endTime,
-                confidence: 0.9,
-                criticalWords: segmentText.toLowerCase().includes('problema') || 
-                             segmentText.toLowerCase().includes('reclamação') ? ['problema'] : []
-              });
-            }
-            
-            transcriptionResult = {
-              text: transcript,
-              segments,
-              duration: 60
-            };
-            
-            // Simple analysis based on real content
-            const sentiment = transcript.toLowerCase().includes('obrigado') || 
-                            transcript.toLowerCase().includes('satisfeito') ? 0.8 : 0.5;
-            
-            aiAnalysis = {
-              sentiment,
-              keyTopics: ['atendimento'],
-              criticalMoments: [],
-              recommendations: ['Revisar protocolos de atendimento'],
-              score: Math.round(sentiment * 10)
-            };
+            // Analyze transcription results
+            aiAnalysis = analyzeAssemblyAI(transcriptionResult);
+            console.log('AI analysis completed');
             
           } catch (error) {
-            console.error('Real transcription failed:', (error as any).message);
+            console.error('AssemblyAI transcription failed:', (error as any).message);
             throw new Error(`Real transcription failed: ${(error as any).message}`);
           }
           
