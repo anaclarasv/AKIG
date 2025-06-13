@@ -72,15 +72,21 @@ export default function Users() {
     queryKey: ['/api/companies'],
   });
 
-  // Fetch supervisors for dropdown
+  // Fetch supervisors for dropdown - filtered by selected company
   const { data: supervisors = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
     select: (data) => {
-      const allUsers = data || [];
-      const filteredSupervisors = allUsers.filter(user => user.role === 'supervisor');
-      console.log('All users:', allUsers);
-      console.log('Filtered supervisors:', filteredSupervisors);
-      return filteredSupervisors;
+      const allSupervisors = data.filter(user => user.role === 'supervisor');
+      
+      // If no company selected, return all supervisors
+      if (!formData.companyId) {
+        return allSupervisors;
+      }
+      
+      // Filter supervisors by selected company
+      return allSupervisors.filter(supervisor => 
+        supervisor.companyId && supervisor.companyId.toString() === formData.companyId
+      );
     },
   });
 
@@ -521,7 +527,14 @@ export default function Users() {
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   value={formData.companyId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, companyId: e.target.value }))}
+                  onChange={(e) => {
+                    // Reset supervisor when company changes
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      companyId: e.target.value,
+                      supervisorId: "" // Clear supervisor selection
+                    }));
+                  }}
                 >
                   <option value="">Nenhuma</option>
                   {companies && companies.length > 0 ? companies
@@ -543,10 +556,7 @@ export default function Users() {
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 value={formData.supervisorId}
-                onChange={(e) => {
-                  console.log('Supervisor selected:', e.target.value);
-                  setFormData(prev => ({ ...prev, supervisorId: e.target.value }));
-                }}
+                onChange={(e) => setFormData(prev => ({ ...prev, supervisorId: e.target.value }))}
                 disabled={formData.role === 'admin'}
               >
                 <option value="">
@@ -554,14 +564,17 @@ export default function Users() {
                 </option>
                 {supervisors && supervisors.length > 0 ? supervisors
                   .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
-                  .map((supervisor) => {
-                    console.log('Rendering supervisor:', supervisor);
-                    return (
-                      <option key={supervisor.id} value={supervisor.id || ""}>
-                        {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
-                      </option>
-                    );
-                  }) : <option disabled>Nenhum supervisor disponível</option>}
+                  .map((supervisor) => (
+                    <option key={supervisor.id} value={supervisor.id || ""}>
+                      {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
+                    </option>
+                  )) : (
+                    <option disabled>
+                      {formData.companyId 
+                        ? 'Nenhum supervisor disponível nesta empresa' 
+                        : 'Selecione uma empresa primeiro'}
+                    </option>
+                  )}
               </select>
               {formData.role === 'agent' && !formData.supervisorId && (
                 <p className="text-sm text-red-500 mt-1">
