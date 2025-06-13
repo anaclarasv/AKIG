@@ -75,7 +75,13 @@ export default function Users() {
   // Fetch supervisors for dropdown
   const { data: supervisors = [] } = useQuery<User[]>({
     queryKey: ['/api/users'],
-    select: (data) => data.filter(user => user.role === 'supervisor'),
+    select: (data) => {
+      const allUsers = data || [];
+      const filteredSupervisors = allUsers.filter(user => user.role === 'supervisor');
+      console.log('All users:', allUsers);
+      console.log('Filtered supervisors:', filteredSupervisors);
+      return filteredSupervisors;
+    },
   });
 
   // Create user mutation
@@ -529,26 +535,40 @@ export default function Users() {
               </div>
             </div>
 
-            {/* Supervisor Selection for Agents */}
-            {formData.role === 'agent' && (
-              <div>
-                <Label htmlFor="supervisor">Supervisor</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  value={formData.supervisorId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, supervisorId: e.target.value }))}
-                >
-                  <option value="">Nenhum supervisor</option>
-                  {supervisors && supervisors.length > 0 ? supervisors
-                    .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
-                    .map((supervisor) => (
+            {/* Supervisor Selection - Always visible with conditional requirement */}
+            <div>
+              <Label htmlFor="supervisor">
+                Supervisor {formData.role === 'agent' && <span className="text-red-500">*</span>}
+              </Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                value={formData.supervisorId}
+                onChange={(e) => {
+                  console.log('Supervisor selected:', e.target.value);
+                  setFormData(prev => ({ ...prev, supervisorId: e.target.value }));
+                }}
+                disabled={formData.role === 'admin'}
+              >
+                <option value="">
+                  {formData.role === 'agent' ? 'Selecione um supervisor' : 'Nenhum supervisor'}
+                </option>
+                {supervisors && supervisors.length > 0 ? supervisors
+                  .filter(supervisor => supervisor?.id && supervisor?.firstName && supervisor?.lastName)
+                  .map((supervisor) => {
+                    console.log('Rendering supervisor:', supervisor);
+                    return (
                       <option key={supervisor.id} value={supervisor.id || ""}>
                         {supervisor.firstName} {supervisor.lastName} ({supervisor.email})
                       </option>
-                    )) : null}
-                </select>
-              </div>
-            )}
+                    );
+                  }) : <option disabled>Nenhum supervisor disponível</option>}
+              </select>
+              {formData.role === 'agent' && !formData.supervisorId && (
+                <p className="text-sm text-red-500 mt-1">
+                  Agentes devem ter um supervisor
+                </p>
+              )}
+            </div>
 
             <div className="flex items-center space-x-2">
               <Switch
