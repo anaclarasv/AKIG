@@ -28,7 +28,7 @@ export default function ActivityTable() {
     enabled: !!user,
   });
   
-  const activities = evaluationsData || [];
+  const activities = Array.isArray(evaluationsData) ? evaluationsData : [];
   const totalPages = Math.ceil(activities.length / itemsPerPage);
   const currentActivities = activities.slice(
     (currentPage - 1) * itemsPerPage,
@@ -126,7 +126,20 @@ export default function ActivityTable() {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {mockActivities.map((activity) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="text-muted-foreground">Carregando atividades...</div>
+                  </td>
+                </tr>
+              ) : currentActivities.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="text-muted-foreground">Nenhuma atividade encontrada</div>
+                  </td>
+                </tr>
+              ) : (
+                currentActivities.map((activity) => (
                 <tr key={activity.id} className="hover:bg-muted/50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -136,8 +149,8 @@ export default function ActivityTable() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{activity.agentName}</p>
-                        <p className="text-sm text-muted-foreground">ID: {activity.id.toString().padStart(4, '0')}</p>
+                        <p className="text-sm font-medium text-foreground">{activity.agentName || activity.agent?.firstName + ' ' + activity.agent?.lastName}</p>
+                        <p className="text-sm text-muted-foreground">ID: {activity.id?.toString().padStart(4, '0')}</p>
                       </div>
                     </div>
                   </td>
@@ -198,7 +211,8 @@ export default function ActivityTable() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -325,8 +339,9 @@ export default function ActivityTable() {
         <div className="px-6 py-3 border-t border-border bg-muted/50">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Mostrando <span className="font-medium">1</span> a <span className="font-medium">10</span> de{" "}
-              <span className="font-medium">247</span> resultados
+              Mostrando <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, activities.length)}</span> a{" "}
+              <span className="font-medium">{Math.min(currentPage * itemsPerPage, activities.length)}</span> de{" "}
+              <span className="font-medium">{activities.length}</span> resultados
             </p>
             <div className="flex items-center space-x-2">
               <Button 
