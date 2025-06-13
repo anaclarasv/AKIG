@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,49 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Filter, Download, Eye, Edit, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-// Mock data - in real app this would come from API
-const mockActivities = [
-  {
-    id: 1,
-    agentName: "Maria Silva",
-    agentId: "MS",
-    campaignName: "Vendas Digitais",
-    evaluatorName: "João Avaliador",
-    score: 8.5,
-    status: "signed" as const,
-    createdAt: "2024-01-15 14:30"
-  },
-  {
-    id: 2,
-    agentName: "Carlos Santos",
-    agentId: "CS",
-    campaignName: "Suporte Técnico",
-    evaluatorName: "Ana Avaliadora",
-    score: 6.2,
-    status: "pending" as const,
-    createdAt: "2024-01-15 13:15"
-  },
-  {
-    id: 3,
-    agentName: "Julia Oliveira",
-    agentId: "JO",
-    campaignName: "Retenção",
-    evaluatorName: "Pedro Avaliador",
-    score: 9.1,
-    status: "contested" as const,
-    createdAt: "2024-01-15 11:20"
-  },
-  {
-    id: 4,
-    agentName: "Roberto Lima",
-    agentId: "RL",
-    campaignName: "Vendas Digitais",
-    evaluatorName: "João Avaliador",
-    score: 7.8,
-    status: "signed" as const,
-    createdAt: "2024-01-15 10:45"
-  }
-];
+
 
 export default function ActivityTable() {
   const { user } = useAuth();
@@ -60,7 +19,21 @@ export default function ActivityTable() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [contestModalOpen, setContestModalOpen] = useState(false);
   const [contestReason, setContestReason] = useState("");
-  const totalPages = 25; // Mock total pages
+  
+  const itemsPerPage = 10;
+  
+  // Fetch real evaluations data from API
+  const { data: evaluationsData, isLoading } = useQuery({
+    queryKey: ['/api/evaluations', currentPage],
+    enabled: !!user,
+  });
+  
+  const activities = evaluationsData || [];
+  const totalPages = Math.ceil(activities.length / itemsPerPage);
+  const currentActivities = activities.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   
   // Define permissions based on user role
   const canEdit = user?.role === 'supervisor' || user?.role === 'evaluator';
