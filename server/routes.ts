@@ -126,12 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: req.body.profileImageUrl || null,
       };
 
-      const user = await storage.createUser({
-        ...userData,
-        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+      const user = await storage.createUser(userData);
 
       res.status(201).json({
         id: user.id,

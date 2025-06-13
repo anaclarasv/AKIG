@@ -45,7 +45,7 @@ export default function Users() {
     password: "",
     firstName: "",
     lastName: "",
-    role: "agent",
+    role: "",
     companyId: "",
     supervisorId: "",
     virtualCoins: 0,
@@ -493,7 +493,7 @@ export default function Users() {
                 <Label htmlFor="role">Role</Label>
                 <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione um papel" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
