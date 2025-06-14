@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import akigLogo from "@/assets/akig-logo.png";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Nome de usuário é obrigatório"),
@@ -66,8 +67,12 @@ export default function AuthPage() {
     <div className="min-h-screen akig-gradient flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold akig-text-primary">A</span>
+          <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src={akigLogo} 
+              alt="AKIG Solutions Logo" 
+              className="w-full h-full object-contain rounded-lg"
+            />
           </div>
           <CardTitle className="text-2xl font-bold">AKIG Solutions</CardTitle>
           <p className="text-muted-foreground">Monitoria Inteligente com IA</p>

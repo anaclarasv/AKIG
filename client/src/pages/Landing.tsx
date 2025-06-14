@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import akigLogo from "@/assets/akig-logo.png";
 
 export default function Landing() {
   const handleLogin = () => {
@@ -10,8 +11,12 @@ export default function Landing() {
     <div className="min-h-screen akig-gradient flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold akig-text-primary">A</span>
+          <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src={akigLogo} 
+              alt="AKIG Solutions Logo" 
+              className="w-full h-full object-contain rounded-lg"
+            />
           </div>
           <CardTitle className="text-2xl font-bold">AKIG Solutions</CardTitle>
           <p className="text-muted-foreground">Monitoria Inteligente com IA</p>
