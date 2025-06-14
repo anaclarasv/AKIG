@@ -65,6 +65,14 @@ export default function ActivityTable() {
   };
 
   const getScoreBadge = (score: number) => {
+    if (score === undefined || score === null || isNaN(score)) {
+      return (
+        <Badge className="bg-gray-100 text-gray-800">
+          N/A
+        </Badge>
+      );
+    }
+    
     const colorClass = score >= 8 ? "bg-green-100 text-green-800" :
                       score >= 6 ? "bg-yellow-100 text-yellow-800" :
                       "bg-red-100 text-red-800";
@@ -149,25 +157,27 @@ export default function ActivityTable() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{activity.agentName || activity.agent?.firstName + ' ' + activity.agent?.lastName}</p>
-                        <p className="text-sm text-muted-foreground">ID: {activity.id?.toString().padStart(4, '0')}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {activity.agentName || (activity.agent ? `${activity.agent.firstName || ''} ${activity.agent.lastName || ''}`.trim() : 'N/A')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">ID: {activity.id ? activity.id.toString().padStart(4, '0') : 'N/A'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {activity.campaignName}
+                    {activity.campaignName || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {activity.evaluatorName}
+                    {activity.evaluatorName || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getScoreBadge(activity.score)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(activity.status, activity.score)}
+                    {getStatusBadge(activity.status || 'unknown', activity.score)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {activity.createdAt}
+                    {activity.createdAt || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <div className="flex items-center space-x-2">
