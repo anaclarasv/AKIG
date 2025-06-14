@@ -72,7 +72,6 @@ export default function Sidebar() {
       case 'supervisor':
         return [
           ...baseNavigation,
-          { name: 'Monitorias', href: '/monitoring', icon: Headphones },
           { name: 'Avaliações', href: '/evaluations', icon: ClipboardCheck },
           { name: 'Ranking', href: '/ranking', icon: Trophy },
           { name: 'Loja de Brindes', href: '/rewards', icon: Gift },
