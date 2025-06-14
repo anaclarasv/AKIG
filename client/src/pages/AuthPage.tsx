@@ -67,14 +67,13 @@ export default function AuthPage() {
     <div className="min-h-screen akig-gradient flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center">
             <img 
               src={akigLogo} 
               alt="AKIG Solutions Logo" 
               className="w-full h-full object-contain rounded-lg"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">AKIG Solutions</CardTitle>
           <p className="text-muted-foreground">Monitoria Inteligente com IA</p>
         </CardHeader>
         <CardContent>
@@ -115,16 +114,6 @@ export default function AuthPage() {
               </Button>
             </form>
           </Form>
-          
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Usuários de Teste:</h4>
-            <div className="text-xs space-y-1 text-muted-foreground">
-              <div>Admin: <code>admin / admin123</code></div>
-              <div>Supervisor: <code>supervisor / super123</code></div>
-              <div>Avaliador: <code>avaliador / aval123</code></div>
-              <div>Agente: <code>agente / agente123</code></div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
