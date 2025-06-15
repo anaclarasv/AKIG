@@ -70,11 +70,16 @@ export const monitoringSessions = pgTable("monitoring_sessions", {
   agentId: varchar("agent_id").references(() => users.id).notNull(),
   evaluatorId: varchar("evaluator_id").references(() => users.id),
   campaignId: integer("campaign_id").references(() => campaigns.id).notNull(),
-  audioUrl: varchar("audio_url"),
-  transcription: jsonb("transcription"), // AI transcription data
-  duration: integer("duration"), // in seconds
-  criticalMoments: jsonb("critical_moments"), // timestamps of critical moments
+  channelType: varchar("channel_type").notNull().default("voice"), // voice, chat, email
+  audioUrl: varchar("audio_url"), // for voice
+  chatContent: text("chat_content"), // for chat conversations
+  emailContent: jsonb("email_content"), // for email threads with metadata
+  transcription: jsonb("transcription"), // AI transcription/analysis data
+  duration: integer("duration"), // in seconds for voice, response time for chat/email
+  criticalMoments: jsonb("critical_moments"), // timestamps or markers of critical moments
   aiAnalysis: jsonb("ai_analysis"), // AI analysis results
+  customerSatisfaction: integer("customer_satisfaction"), // 1-5 rating if available
+  responseTime: integer("response_time"), // average response time in seconds
   status: varchar("status").default("pending"), // pending, in_progress, completed, archived, deleted
   archivedAt: timestamp("archived_at"),
   archivedBy: varchar("archived_by").references(() => users.id),
@@ -94,6 +99,7 @@ export const evaluationCriteria = pgTable("evaluation_criteria", {
   description: text("description"),
   weight: decimal("weight", { precision: 5, scale: 2 }).notNull(), // percentage weight
   maxScore: integer("max_score").default(10),
+  channelType: varchar("channel_type").notNull().default("voice"), // voice, chat, email, all
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

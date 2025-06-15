@@ -25,11 +25,14 @@ export default function Monitoring() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [chatContent, setChatContent] = useState("");
+  const [emailContent, setEmailContent] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState<{[key: number]: number}>({});
   const [processingStatuses, setProcessingStatuses] = useState<{[key: number]: string}>({});
   const [formData, setFormData] = useState({
     agentId: "",
     campaignId: "",
+    channelType: "voice" as "voice" | "chat" | "email",
   });
   const [showEvaluationForm, setShowEvaluationForm] = useState(false);
 
@@ -67,7 +70,9 @@ export default function Monitoring() {
       queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       setIsUploadDialogOpen(false);
       setAudioFile(null);
-      setFormData({ agentId: "", campaignId: "" });
+      setChatContent("");
+      setEmailContent("");
+      setFormData({ agentId: "", campaignId: "", channelType: "voice" });
       
       // Automatically select the new session to show transcription progress
       if (newSession?.id) {
