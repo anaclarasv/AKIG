@@ -79,9 +79,15 @@ export default function Monitoring() {
         setSelectedSession(newSession.id);
       }
       
+      const channelLabels = {
+        voice: "Áudio enviado com sucesso! Transcrição em andamento...",
+        chat: "Chat enviado com sucesso! Análise em andamento...",
+        email: "E-mail enviado com sucesso! Análise em andamento..."
+      };
+      
       toast({
         title: "Sucesso",
-        description: "Áudio enviado com sucesso! Transcrição em andamento...",
+        description: channelLabels[formData.channelType],
       });
     },
     onError: (error) => {
@@ -280,11 +286,13 @@ export default function Monitoring() {
   };
 
   const handleSubmit = () => {
-    console.log('handleSubmit called');
-    console.log('audioFile:', audioFile);
-    console.log('formData:', formData);
+    // Validate based on channel type
+    const hasRequiredContent = 
+      (formData.channelType === 'voice' && audioFile) ||
+      (formData.channelType === 'chat' && chatContent.trim()) ||
+      (formData.channelType === 'email' && emailContent.trim());
     
-    if (!audioFile || !formData.agentId || !formData.campaignId) {
+    if (!hasRequiredContent || !formData.agentId || !formData.campaignId) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -294,14 +302,17 @@ export default function Monitoring() {
     }
 
     const uploadData = new FormData();
-    uploadData.append('audio', audioFile);
     uploadData.append('agentId', formData.agentId);
     uploadData.append('campaignId', formData.campaignId);
+    uploadData.append('channelType', formData.channelType);
 
-    console.log('FormData contents:');
-    console.log('- agentId:', uploadData.get('agentId'));
-    console.log('- campaignId:', uploadData.get('campaignId'));
-    console.log('- audio file:', uploadData.get('audio'));
+    if (formData.channelType === 'voice' && audioFile) {
+      uploadData.append('audio', audioFile);
+    } else if (formData.channelType === 'chat') {
+      uploadData.append('chatContent', chatContent);
+    } else if (formData.channelType === 'email') {
+      uploadData.append('emailContent', emailContent);
+    }
 
     uploadMutation.mutate(uploadData);
   };
@@ -733,15 +744,29 @@ export default function Monitoring() {
 
       {/* Upload Dialog */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nova Monitoria</DialogTitle>
+            <DialogTitle>Nova Monitoria Multicanal</DialogTitle>
             <DialogDescription>
-              Faça upload de um arquivo de áudio para iniciar uma nova sessão de monitoramento.
+              Crie uma sessão de monitoramento para análise de atendimento por voz, chat ou e-mail.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div>
+              <Label htmlFor="channelType">Tipo de Canal *</Label>
+              <Select value={formData.channelType} onValueChange={(value: "voice" | "chat" | "email") => setFormData({ ...formData, channelType: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="voice">📞 Atendimento por Voz</SelectItem>
+                  <SelectItem value="chat">💬 Chat Online</SelectItem>
+                  <SelectItem value="email">✉️ E-mail</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="campaign">Campanha *</Label>
               <Select value={formData.campaignId} onValueChange={handleCampaignChange}>
@@ -797,27 +822,96 @@ export default function Monitoring() {
               )}
             </div>
             
-            <div>
-              <Label htmlFor="audio">Arquivo de Áudio *</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  id="audio"
-                  type="file"
-                  accept=".mp3,.wav,.flac,.aac,.ogg,.webm,.m4a,.mp4,.amr,.3gp,.aiff,audio/*"
-                  onChange={handleFileChange}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-                />
-                <Upload className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Formatos suportados: MP3, WAV, FLAC, AAC, OGG, WEBM, M4A, AMR, AIFF (máx. 100MB)
-              </p>
-              {audioFile && (
-                <p className="text-sm text-green-600 mt-1">
-                  ✓ Arquivo selecionado: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(1)}MB)
+            {/* Dynamic content based on channel type */}
+            {formData.channelType === 'voice' && (
+              <div>
+                <Label htmlFor="audio">Arquivo de Áudio *</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="audio"
+                    type="file"
+                    accept=".mp3,.wav,.flac,.aac,.ogg,.webm,.m4a,.mp4,.amr,.3gp,.aiff,audio/*"
+                    onChange={handleFileChange}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  />
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formatos suportados: MP3, WAV, FLAC, AAC, OGG, WEBM, M4A, AMR, AIFF (máx. 100MB)
                 </p>
-              )}
-            </div>
+                {audioFile && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✓ Arquivo selecionado: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(1)}MB)
+                  </p>
+                )}
+              </div>
+            )}
+
+            {formData.channelType === 'chat' && (
+              <div>
+                <Label htmlFor="chat">Conversa de Chat *</Label>
+                <textarea
+                  id="chat"
+                  value={chatContent}
+                  onChange={(e) => setChatContent(e.target.value)}
+                  placeholder="Cole aqui a conversa do chat...
+
+Exemplo:
+[10:30] Cliente: Olá, preciso de ajuda com meu pedido
+[10:31] Agente: Olá! Claro, vou te ajudar. Qual o número do seu pedido?
+[10:32] Cliente: É o pedido #12345"
+                  className="w-full h-40 p-3 border rounded-md resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cole a conversa completa incluindo horários e identificação de quem está falando
+                </p>
+                {chatContent.trim() && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✓ Conversa inserida ({chatContent.length} caracteres)
+                  </p>
+                )}
+              </div>
+            )}
+
+            {formData.channelType === 'email' && (
+              <div>
+                <Label htmlFor="email">Thread de E-mail *</Label>
+                <textarea
+                  id="email"
+                  value={emailContent}
+                  onChange={(e) => setEmailContent(e.target.value)}
+                  placeholder="Cole aqui o thread completo de e-mails...
+
+Exemplo:
+De: cliente@email.com
+Para: suporte@empresa.com
+Assunto: Problema com produto
+Data: 15/06/2025 10:30
+
+Olá,
+Estou com um problema no meu produto...
+
+---
+
+De: suporte@empresa.com
+Para: cliente@email.com
+Assunto: Re: Problema com produto
+Data: 15/06/2025 11:15
+
+Olá,
+Obrigado pelo contato..."
+                  className="w-full h-48 p-3 border rounded-md resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Inclua cabeçalhos completos (De, Para, Assunto, Data) e todo o conteúdo das mensagens
+                </p>
+                {emailContent.trim() && (
+                  <p className="text-sm text-green-600 mt-1">
+                    ✓ E-mail inserido ({emailContent.length} caracteres)
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -829,7 +923,9 @@ export default function Monitoring() {
               disabled={uploadMutation.isPending}
               className="akig-bg-primary hover:opacity-90"
             >
-              {uploadMutation.isPending ? "Enviando..." : "Enviar Áudio"}
+              {uploadMutation.isPending ? "Enviando..." : 
+                formData.channelType === 'voice' ? "Enviar Áudio" :
+                formData.channelType === 'chat' ? "Enviar Chat" : "Enviar E-mail"}
             </Button>
           </DialogFooter>
         </DialogContent>
