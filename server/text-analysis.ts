@@ -339,59 +339,65 @@ function parseConversationFlow(content: string): {
 function identifySpeaker(message: string, index: number): 'agent' | 'client' {
   const lowerMessage = message.toLowerCase();
   
-  // Padrões típicos de atendente
+  // Padrões típicos de atendente (mais específicos)
   const agentPatterns = [
+    'bom dia!',
+    'boa tarde!',
     'como posso ajudar',
     'em que posso ajudá-lo',
-    'obrigado por entrar em contato',
-    'prezado cliente',
-    'agradecemos o contato',
-    'nossa equipe',
     'vou verificar',
-    'posso resolver',
-    'protocolo',
-    'sistema',
-    'vou encaminhar',
-    'departamento responsável',
-    'política da empresa'
+    'localizei seu pedido',
+    'vou providenciar',
+    'será processado',
+    'compreendo sua',
+    'de nada!',
+    'mais alguma dúvida'
   ];
 
-  // Padrões típicos de cliente
+  // Padrões típicos de cliente (mais específicos)
   const clientPatterns = [
-    'tenho um problema',
+    'olá',
     'preciso de ajuda',
-    'não consigo',
-    'está com defeito',
-    'não funciona',
+    'meu pedido',
+    'não chegou',
+    'inaceitável',
     'quero cancelar',
-    'estou insatisfeito',
-    'por favor me ajudem',
-    'urgente',
-    'já tentei'
+    'quanto tempo',
+    'tá bom',
+    'obrigado'
   ];
 
-  // Verifica padrões de atendente
+  // Verifica padrões específicos primeiro
   if (agentPatterns.some(pattern => lowerMessage.includes(pattern))) {
     return 'agent';
   }
 
-  // Verifica padrões de cliente
   if (clientPatterns.some(pattern => lowerMessage.includes(pattern))) {
     return 'client';
   }
 
-  // Heurística: mensagens mais formais/profissionais = atendente
-  const formalWords = ['senhor', 'senhora', 'protocolo', 'sistema', 'departamento', 'política'];
-  const casualWords = ['cara', 'mano', 'poxa', 'nossa', 'ai', 'né'];
+  // Heurística melhorada: tom profissional vs informal
+  const professionalIndicators = [
+    'sistema', 'protocolo', 'providenciar', 'verificar', 'processado',
+    'compreendo', 'localizado', 'transportadora', 'reembolso'
+  ];
   
-  const formalCount = formalWords.filter(word => lowerMessage.includes(word)).length;
-  const casualCount = casualWords.filter(word => lowerMessage.includes(word)).length;
+  const informalIndicators = [
+    'meu', 'não', 'quero', 'isso é', 'tá bom'
+  ];
+  
+  const professionalScore = professionalIndicators.filter(word => lowerMessage.includes(word)).length;
+  const informalScore = informalIndicators.filter(word => lowerMessage.includes(word)).length;
 
-  if (formalCount > casualCount) {
+  if (professionalScore > informalScore && professionalScore > 0) {
     return 'agent';
   }
+  
+  if (informalScore > professionalScore && informalScore > 0) {
+    return 'client';
+  }
 
-  // Padrão alternado: primeira mensagem geralmente é cliente, segunda atendente
+  // Padrão alternado inteligente: primeira mensagem é cliente iniciando conversa
   return index % 2 === 0 ? 'client' : 'agent';
 }
 
