@@ -572,32 +572,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
               throw new Error(`Voice transcription failed: ${(error as any).message}`);
             }
           } else if (channelType === 'chat') {
-            // Chat analysis
+            // Chat analysis with local fallback
             const chatAnalysis = await analyzeChatConversation(sessionData.chatContent);
             const chatMetrics = extractChatMetrics(sessionData.chatContent);
             
-            // Convert chat analysis to format compatible with existing system
+            // Store the full chat analysis including conversation flow
             transcriptionResult = {
-              segments: sessionData.chatContent.split('\n').filter((line: string) => line.trim()).map((line: string, index: number) => ({
+              conversationFlow: chatAnalysis.conversationFlow,
+              speakerAnalysis: chatAnalysis.speakerAnalysis,
+              segments: chatAnalysis.conversationFlow?.map((msg: any, index: number) => ({
                 id: `chat_${index}`,
-                speaker: line.includes('[Agente]') || line.includes('[Agent]') ? 'agent' : 'client',
-                text: line.replace(/^\[.*?\]\s*/, ''), // Remove timestamp/speaker prefix
-                startTime: index * 30, // Estimate 30 seconds per message
+                speaker: msg.speaker,
+                text: msg.message,
+                startTime: index * 30,
                 endTime: (index + 1) * 30,
                 confidence: 1.0,
                 criticalWords: []
-              })),
-              totalDuration: chatMetrics.duration * 60 // Convert to seconds
+              })) || [],
+              totalDuration: chatMetrics.duration * 60
             };
             
             aiAnalysis = {
               score: chatAnalysis.overallScore,
-              engine: 'openai_chat',
+              engine: 'local_chat_analysis',
               keyTopics: chatAnalysis.keyTopics,
               sentiment: chatAnalysis.sentiment,
               criticalMoments: chatAnalysis.criticalMoments,
               recommendations: chatAnalysis.recommendations,
-              responseTime: chatMetrics.avgResponseTime
+              responseTime: chatMetrics.avgResponseTime,
+              conversationFlow: chatAnalysis.conversationFlow,
+              speakerAnalysis: chatAnalysis.speakerAnalysis
             };
             
             duration = chatMetrics.duration * 60;

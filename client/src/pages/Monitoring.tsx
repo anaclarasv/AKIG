@@ -448,16 +448,21 @@ export default function Monitoring() {
             </CardContent>
           </Card>
 
-          {/* Transcription Display */}
+          {/* Content Display - Voice, Chat, or Email */}
           <Card className="lg:col-span-2 akig-card-shadow">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Transcrição com IA Local</CardTitle>
+                <CardTitle>
+                  {selectedSessionData.channelType === 'voice' ? 'Transcrição com IA Local' : 
+                   selectedSessionData.channelType === 'chat' ? 'Análise de Chat' : 'Análise de E-mail'}
+                </CardTitle>
                 {(selectedSessionData.status === 'in_progress' || processingStatuses[selectedSessionData.id] === 'processing') && (
                   <div className="space-y-2 mt-2">
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-muted-foreground">Processando com Whisper local...</span>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedSessionData.channelType === 'voice' ? 'Processando com Whisper local...' : 'Analisando com IA...'}
+                      </span>
                     </div>
                     <Progress 
                       value={transcriptionProgress[selectedSessionData.id] || 0} 
@@ -478,82 +483,134 @@ export default function Monitoring() {
                 {(transcribingMutation.isPending || processingStatuses[selectedSessionData.id] === 'processing') ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Transcrevendo...
+                    {selectedSessionData.channelType === 'voice' ? 'Transcrevendo...' : 'Analisando...'}
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4 mr-2" />
-                    {selectedSessionData.transcription?.segments?.length ? 'Retranscrever' : 'Transcrever Agora'}
+                    {selectedSessionData.transcription?.segments?.length || selectedSessionData.chatAnalysis?.conversationFlow?.length ? 
+                      (selectedSessionData.channelType === 'voice' ? 'Retranscrever' : 'Reanalisar') : 
+                      (selectedSessionData.channelType === 'voice' ? 'Transcrever Agora' : 'Analisar Agora')}
                   </>
                 )}
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="h-96 overflow-y-auto space-y-3">
-                {selectedSessionData.transcription?.segments?.length ? (
-                  selectedSessionData.transcription.segments.map((segment, index) => (
-                    <div 
-                      key={segment.id || index} 
-                      className={`p-3 rounded-lg ${
-                        segment.speaker === 'agent' 
-                          ? 'bg-blue-50 border-l-4 border-blue-400' 
-                          : 'bg-gray-50 border-l-4 border-gray-400'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-xs font-medium ${
-                          segment.speaker === 'agent' ? 'text-blue-700' : 'text-gray-700'
-                        }`}>
-                          {segment.speaker === 'agent' ? 'Atendente' : 'Cliente'}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.floor(segment.startTime / 60)}:{String(Math.floor(segment.startTime % 60)).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <p className="text-sm">{segment.text}</p>
-                      {segment.criticalWords && segment.criticalWords.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {segment.criticalWords.map((word, i) => (
-                            <Badge key={i} variant="destructive" className="text-xs">
-                              {word}
-                            </Badge>
-                          ))}
+              {/* Voice Channel - Transcription */}
+              {selectedSessionData.channelType === 'voice' && (
+                <div className="h-96 overflow-y-auto space-y-3">
+                  {selectedSessionData.transcription?.segments?.length ? (
+                    selectedSessionData.transcription.segments.map((segment, index) => (
+                      <div 
+                        key={segment.id || index} 
+                        className={`p-3 rounded-lg ${
+                          segment.speaker === 'agent' 
+                            ? 'bg-blue-50 border-l-4 border-blue-400' 
+                            : 'bg-orange-50 border-l-4 border-orange-400'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`text-xs font-medium ${
+                            segment.speaker === 'agent' ? 'text-blue-700' : 'text-orange-700'
+                          }`}>
+                            {segment.speaker === 'agent' ? 'Atendente' : 'Cliente'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {Math.floor(segment.startTime / 60)}:{String(Math.floor(segment.startTime % 60)).padStart(2, '0')}
+                          </span>
                         </div>
-                      )}
+                        <p className="text-sm">{segment.text}</p>
+                        {segment.criticalWords && segment.criticalWords.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {segment.criticalWords.map((word, i) => (
+                              <Badge key={i} variant="destructive" className="text-xs">
+                                {word}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : selectedSessionData.status === 'pending' ? (
+                    <div className="text-center py-8">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                        <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+                      </div>
+                      <p className="text-muted-foreground mt-4">Aguardando transcrição...</p>
                     </div>
-                  ))
-                ) : selectedSessionData.status === 'pending' ? (
-                  <div className="text-center py-8">
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                      <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Nenhuma transcrição disponível</p>
+                      <Button 
+                        onClick={() => handleStartTranscription(selectedSessionData.id)}
+                        className="mt-4"
+                        disabled={transcribingMutation.isPending}
+                      >
+                        {transcribingMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Transcrevendo...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-2" />
+                            Iniciar Transcrição
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <p className="text-muted-foreground mt-4">Aguardando transcrição...</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">Nenhuma transcrição disponível</p>
-                    <Button 
-                      onClick={() => handleStartTranscription(selectedSessionData.id)}
-                      className="mt-4"
-                      disabled={transcribingMutation.isPending}
-                    >
-                      {transcribingMutation.isPending ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Transcrevendo...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Iniciar Transcrição
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+
+              {/* Chat and Email Channels - Conversation Flow */}
+              {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
+                <div className="h-96 overflow-hidden">
+                  {selectedSessionData.chatAnalysis?.conversationFlow?.length || selectedSessionData.emailAnalysis?.conversationFlow?.length ? (
+                    <ConversationFlow
+                      messages={selectedSessionData.chatAnalysis?.conversationFlow || selectedSessionData.emailAnalysis?.conversationFlow || []}
+                      channelType={selectedSessionData.channelType}
+                      speakerAnalysis={selectedSessionData.chatAnalysis?.speakerAnalysis || selectedSessionData.emailAnalysis?.speakerAnalysis}
+                    />
+                  ) : selectedSessionData.status === 'pending' ? (
+                    <div className="text-center py-8">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                        <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+                      </div>
+                      <p className="text-muted-foreground mt-4">
+                        Aguardando análise do {selectedSessionData.channelType === 'chat' ? 'chat' : 'e-mail'}...
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Nenhuma análise de {selectedSessionData.channelType === 'chat' ? 'chat' : 'e-mail'} disponível
+                      </p>
+                      <Button 
+                        onClick={() => handleStartTranscription(selectedSessionData.id)}
+                        className="mt-4"
+                        disabled={transcribingMutation.isPending}
+                      >
+                        {transcribingMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Analisando...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-2" />
+                            Iniciar Análise
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

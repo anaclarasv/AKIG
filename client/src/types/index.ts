@@ -31,8 +31,13 @@ export interface MonitoringSession {
   agentId: string;
   evaluatorId?: string;
   campaignId: number;
+  channelType: 'voice' | 'chat' | 'email';
   audioUrl?: string;
+  chatContent?: string;
+  emailContent?: string;
   transcription?: TranscriptionData;
+  chatAnalysis?: ChatAnalysisData;
+  emailAnalysis?: EmailAnalysisData;
   duration?: number;
   criticalMoments?: CriticalMoment[];
   aiAnalysis?: AIAnalysis;
@@ -68,6 +73,44 @@ export interface AIAnalysis {
   totalSilenceTime: number;
   averageToneScore: number;
   sentimentScore: number;
+  recommendations: string[];
+  conversationFlow?: ConversationMessage[];
+  speakerAnalysis?: SpeakerAnalysis;
+}
+
+export interface ConversationMessage {
+  timestamp: string;
+  speaker: 'agent' | 'client';
+  message: string;
+  sentiment: number;
+  responseTime?: number;
+}
+
+export interface SpeakerAnalysis {
+  agent: {
+    messageCount: number;
+    avgResponseTime: number;
+    sentimentScore: number;
+    professionalismScore: number;
+  };
+  client: {
+    messageCount: number;
+    sentimentScore: number;
+    satisfactionLevel: number;
+  };
+}
+
+export interface ChatAnalysisData {
+  conversationFlow: ConversationMessage[];
+  speakerAnalysis: SpeakerAnalysis;
+  overallScore: number;
+  recommendations: string[];
+}
+
+export interface EmailAnalysisData {
+  conversationFlow: ConversationMessage[];
+  speakerAnalysis: SpeakerAnalysis;
+  overallScore: number;
   recommendations: string[];
 }
 
