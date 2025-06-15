@@ -1088,6 +1088,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para análise específica de chat
+  app.post('/api/monitoring-sessions/:id/analyze-chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getMonitoringSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.channelType !== 'chat' || !session.chatContent) {
+        return res.status(400).json({ message: "Session is not a chat or has no content" });
+      }
+      
+      console.log('Starting chat analysis for session:', sessionId);
+      
+      // Análise do chat
+      const chatAnalysis = await analyzeChatConversation(session.chatContent);
+      const chatMetrics = extractChatMetrics(session.chatContent);
+      
+      // Prepare transcription result
+      const transcriptionResult = {
+        conversationFlow: chatAnalysis.conversationFlow,
+        speakerAnalysis: chatAnalysis.speakerAnalysis,
+        segments: chatAnalysis.conversationFlow?.map((msg: any, index: number) => ({
+          id: `chat_${index}`,
+          speaker: msg.speaker,
+          text: msg.message,
+          startTime: index * 30,
+          endTime: (index + 1) * 30,
+          confidence: 1.0,
+          criticalWords: []
+        })) || [],
+        totalDuration: chatMetrics.duration * 60
+      };
+      
+      const aiAnalysis = {
+        score: chatAnalysis.overallScore,
+        engine: 'local_chat_analysis',
+        keyTopics: chatAnalysis.keyTopics,
+        sentiment: chatAnalysis.sentiment,
+        criticalMoments: chatAnalysis.criticalMoments,
+        recommendations: chatAnalysis.recommendations,
+        responseTime: chatMetrics.avgResponseTime,
+        conversationFlow: chatAnalysis.conversationFlow,
+        speakerAnalysis: chatAnalysis.speakerAnalysis
+      };
+      
+      // Update session with analysis results
+      await storage.updateMonitoringSession(sessionId, {
+        transcription: transcriptionResult,
+        aiAnalysis,
+        duration: chatMetrics.duration * 60,
+        status: 'completed'
+      });
+      
+      console.log('Chat analysis completed for session:', sessionId);
+      
+      const updatedSession = await storage.getMonitoringSession(sessionId);
+      res.json({
+        ...updatedSession,
+        message: "Chat analysis completed successfully"
+      });
+      
+    } catch (error) {
+      console.error('Chat analysis failed:', error);
+      res.status(500).json({ message: "Chat analysis failed" });
+    }
+  });
+
   // Update transcription text
   app.patch('/api/monitoring-sessions/:id', isAuthenticated, async (req: any, res) => {
     try {
