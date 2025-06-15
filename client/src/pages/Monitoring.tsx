@@ -590,7 +590,14 @@ export default function Monitoring() {
               {/* Chat and Email Channels - Conversation Flow */}
               {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
                 <div className="h-96 overflow-hidden">
-                  {selectedSessionData.chatAnalysis?.conversationFlow?.length || selectedSessionData.emailAnalysis?.conversationFlow?.length ? (
+                  {/* Check if we have analysis results from transcription data */}
+                  {selectedSessionData.transcription?.conversationFlow?.length ? (
+                    <ConversationFlow
+                      messages={selectedSessionData.transcription.conversationFlow}
+                      channelType={selectedSessionData.channelType}
+                      speakerAnalysis={selectedSessionData.transcription.speakerAnalysis}
+                    />
+                  ) : selectedSessionData.chatAnalysis?.conversationFlow?.length || selectedSessionData.emailAnalysis?.conversationFlow?.length ? (
                     <ConversationFlow
                       messages={selectedSessionData.chatAnalysis?.conversationFlow || selectedSessionData.emailAnalysis?.conversationFlow || []}
                       channelType={selectedSessionData.channelType}
