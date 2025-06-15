@@ -11,6 +11,7 @@ import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./auth";
 import { analyzeTranscription } from "./openai";
 import { transcribeAudioWithAssemblyAI, analyzeTranscription as analyzeAssemblyAI } from "./assemblyai-service";
+import { analyzeChatConversation, analyzeEmailThread, extractChatMetrics, extractEmailMetrics } from "./text-analysis";
 // import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
@@ -514,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Request body:', req.body);
       console.log('Request file:', req.file);
 
-      const { agentId, campaignId } = req.body;
+      const { agentId, campaignId, channelType = 'voice', chatContent, emailContent } = req.body;
       if (!agentId || !campaignId) {
         return res.status(400).json({ 
           message: "Agent ID and Campaign ID are required",
@@ -522,60 +523,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const audioFile = req.file;
-      if (!audioFile) {
-        return res.status(400).json({ message: "Audio file is required" });
-      }
-
-      // Create initial session
-      const sessionData = {
+      // Validate content based on channel type
+      let sessionData: any = {
         agentId,
         campaignId: parseInt(campaignId),
-        status: 'pending' as const,
-        audioUrl: audioFile.path
+        channelType,
+        status: 'pending' as const
       };
+
+      if (channelType === 'voice') {
+        const audioFile = req.file;
+        if (!audioFile) {
+          return res.status(400).json({ message: "Audio file is required for voice channel" });
+        }
+        sessionData.audioUrl = audioFile.path;
+      } else if (channelType === 'chat') {
+        if (!chatContent || chatContent.trim().length === 0) {
+          return res.status(400).json({ message: "Chat content is required for chat channel" });
+        }
+        sessionData.chatContent = chatContent.trim();
+      } else if (channelType === 'email') {
+        if (!emailContent || emailContent.trim().length === 0) {
+          return res.status(400).json({ message: "Email content is required for email channel" });
+        }
+        sessionData.emailContent = JSON.stringify({ content: emailContent.trim() });
+      }
 
       const session = await storage.createMonitoringSession(sessionData);
 
-      // Process transcription in background using AssemblyAI
+      // Process content in background based on channel type
       setImmediate(async () => {
         try {
-          console.log('Starting AssemblyAI transcription for session:', session.id);
+          console.log(`Starting analysis for ${channelType} session:`, session.id);
           
-          let transcriptionResult;
-          let aiAnalysis;
+          let transcriptionResult: any;
+          let aiAnalysis: any;
+          let duration = 0;
           
-          try {
-            console.log('Starting AssemblyAI transcription...');
+          if (channelType === 'voice') {
+            // Voice processing with AssemblyAI
+            try {
+              console.log('Starting AssemblyAI transcription...');
+              transcriptionResult = await transcribeAudioWithAssemblyAI(sessionData.audioUrl);
+              aiAnalysis = analyzeAssemblyAI(transcriptionResult);
+              duration = transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 0;
+            } catch (error) {
+              console.error('AssemblyAI transcription failed:', (error as any).message);
+              throw new Error(`Voice transcription failed: ${(error as any).message}`);
+            }
+          } else if (channelType === 'chat') {
+            // Chat analysis
+            const chatAnalysis = await analyzeChatConversation(sessionData.chatContent);
+            const chatMetrics = extractChatMetrics(sessionData.chatContent);
             
-            // Use AssemblyAI for professional transcription
-            transcriptionResult = await transcribeAudioWithAssemblyAI(audioFile.path);
-            console.log('AssemblyAI transcription completed successfully');
+            // Convert chat analysis to format compatible with existing system
+            transcriptionResult = {
+              segments: sessionData.chatContent.split('\n').filter((line: string) => line.trim()).map((line: string, index: number) => ({
+                id: `chat_${index}`,
+                speaker: line.includes('[Agente]') || line.includes('[Agent]') ? 'agent' : 'client',
+                text: line.replace(/^\[.*?\]\s*/, ''), // Remove timestamp/speaker prefix
+                startTime: index * 30, // Estimate 30 seconds per message
+                endTime: (index + 1) * 30,
+                confidence: 1.0,
+                criticalWords: []
+              })),
+              totalDuration: chatMetrics.duration * 60 // Convert to seconds
+            };
             
-            // Analyze transcription results
-            aiAnalysis = analyzeAssemblyAI(transcriptionResult);
-            console.log('AI analysis completed');
+            aiAnalysis = {
+              score: chatAnalysis.overallScore,
+              engine: 'openai_chat',
+              keyTopics: chatAnalysis.keyTopics,
+              sentiment: chatAnalysis.sentiment,
+              criticalMoments: chatAnalysis.criticalMoments,
+              recommendations: chatAnalysis.recommendations,
+              responseTime: chatMetrics.avgResponseTime
+            };
             
-          } catch (error) {
-            console.error('AssemblyAI transcription failed:', (error as any).message);
-            throw new Error(`Real transcription failed: ${(error as any).message}`);
+            duration = chatMetrics.duration * 60;
+          } else if (channelType === 'email') {
+            // Email analysis
+            const emailData = JSON.parse(sessionData.emailContent);
+            const emailAnalysis = await analyzeEmailThread(emailData.content);
+            const emailMetrics = extractEmailMetrics(emailData.content);
+            
+            // Convert email analysis to format compatible with existing system
+            transcriptionResult = {
+              segments: [{
+                id: 'email_thread',
+                speaker: 'agent',
+                text: emailData.content,
+                startTime: 0,
+                endTime: 300, // 5 minutes estimated reading time
+                confidence: 1.0,
+                criticalWords: []
+              }],
+              totalDuration: 300
+            };
+            
+            aiAnalysis = {
+              score: emailAnalysis.overallScore,
+              engine: 'openai_email',
+              keyTopics: emailAnalysis.keyTopics,
+              sentiment: emailAnalysis.sentiment,
+              criticalMoments: emailAnalysis.criticalMoments,
+              recommendations: emailAnalysis.recommendations,
+              responseTime: emailMetrics.avgResponseTime
+            };
+            
+            duration = 300; // 5 minutes for email reading
           }
           
           const transcriptionData = {
             segments: transcriptionResult.segments || [],
-            totalDuration: transcriptionResult.segments?.reduce((acc: number, seg: any) => Math.max(acc, seg.endTime), 0) || 23
+            totalDuration: duration
           };
 
-          // Update session with transcription and analysis
+          // Update session with analysis results
           await storage.updateMonitoringSession(session.id, {
             transcription: transcriptionData,
             aiAnalysis,
+            duration,
+            responseTime: aiAnalysis.responseTime || null,
             status: 'completed'
           });
 
-          console.log('Transcription completed for session:', session.id);
+          console.log(`${channelType} analysis completed for session:`, session.id);
         } catch (error) {
-          console.error('Error processing transcription:', error);
+          console.error(`Error processing ${channelType} analysis:`, error);
           await storage.updateMonitoringSession(session.id, {
             status: 'failed'
           });
