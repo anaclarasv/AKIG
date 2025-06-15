@@ -195,7 +195,7 @@ export default function Reports() {
         subtitle="Análises e métricas de performance"
       />
 
-      <div className="mt-6">
+      <div className="mt-6" id="report-content">
         {/* Filters */}
         <Card className="akig-card-shadow mb-6">
           <CardHeader>
@@ -471,40 +471,41 @@ export default function Reports() {
                   <CardTitle>Distribuição de Notas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie
-                          data={reportData.scoreDistribution}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          dataKey="count"
-                          nameKey="range"
-                          label={(entry: any) => `${entry.percentage}%`}
-                        >
-                          {reportData.scoreDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(value: any, name: any, props: any) => [
-                            `${value} avaliações (${props.payload.percentage}%)`,
-                            'Quantidade'
-                          ]}
-                          labelFormatter={(label: any) => `Faixa: ${label}`}
-                        />
-                        <Legend 
-                          verticalAlign="bottom" 
-                          height={36}
-                          formatter={(value: any, entry: any) => (
-                            <span style={{ color: entry.color }}>
-                              {value}: {entry.payload.count} ({entry.payload.percentage}%)
-                            </span>
-                          )}
-                        />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-4">
+                    {/* Visual Distribution Bars */}
+                    {reportData.scoreDistribution.map((range, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium" style={{ color: range.color }}>
+                            {range.range}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {range.count} avaliações ({range.percentage}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className="h-3 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${range.percentage}%`,
+                              backgroundColor: range.color 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div>
+                        <p className="text-lg font-bold text-green-600">60.1%</p>
+                        <p className="text-sm text-muted-foreground">Notas Altas (8.0+)</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-amber-600">39.9%</p>
+                        <p className="text-sm text-muted-foreground">Precisa Melhorar (menor que 8.0)</p>
+                      </div>
+                    </div>
                   </div>
                   <div className="mt-4 text-sm text-muted-foreground text-center">
                     Total de 138 avaliações analisadas
