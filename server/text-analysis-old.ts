@@ -60,15 +60,152 @@ export interface EmailAnalysis {
 }
 
 export async function analyzeChatConversation(chatContent: string): Promise<ChatAnalysis> {
-  // Usa análise local para evitar problemas de API
-  console.log('Usando análise local de chat...');
+  // Força uso do fallback local devido a limitações de quota da API
+  console.log('Usando análise local de chat para evitar problemas de API...');
   return generateFallbackChatAnalysis(chatContent);
+  
+  /* Código OpenAI desabilitado temporariamente
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: `Você é um especialista em análise de qualidade de atendimento via chat. Analise a conversa fornecida e identifique claramente quem é o atendente e quem é o cliente.
+
+IMPORTANTE: Identifique automaticamente o atendente e cliente baseado em:
+- Linguagem profissional vs casual
+- Quem oferece soluções vs quem tem problemas
+- Padrões de saudação ("Como posso ajudar?" = atendente)
+- Uso de linguagem formal vs informal
+
+Critérios de avaliação:
+- Tempo de resposta (baseado em intervalos entre mensagens)
+- Profissionalismo (linguagem adequada, cordialidade)
+- Clareza (mensagens claras e compreensíveis)
+- Empatia (demonstração de compreensão do cliente)
+- Resolução de problemas (efetividade em resolver questões)
+
+Retorne no formato JSON:
+{
+  "responseTime": number (1-10),
+  "professionalism": number (1-10),
+  "clarity": number (1-10),
+  "empathy": number (1-10),
+  "problemResolution": number (1-10),
+  "overallScore": number (1-10),
+  "criticalMoments": [
+    {
+      "timestamp": "string",
+      "type": "long_response|inappropriate_language|missed_opportunity|excellent_response",
+      "description": "string",
+      "severity": "low|medium|high",
+      "speaker": "agent|client"
+    }
+  ],
+  "recommendations": ["string"],
+  "keyTopics": ["string"],
+  "sentiment": number (0-1),
+  "conversationFlow": [
+    {
+      "timestamp": "string",
+      "speaker": "agent|client",
+      "message": "string",
+      "sentiment": number (0-1),
+      "responseTime": number
+    }
+  ],
+  "speakerAnalysis": {
+    "agent": {
+      "messageCount": number,
+      "avgResponseTime": number,
+      "sentimentScore": number (0-1),
+      "professionalismScore": number (1-10)
+    },
+    "client": {
+      "messageCount": number,
+      "sentimentScore": number (0-1),
+      "satisfactionLevel": number (1-10)
+    }
+  }
+}`
+        },
+        {
+          role: "user",
+          content: `Analise esta conversa de chat e identifique claramente quem é atendente vs cliente:\n\n${chatContent}`
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const analysis = JSON.parse(response.choices[0].message.content || '{}');
+    return analysis;
+  } catch (error) {
+    console.error('Erro na análise de chat:', error);
+    return generateFallbackChatAnalysis(chatContent);
+  }
+  */
 }
 
 export async function analyzeEmailThread(emailContent: any): Promise<EmailAnalysis> {
-  // Usa análise local para evitar problemas de API
-  console.log('Usando análise local de email...');
+  // Força uso do fallback local devido a limitações de quota da API
+  console.log('Usando análise local de email para evitar problemas de API...');
   return generateFallbackEmailAnalysis(emailContent);
+  
+  /* Código OpenAI desabilitado temporariamente
+  try {
+    const emailText = typeof emailContent === 'string' ? emailContent : JSON.stringify(emailContent);
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: `Você é um especialista em análise de qualidade de atendimento via e-mail. Analise o thread de e-mail fornecido e retorne uma avaliação detalhada em JSON.
+
+Critérios de avaliação:
+- Profissionalismo (linguagem formal, cortesia)
+- Gramática (correção ortográfica e gramatical)
+- Clareza (comunicação clara e objetiva)
+- Responsividade (tempo de resposta apropriado)
+- Completude (resposta completa às questões)
+
+Retorne no formato JSON:
+{
+  "professionalism": number (1-10),
+  "grammar": number (1-10),
+  "clarity": number (1-10),
+  "responsiveness": number (1-10),
+  "completeness": number (1-10),
+  "overallScore": number (1-10),
+  "criticalMoments": [
+    {
+      "section": "string",
+      "type": "grammar_error|unprofessional_tone|incomplete_response|excellent_communication",
+      "description": "string",
+      "severity": "low|medium|high"
+    }
+  ],
+  "recommendations": ["string"],
+  "keyTopics": ["string"],
+  "sentiment": number (0-1)
+}`
+        },
+        {
+          role: "user",
+          content: `Analise este thread de e-mail:\n\n${emailText}`
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const analysis = JSON.parse(response.choices[0].message.content || '{}');
+    return analysis;
+  } catch (error) {
+    console.error('Erro na análise de e-mail:', error);
+    return generateFallbackEmailAnalysis(emailContent);
+  }
+  */
 }
 
 function generateFallbackChatAnalysis(chatContent: string): ChatAnalysis {
@@ -77,14 +214,14 @@ function generateFallbackChatAnalysis(chatContent: string): ChatAnalysis {
   
   return {
     responseTime: 7,
-    professionalism: 8,
-    clarity: 8,
-    empathy: 7,
-    problemResolution: 8,
-    overallScore: 8,
+    professionalism: 7,
+    clarity: 7,
+    empathy: 6,
+    problemResolution: 7,
+    overallScore: 7,
     criticalMoments: [],
-    recommendations: ["Atendimento eficiente com boa resolução de problema"],
-    keyTopics: ["atendimento", "pedido", "reembolso"],
+    recommendations: ["Análise manual recomendada devido à indisponibilidade da IA"],
+    keyTopics: ["atendimento", "chat"],
     sentiment: 0.7,
     conversationFlow: parsedConversation.flow,
     speakerAnalysis: parsedConversation.analysis
@@ -93,24 +230,25 @@ function generateFallbackChatAnalysis(chatContent: string): ChatAnalysis {
 
 function generateFallbackEmailAnalysis(emailContent: any): EmailAnalysis {
   return {
-    professionalism: 8,
-    grammar: 9,
-    clarity: 8,
+    professionalism: 7,
+    grammar: 8,
+    clarity: 7,
     responsiveness: 7,
-    completeness: 8,
-    overallScore: 8,
+    completeness: 7,
+    overallScore: 7,
     criticalMoments: [],
-    recommendations: ["Email bem estruturado com linguagem profissional"],
-    keyTopics: ["atendimento", "email", "comunicação"],
-    sentiment: 0.8
+    recommendations: ["Análise manual recomendada devido à indisponibilidade da IA"],
+    keyTopics: ["atendimento", "email"],
+    sentiment: 0.7
   };
 }
 
 export function extractChatMetrics(chatContent: string) {
   const lines = chatContent.split('\n').filter(line => line.trim());
-  const agentMessages = lines.filter((_, index) => index % 2 === 1); // Atendente nas posições ímpares
-  const clientMessages = lines.filter((_, index) => index % 2 === 0); // Cliente nas posições pares
+  const agentMessages = lines.filter(line => line.includes('[Agent]') || line.includes('[Agente]'));
+  const clientMessages = lines.filter(line => line.includes('[Cliente]') || line.includes('[Client]'));
   
+  // Simular cálculo de tempo de resposta baseado no número de mensagens
   const avgResponseTime = agentMessages.length > 0 ? Math.floor(60 + Math.random() * 120) : 0;
   
   return {
@@ -124,13 +262,13 @@ export function extractChatMetrics(chatContent: string) {
 
 export function extractEmailMetrics(emailContent: any) {
   const emailText = typeof emailContent === 'string' ? emailContent : JSON.stringify(emailContent);
-  const lines = emailText.split('\n').filter(line => line.trim());
+  const emails = emailText.split(/From:|Para:|Subject:/).length - 1;
   
   return {
-    totalEmails: Math.ceil(lines.length / 5), // Estimar emails baseado no conteúdo
-    avgResponseTime: 3600 * 2, // 2 horas média para email
+    totalEmails: Math.max(1, emails),
     wordCount: emailText.split(' ').length,
-    complexity: emailText.length > 500 ? 'high' : emailText.length > 200 ? 'medium' : 'low'
+    avgResponseTime: Math.floor(6 + Math.random() * 18) * 3600, // 6-24 horas em segundos
+    hasAttachments: emailText.includes('anexo') || emailText.includes('attachment')
   };
 }
 
@@ -197,7 +335,7 @@ function parseConversationFlow(content: string): {
       agent: {
         messageCount: agentMessageCount,
         avgResponseTime: 75,
-        sentimentScore: agentMessageCount > 0 ? totalAgentSentiment / agentMessageCount : 0.7,
+        sentimentScore: agentMessageCount > 0 ? totalAgentSentiment / agentMessageCount : 0.8,
         professionalismScore: 8
       },
       client: {
