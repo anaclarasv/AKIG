@@ -1102,49 +1102,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session is not a chat or has no content" });
       }
       
-      console.log('Starting chat analysis for session:', sessionId);
+      console.log('Starting manual chat analysis for session:', sessionId);
       
-      // Análise do chat
-      const chatAnalysis = await analyzeChatConversation(session.chatContent);
-      const chatMetrics = extractChatMetrics(session.chatContent);
+      // Import manual analyzer
+      const { ManualChatAnalyzer } = await import('./manual-chat-analysis');
+      
+      // Análise manual do chat
+      const manualAnalysis = ManualChatAnalyzer.analyzeChatContent(session.chatContent);
       
       // Prepare transcription result
       const transcriptionResult = {
-        conversationFlow: chatAnalysis.conversationFlow,
-        speakerAnalysis: chatAnalysis.speakerAnalysis,
-        segments: chatAnalysis.conversationFlow?.map((msg: any, index: number) => ({
+        conversationFlow: manualAnalysis.conversationFlow.map((msg, index) => ({
+          timestamp: msg.timestamp,
+          speaker: msg.speaker,
+          message: msg.text,
+          sentiment: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
+                    manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
+          responseTime: index > 0 ? 45 : undefined
+        })),
+        speakerAnalysis: {
+          agent: {
+            messageCount: manualAnalysis.metrics.agentMessages,
+            avgResponseTime: manualAnalysis.metrics.responseTime,
+            sentimentScore: 0.7,
+            professionalismScore: manualAnalysis.summary.agentPerformance === 'excellent' ? 9 :
+                                 manualAnalysis.summary.agentPerformance === 'good' ? 7 :
+                                 manualAnalysis.summary.agentPerformance === 'poor' ? 4 : 6
+          },
+          client: {
+            messageCount: manualAnalysis.metrics.clientMessages,
+            sentimentScore: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
+                           manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
+            satisfactionLevel: manualAnalysis.summary.customerSatisfaction === 'high' ? 9 :
+                              manualAnalysis.summary.customerSatisfaction === 'low' ? 4 : 6
+          }
+        },
+        segments: manualAnalysis.conversationFlow.map((msg, index) => ({
           id: `chat_${index}`,
           speaker: msg.speaker,
-          text: msg.message,
+          text: msg.text,
           startTime: index * 30,
           endTime: (index + 1) * 30,
           confidence: 1.0,
-          criticalWords: []
-        })) || [],
-        totalDuration: chatMetrics.duration * 60
+          criticalWords: msg.hasProblem ? ['problema'] : msg.hasSolution ? ['solução'] : []
+        })),
+        totalDuration: manualAnalysis.metrics.totalMessages * 30
       };
       
       const aiAnalysis = {
-        score: chatAnalysis.overallScore,
-        engine: 'local_chat_analysis',
-        keyTopics: chatAnalysis.keyTopics,
-        sentiment: chatAnalysis.sentiment,
-        criticalMoments: chatAnalysis.criticalMoments,
-        recommendations: chatAnalysis.recommendations,
-        responseTime: chatMetrics.avgResponseTime,
-        conversationFlow: chatAnalysis.conversationFlow,
-        speakerAnalysis: chatAnalysis.speakerAnalysis
+        score: manualAnalysis.summary.agentPerformance === 'excellent' ? 9 :
+               manualAnalysis.summary.agentPerformance === 'good' ? 7 :
+               manualAnalysis.summary.agentPerformance === 'poor' ? 4 : 6,
+        engine: 'manual_chat_analysis',
+        keyTopics: [...manualAnalysis.keywords.problems, ...manualAnalysis.keywords.solutions],
+        sentiment: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
+                  manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
+        criticalMoments: [{
+          timestamp: "00:30",
+          type: manualAnalysis.summary.resolution === 'resolved' ? 'excellent_response' : 'missed_opportunity',
+          description: `Resolução: ${manualAnalysis.summary.resolution}`,
+          severity: manualAnalysis.summary.customerSatisfaction === 'low' ? 'high' : 'low',
+          speaker: 'agent'
+        }],
+        recommendations: [
+          `Satisfação do cliente: ${manualAnalysis.summary.customerSatisfaction}`,
+          `Performance do agente: ${manualAnalysis.summary.agentPerformance}`,
+          `Status da resolução: ${manualAnalysis.summary.resolution}`
+        ],
+        responseTime: manualAnalysis.metrics.responseTime,
+        conversationFlow: transcriptionResult.conversationFlow,
+        speakerAnalysis: transcriptionResult.speakerAnalysis
       };
       
       // Update session with analysis results
       await storage.updateMonitoringSession(sessionId, {
         transcription: transcriptionResult,
         aiAnalysis,
-        duration: chatMetrics.duration * 60,
+        duration: manualAnalysis.metrics.totalMessages * 30,
         status: 'completed'
       });
       
-      console.log('Chat analysis completed for session:', sessionId);
+      console.log('Manual chat analysis completed for session:', sessionId);
       
       const updatedSession = await storage.getMonitoringSession(sessionId);
       res.json({
@@ -1153,7 +1191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
-      console.error('Chat analysis failed:', error);
+      console.error('Manual chat analysis failed:', error);
       res.status(500).json({ message: "Chat analysis failed" });
     }
   });
