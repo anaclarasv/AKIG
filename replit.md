@@ -125,6 +125,11 @@ AKIG Solutions is a comprehensive intelligent call monitoring and evaluation sys
 
 ```
 Changelog:
+- June 15, 2025. Correção crítica: Sistema de análise de chat/email totalmente reformulado
+  * Eliminado loop infinito que travava análise de chat
+  * Implementado sistema local simplificado sem dependência de IA externa
+  * Chat e email processados instantaneamente com métricas básicas práticas
+  * Mantida análise de áudio via AssemblyAI para transcrições complexas
 - June 14, 2025. Initial setup
 ```
 

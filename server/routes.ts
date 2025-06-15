@@ -11,7 +11,7 @@ import { eq, desc } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./auth";
 import { analyzeTranscription } from "./openai";
 import { transcribeAudioWithAssemblyAI, analyzeTranscription as analyzeAssemblyAI } from "./assemblyai-service";
-import { analyzeChatConversation, analyzeEmailThread, extractChatMetrics, extractEmailMetrics } from "./text-analysis";
+import { analyzeChatConversation, analyzeEmailThread, extractChatMetrics, extractEmailMetrics } from "./simple-text-analysis";
 // import { transcribeWithNodeWhisper } from "./whisper-real";
 import { SecurityMiddleware } from "./security";
 import lgpdRoutes from "./lgpd-routes";
