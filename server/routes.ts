@@ -683,35 +683,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Session not found" });
       }
 
-      console.log(`Starting instant transcription for session ${sessionId}`);
+      console.log(`Starting instant analysis for session ${sessionId}, channel: ${session.channelType}`);
 
-      // Process transcription instantly using our local system
-      const audioPath = session.audioUrl;
-      if (!audioPath) {
-        return res.status(400).json({ message: "No audio file found for this session" });
+      // Handle different channel types
+      if (session.channelType === 'voice') {
+        const audioPath = session.audioUrl;
+        if (!audioPath) {
+          return res.status(400).json({ message: "No audio file found for this session" });
+        }
+      } else if (session.channelType === 'chat') {
+        if (!session.chatContent) {
+          return res.status(400).json({ message: "No chat content found for this session" });
+        }
+      } else if (session.channelType === 'email') {
+        if (!session.emailContent) {
+          return res.status(400).json({ message: "No email content found for this session" });
+        }
       }
 
-      // Use OpenAI Whisper API for real transcription
-      console.log('Processing with OpenAI Whisper API for real audio transcription...');
-      
-      // Fix audio path resolution - handle absolute paths correctly
-      let resolvedPath;
-      
-      if (path.isAbsolute(audioPath)) {
-        // If it's already an absolute path, use it directly
-        resolvedPath = audioPath;
+      // Process based on channel type
+      if (session.channelType === 'voice') {
+        console.log('Processing voice transcription with OpenAI Whisper API...');
+        
+        // Fix audio path resolution - handle absolute paths correctly
+        let resolvedPath;
+        const audioPath = session.audioUrl!;
+        
+        if (path.isAbsolute(audioPath)) {
+          // If it's already an absolute path, use it directly
+          resolvedPath = audioPath;
+        } else {
+          // If relative, join with current working directory
+          resolvedPath = path.join(process.cwd(), audioPath);
+        }
+        
+        console.log(`Original path: ${audioPath}`);
+        console.log(`Resolved path: ${resolvedPath}`);
+        
+        // Check if file exists
+        if (!fs.existsSync(resolvedPath)) {
+          console.error(`Audio file not found: ${resolvedPath}`);
+          return res.status(400).json({ message: "Audio file not found on server" });
+        }
       } else {
-        // If relative, join with current working directory
-        resolvedPath = path.join(process.cwd(), audioPath);
-      }
-      
-      console.log(`Original path: ${audioPath}`);
-      console.log(`Resolved path: ${resolvedPath}`);
-      
-      // Check if file exists
-      if (!fs.existsSync(resolvedPath)) {
-        console.error(`Audio file not found: ${resolvedPath}`);
-        return res.status(400).json({ message: "Audio file not found on server" });
+        console.log(`Processing ${session.channelType} analysis with local AI...`);
       }
       
       // Update status to processing immediately
@@ -719,7 +734,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "processing"
       });
 
-      // Use AssemblyAI for real audio transcription
+      // Process based on channel type
+      if (session.channelType === 'chat') {
+        // Chat analysis
+        try {
+          console.log('Starting chat analysis for session:', sessionId);
+          const chatAnalysis = await analyzeChatConversation(session.chatContent!);
+          const chatMetrics = extractChatMetrics(session.chatContent!);
+          
+          // Store the analysis results
+          const transcriptionResult = {
+            conversationFlow: chatAnalysis.conversationFlow,
+            speakerAnalysis: chatAnalysis.speakerAnalysis,
+            segments: chatAnalysis.conversationFlow?.map((msg: any, index: number) => ({
+              id: `chat_${index}`,
+              speaker: msg.speaker,
+              text: msg.message,
+              startTime: index * 30,
+              endTime: (index + 1) * 30,
+              confidence: 1.0,
+              criticalWords: []
+            })) || [],
+            totalDuration: chatMetrics.duration * 60
+          };
+          
+          const aiAnalysis = {
+            score: chatAnalysis.overallScore,
+            engine: 'local_chat_analysis',
+            keyTopics: chatAnalysis.keyTopics,
+            sentiment: chatAnalysis.sentiment,
+            criticalMoments: chatAnalysis.criticalMoments,
+            recommendations: chatAnalysis.recommendations,
+            responseTime: chatMetrics.avgResponseTime,
+            conversationFlow: chatAnalysis.conversationFlow,
+            speakerAnalysis: chatAnalysis.speakerAnalysis
+          };
+
+          // Update session with analysis results
+          await storage.updateMonitoringSession(sessionId, {
+            transcription: transcriptionResult,
+            aiAnalysis: aiAnalysis,
+            duration: chatMetrics.duration * 60,
+            status: "completed"
+          });
+
+          console.log('Chat analysis completed for session:', sessionId);
+          
+          // Return success response
+          const finalSession = await storage.getMonitoringSession(sessionId);
+          return res.json({
+            ...finalSession,
+            message: "Chat analysis completed successfully"
+          });
+          
+        } catch (error) {
+          console.error('Chat analysis failed:', error);
+          await storage.updateMonitoringSession(sessionId, { status: "pending" });
+          return res.status(500).json({ message: "Chat analysis failed" });
+        }
+      } else if (session.channelType === 'email') {
+        // Email analysis
+        try {
+          console.log('Starting email analysis for session:', sessionId);
+          const emailAnalysis = await analyzeEmailThread(session.emailContent!);
+          const emailMetrics = extractEmailMetrics(session.emailContent!);
+          
+          // Convert email content to conversation flow format
+          const emailLines = session.emailContent!.split('\n').filter(line => line.trim());
+          const conversationFlow = emailLines.map((line, index) => ({
+            timestamp: `Email ${index + 1}`,
+            speaker: index % 2 === 0 ? 'client' : 'agent',
+            message: line.trim(),
+            sentiment: 0.7,
+            responseTime: index > 0 ? 3600 : undefined // 1 hour average response time
+          }));
+
+          const speakerAnalysis = {
+            agent: {
+              messageCount: conversationFlow.filter(msg => msg.speaker === 'agent').length,
+              avgResponseTime: 3600,
+              sentimentScore: 0.8,
+              professionalismScore: emailAnalysis.professionalism
+            },
+            client: {
+              messageCount: conversationFlow.filter(msg => msg.speaker === 'client').length,
+              sentimentScore: 0.6,
+              satisfactionLevel: 7
+            }
+          };
+          
+          const transcriptionResult = {
+            conversationFlow,
+            speakerAnalysis,
+            segments: conversationFlow.map((msg, index) => ({
+              id: `email_${index}`,
+              speaker: msg.speaker,
+              text: msg.message,
+              startTime: index * 300, // 5 minutes per email
+              endTime: (index + 1) * 300,
+              confidence: 1.0,
+              criticalWords: []
+            })),
+            totalDuration: emailMetrics.avgResponseTime
+          };
+          
+          const aiAnalysis = {
+            score: emailAnalysis.overallScore,
+            engine: 'local_email_analysis',
+            keyTopics: emailAnalysis.keyTopics,
+            sentiment: emailAnalysis.sentiment,
+            criticalMoments: emailAnalysis.criticalMoments,
+            recommendations: emailAnalysis.recommendations,
+            responseTime: emailMetrics.avgResponseTime,
+            conversationFlow,
+            speakerAnalysis
+          };
+
+          // Update session with analysis results
+          await storage.updateMonitoringSession(sessionId, {
+            transcription: transcriptionResult,
+            aiAnalysis: aiAnalysis,
+            duration: emailMetrics.avgResponseTime,
+            status: "completed"
+          });
+
+          console.log('Email analysis completed for session:', sessionId);
+          
+          // Return success response
+          const finalSession = await storage.getMonitoringSession(sessionId);
+          return res.json({
+            ...finalSession,
+            message: "Email analysis completed successfully"
+          });
+          
+        } catch (error) {
+          console.error('Email analysis failed:', error);
+          await storage.updateMonitoringSession(sessionId, { status: "pending" });
+          return res.status(500).json({ message: "Email analysis failed" });
+        }
+      }
+
+      // Voice transcription (existing code)
       try {
         console.log('Starting AssemblyAI real transcription for session:', sessionId);
         
