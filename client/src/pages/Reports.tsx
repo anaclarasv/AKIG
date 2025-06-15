@@ -18,6 +18,7 @@ import {
   Clock,
   Filter
 } from "lucide-react";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { DateRange } from "react-day-picker";
 import type { DashboardMetrics } from "@/types";
 
@@ -60,12 +61,119 @@ export default function Reports() {
       { word: "absurdo", frequency: 8, trend: "+2" },
       { word: "incompetente", frequency: 5, trend: "-1" },
       { word: "ridículo", frequency: 3, trend: "0" }
+    ],
+    scoreDistribution: [
+      { range: "9.0 - 10.0", count: 45, percentage: 32.6, color: "#22c55e" },
+      { range: "8.0 - 8.9", count: 38, percentage: 27.5, color: "#84cc16" },
+      { range: "7.0 - 7.9", count: 28, percentage: 20.3, color: "#eab308" },
+      { range: "6.0 - 6.9", count: 19, percentage: 13.8, color: "#f97316" },
+      { range: "5.0 - 5.9", count: 8, percentage: 5.8, color: "#ef4444" }
     ]
   };
 
-  const handleExportReport = (format: 'pdf' | 'excel') => {
-    console.log(`Exporting report as ${format}`);
-    // Implement export functionality
+  const handleExportReport = async (format: 'pdf' | 'excel') => {
+    if (format === 'pdf') {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const element = document.getElementById('report-content');
+      if (!element) return;
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      pdf.save(`relatorio-akig-${today}.pdf`);
+    } else if (format === 'excel') {
+      const XLSX = await import('xlsx');
+      
+      const workbook = XLSX.utils.book_new();
+      
+      // Aba Geral
+      const generalData = [
+        ['Relatório AKIG Solutions', '', '', ''],
+        ['Data:', new Date().toLocaleDateString('pt-BR'), '', ''],
+        ['', '', '', ''],
+        ['Visão Geral', '', '', ''],
+        ['Total de Avaliações', reportData.general.totalEvaluations, '', ''],
+        ['Média Geral', reportData.general.averageScore, '', ''],
+        ['Taxa de Aprovação', `${reportData.general.approvalRate}%`, '', ''],
+        ['', '', '', ''],
+        ['Indicadores Críticos', '', '', ''],
+        ['Incidentes Críticos', reportData.general.criticalIncidents, '', ''],
+        ['Fichas Não Assinadas', reportData.general.unsignedForms, '', ''],
+        ['Avaliações Contestadas', reportData.general.contestedEvaluations, '', ''],
+      ];
+      
+      const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
+      XLSX.utils.book_append_sheet(workbook, generalSheet, 'Geral');
+      
+      // Aba Performance por Período
+      const periodData = [
+        ['Período', 'Avaliações', 'Média', 'Incidentes Críticos'],
+        ...reportData.byPeriod.map(item => [
+          item.period,
+          item.evaluations,
+          item.avgScore,
+          item.criticalIncidents
+        ])
+      ];
+      
+      const periodSheet = XLSX.utils.aoa_to_sheet(periodData);
+      XLSX.utils.book_append_sheet(workbook, periodSheet, 'Por Período');
+      
+      // Aba Performance por Campanha
+      const campaignData = [
+        ['Campanha', 'Avaliações', 'Média', 'Incidentes Críticos'],
+        ...reportData.byCampaign.map(item => [
+          item.name,
+          item.evaluations,
+          item.avgScore,
+          item.criticalIncidents
+        ])
+      ];
+      
+      const campaignSheet = XLSX.utils.aoa_to_sheet(campaignData);
+      XLSX.utils.book_append_sheet(workbook, campaignSheet, 'Por Campanha');
+      
+      // Aba Palavras Críticas
+      const wordsData = [
+        ['Palavra', 'Frequência', 'Tendência'],
+        ...reportData.criticalWords.map(item => [
+          item.word,
+          item.frequency,
+          item.trend
+        ])
+      ];
+      
+      const wordsSheet = XLSX.utils.aoa_to_sheet(wordsData);
+      XLSX.utils.book_append_sheet(workbook, wordsSheet, 'Palavras Críticas');
+      
+      const today = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `relatorio-akig-${today}.xlsx`);
+    }
   };
 
   const getScoreColor = (score: number) => {
@@ -363,14 +471,43 @@ export default function Reports() {
                   <CardTitle>Distribuição de Notas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <PieChart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Gráfico de Distribuição
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Funcionalidade em desenvolvimento
-                    </p>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={reportData.scoreDistribution}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="count"
+                          nameKey="range"
+                          label={(entry: any) => `${entry.percentage}%`}
+                        >
+                          {reportData.scoreDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: any, name: any, props: any) => [
+                            `${value} avaliações (${props.payload.percentage}%)`,
+                            'Quantidade'
+                          ]}
+                          labelFormatter={(label: any) => `Faixa: ${label}`}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          height={36}
+                          formatter={(value: any, entry: any) => (
+                            <span style={{ color: entry.color }}>
+                              {value}: {entry.payload.count} ({entry.payload.percentage}%)
+                            </span>
+                          )}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 text-sm text-muted-foreground text-center">
+                    Total de 138 avaliações analisadas
                   </div>
                 </CardContent>
               </Card>
