@@ -144,6 +144,28 @@ export default function Monitoring() {
     },
   });
 
+  // Chat analysis mutation
+  const chatAnalysisMutation = useMutation({
+    mutationFn: async (sessionId: number) => {
+      return await apiRequest('POST', `/api/monitoring-sessions/${sessionId}/analyze-chat`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Análise Concluída",
+        description: "A análise do chat foi processada com sucesso!",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Chat analysis error:', error);
+      toast({
+        title: "Erro na análise",
+        description: error.message || "Falha ao analisar chat. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handler functions with confirmation
   const handleDeleteSession = (sessionId: number) => {
     if (window.confirm("Tem certeza que deseja excluir esta monitoria? Esta ação não pode ser desfeita.")) {
@@ -591,11 +613,17 @@ export default function Monitoring() {
                         Nenhuma análise de {selectedSessionData.channelType === 'chat' ? 'chat' : 'e-mail'} disponível
                       </p>
                       <Button 
-                        onClick={() => handleStartTranscription(selectedSessionData.id)}
+                        onClick={() => {
+                          if (selectedSessionData.channelType === 'chat') {
+                            chatAnalysisMutation.mutate(selectedSessionData.id);
+                          } else {
+                            handleStartTranscription(selectedSessionData.id);
+                          }
+                        }}
                         className="mt-4"
-                        disabled={transcribingMutation.isPending}
+                        disabled={chatAnalysisMutation.isPending || transcribingMutation.isPending}
                       >
-                        {transcribingMutation.isPending ? (
+                        {(chatAnalysisMutation.isPending || transcribingMutation.isPending) ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                             Analisando...
