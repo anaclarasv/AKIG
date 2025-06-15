@@ -80,7 +80,60 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Public registration disabled - only admins can create users
+  // Public registration for initial admin setup
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      const { username, email, password, firstName, lastName, role, companyId } = req.body;
+      
+      if (!username || !email || !password || !firstName || !lastName || !role) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await hashPassword(password);
+
+      const userData = {
+        username,
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        role,
+        companyId: companyId ? parseInt(companyId) : null,
+        supervisorId: null,
+        virtualCoins: 0,
+        isActive: true,
+        profileImageUrl: null,
+      };
+
+      const user = await storage.createUser(userData);
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          companyId: user.companyId,
+          virtualCoins: user.virtualCoins,
+          isActive: user.isActive,
+        });
+      });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ 
+        message: "Failed to create user",
+        error: error.message || "Unknown error"
+      });
+    }
+  });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json({
