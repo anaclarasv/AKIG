@@ -2151,11 +2151,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Monitoring Evaluations endpoints
   app.post("/api/monitoring-evaluations", isAuthenticated, async (req, res) => {
     try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Only admin and evaluator roles can create monitoring evaluations
+      if (!['admin', 'evaluator'].includes(user.role)) {
+        return res.status(403).json({ message: "Only administrators and evaluators can create monitoring evaluations" });
+      }
+
       const evaluationData = {
         ...req.body,
         evaluatorId: req.user.id,
+        status: 'completed', // Mark as completed when evaluation is created by authorized roles
       };
+      
       const evaluation = await storage.createMonitoringEvaluation(evaluationData);
+      
+      // Update monitoring session status to completed only when evaluation is created by authorized roles
+      await storage.updateMonitoringSession(req.body.monitoringSessionId, {
+        status: 'completed'
+      });
+      
       res.status(201).json(evaluation);
     } catch (error) {
       console.error("Error creating monitoring evaluation:", error);
