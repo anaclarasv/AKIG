@@ -592,8 +592,18 @@ export function registerRoutes(app: Express): Server {
 
       filteredEvaluations.forEach(evaluation => {
         if (evaluation.scores && typeof evaluation.scores === 'object') {
-          const scores = Object.values(evaluation.scores as Record<string, number>);
-          const validScores = scores.filter(score => typeof score === 'number' && score >= 0);
+          const scoresObj = evaluation.scores as Record<string, any>;
+          let validScores: number[] = [];
+          
+          // Lidar com diferentes formatos de scores (números diretos ou objetos com propriedade score)
+          Object.values(scoresObj).forEach(scoreValue => {
+            if (typeof scoreValue === 'number' && scoreValue >= 0) {
+              validScores.push(scoreValue);
+            } else if (typeof scoreValue === 'object' && scoreValue.score !== undefined) {
+              validScores.push(scoreValue.score);
+            }
+          });
+          
           if (validScores.length > 0) {
             const avgScore = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
             totalScore += avgScore;

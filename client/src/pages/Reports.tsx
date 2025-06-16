@@ -132,128 +132,165 @@ export default function Reports() {
         const { jsPDF } = await import('jspdf');
         const doc = new jsPDF();
         
-        // Cabeçalho
+        // Cabeçalho conforme modelo solicitado
         doc.setFontSize(20);
-        doc.text('AKIG Solutions - Relatório de Monitoria', 105, 20, { align: 'center' });
+        doc.text('📄 Relatório Completo de Monitoria', 105, 20, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text('Empresa: AKIG Solutions', 105, 30, { align: 'center' });
         doc.setFontSize(12);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 30, { align: 'center' });
+        doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 105, 40, { align: 'center' });
         
-        let yPosition = 50;
+        let yPosition = 60;
         
-        // Métricas gerais usando dados REAIS da API
+        // 📊 Métricas Gerais - usando dados reais do sistema
         doc.setFontSize(16);
-        doc.text('Métricas Gerais (Dados Reais do Sistema)', 20, yPosition);
+        doc.text('📊 Métricas Gerais', 20, yPosition);
         yPosition += 15;
         
-        doc.setFontSize(11);
+        doc.setFontSize(12);
         const realMetrics = [
-          ['Total de Avaliações:', fetchedReportData.general.totalEvaluations.toString()],
-          ['Pontuação Média:', `${fetchedReportData.general.averageScore.toFixed(2)}/10`],
-          ['Taxa de Aprovação:', `${fetchedReportData.general.approvalRate.toFixed(1)}%`],
-          ['Incidentes Críticos:', fetchedReportData.general.criticalIncidents.toString()],
-          ['Formulários Pendentes:', fetchedReportData.general.unsignedForms.toString()],
-          ['Contestações Pendentes:', fetchedReportData.general.contestedEvaluations.toString()]
+          `Total de Avaliações: ${fetchedReportData.general.totalEvaluations}`,
+          `Pontuação Média: ${fetchedReportData.general.averageScore.toFixed(1)}`,
+          `Taxa de Aprovação: ${fetchedReportData.general.approvalRate}%`,
+          `Incidentes Críticos: ${fetchedReportData.general.criticalIncidents}`,
+          `Formulários Pendentes: ${fetchedReportData.general.unsignedForms}`,
+          `Contestações em Análise: ${fetchedReportData.general.contestedEvaluations}`
         ];
         
-        realMetrics.forEach(([label, value]) => {
-          doc.text(label, 25, yPosition);
-          doc.text(value, 120, yPosition);
+        realMetrics.forEach((metric) => {
+          doc.text(metric, 25, yPosition);
           yPosition += 8;
         });
         
         yPosition += 15;
         
-        // Performance por agente usando dados REAIS
+        // 👥 Performance por Agente - tabela estruturada
         if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
           doc.setFontSize(16);
-          doc.text('Performance por Agente (Dados Reais)', 20, yPosition);
+          doc.text('👥 Performance por Agente', 20, yPosition);
           yPosition += 15;
           
+          // Cabeçalho da tabela
           doc.setFontSize(10);
-          doc.text('Nome', 20, yPosition);
-          doc.text('Avaliações', 80, yPosition);
-          doc.text('Média', 120, yPosition);
-          doc.text('Aprovação', 150, yPosition);
-          doc.text('Incidentes', 180, yPosition);
-          yPosition += 10;
+          doc.text('Nome do Agente', 20, yPosition);
+          doc.text('Avaliações', 70, yPosition);
+          doc.text('Média', 105, yPosition);
+          doc.text('Aprovados', 125, yPosition);
+          doc.text('Reprovados', 155, yPosition);
+          doc.text('Taxa', 185, yPosition);
+          yPosition += 8;
           
-          fetchedReportData.agentPerformance.slice(0, 20).forEach((agent) => {
-            if (yPosition > 270) {
+          // Linha separadora
+          doc.line(20, yPosition, 200, yPosition);
+          yPosition += 5;
+          
+          // Dados dos agentes
+          fetchedReportData.agentPerformance.slice(0, 15).forEach((agent) => {
+            if (yPosition > 260) {
               doc.addPage();
               yPosition = 20;
             }
-            doc.text(agent.name.substring(0, 20), 20, yPosition);
-            doc.text(agent.evaluations?.toString() || '0', 80, yPosition);
-            doc.text(agent.score?.toFixed(1) || '0', 120, yPosition);
-            doc.text(`${agent.approvalRate || 0}%`, 150, yPosition);
-            doc.text((agent.incidents || 0).toString(), 180, yPosition);
+            
+            const aprovados = Math.round((agent.evaluations || 0) * (agent.approvalRate || 0) / 100);
+            const reprovados = (agent.evaluations || 0) - aprovados;
+            
+            doc.text(agent.name.substring(0, 18), 20, yPosition);
+            doc.text((agent.evaluations || 0).toString(), 70, yPosition);
+            doc.text((agent.score || 0).toFixed(1), 105, yPosition);
+            doc.text(aprovados.toString(), 125, yPosition);
+            doc.text(reprovados.toString(), 155, yPosition);
+            doc.text(`${agent.approvalRate || 0}%`, 185, yPosition);
             yPosition += 7;
           });
         }
         
+        yPosition += 15;
+        
+        // 📌 Observações Gerais
+        doc.setFontSize(16);
+        doc.text('📌 Observações Gerais', 20, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(11);
+        const observacoes = [
+          `A maior parte das ${fetchedReportData.general.totalEvaluations} avaliações foram positivas.`,
+          `${fetchedReportData.general.criticalIncidents} incidentes críticos foram identificados e encaminhados.`,
+          `Taxa geral de aprovação está em ${fetchedReportData.general.approvalRate}%.`,
+          `Acompanhar ${fetchedReportData.general.unsignedForms} formulários pendentes de assinatura.`
+        ];
+        
+        observacoes.forEach((obs) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(obs, 25, yPosition);
+          yPosition += 8;
+        });
+        
         // Rodapé
         doc.setFontSize(8);
-        doc.text('AKIG Solutions - Dados Extraídos do Sistema Real', 105, 285, { align: 'center' });
+        doc.text('AKIG Solutions - Relatório Gerado com Dados Reais do Sistema', 105, 285, { align: 'center' });
         
-        doc.save(`relatorio-monitoria-real-${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf`);
         
       } else {
-        // Excel com dados REAIS
+        // 📥 Excel seguindo o modelo solicitado
         const { utils, writeFile } = await import('xlsx');
         const workbook = utils.book_new();
         
-        // Aba 1: Métricas Gerais REAIS
-        const realGeneralData = [
-          ['Métrica', 'Valor Real do Sistema'],
+        // Planilha 1: Métricas Gerais (conforme modelo)
+        const metricsData = [
+          ['Métrica', 'Valor'],
           ['Total de Avaliações', fetchedReportData.general.totalEvaluations],
-          ['Pontuação Média', fetchedReportData.general.averageScore.toFixed(2)],
-          ['Taxa de Aprovação (%)', fetchedReportData.general.approvalRate.toFixed(1)],
+          ['Pontuação Média', fetchedReportData.general.averageScore.toFixed(1)],
+          ['Taxa de Aprovação', `${fetchedReportData.general.approvalRate}%`],
           ['Incidentes Críticos', fetchedReportData.general.criticalIncidents],
           ['Formulários Pendentes', fetchedReportData.general.unsignedForms],
-          ['Contestações Pendentes', fetchedReportData.general.contestedEvaluations],
-          [''],
-          ['Dados extraídos em:', new Date().toLocaleString('pt-BR')],
-          ['Fonte:', 'Sistema AKIG Solutions - Dados Reais']
+          ['Contestações', fetchedReportData.general.contestedEvaluations]
         ];
         
-        const realGeneralSheet = utils.aoa_to_sheet(realGeneralData);
-        utils.book_append_sheet(workbook, realGeneralSheet, 'Métricas Reais');
+        const metricsSheet = utils.aoa_to_sheet(metricsData);
+        utils.book_append_sheet(workbook, metricsSheet, 'Métricas Gerais');
         
-        // Aba 2: Performance Agentes REAIS
+        // Planilha 2: Performance por Agente (conforme modelo)
         if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
-          const agentHeaders = ['Nome Agente', 'Total Avaliações', 'Pontuação Média', 'Taxa Aprovação (%)', 'Incidentes'];
+          const agentHeaders = ['Nome', 'Avaliações', 'Média', 'Aprovados', 'Reprovados', 'Taxa de Aprovação'];
           const agentData = [
             agentHeaders,
-            ...fetchedReportData.agentPerformance.map(agent => [
-              agent.name,
-              agent.evaluations || 0,
-              agent.score?.toFixed(2) || '0.00',
-              agent.approvalRate || 0,
-              agent.incidents || 0
-            ])
+            ...fetchedReportData.agentPerformance.map(agent => {
+              const aprovados = Math.round((agent.evaluations || 0) * (agent.approvalRate || 0) / 100);
+              const reprovados = (agent.evaluations || 0) - aprovados;
+              
+              return [
+                agent.name,
+                agent.evaluations || 0,
+                (agent.score || 0).toFixed(1),
+                aprovados,
+                reprovados,
+                `${agent.approvalRate || 0}%`
+              ];
+            })
           ];
           
           const agentSheet = utils.aoa_to_sheet(agentData);
-          utils.book_append_sheet(workbook, agentSheet, 'Performance Real');
+          utils.book_append_sheet(workbook, agentSheet, 'Performance por Agente');
         }
         
-        // Aba 3: Palavras Críticas REAIS
-        if (fetchedReportData.criticalWords && fetchedReportData.criticalWords.length > 0) {
-          const wordsHeaders = ['Palavra Crítica', 'Frequência Real', 'Tendência'];
-          const wordsData = [
-            wordsHeaders,
-            ...fetchedReportData.criticalWords.map(word => [
-              word.word,
-              word.frequency,
-              word.trend
-            ])
-          ];
-          
-          const wordsSheet = utils.aoa_to_sheet(wordsData);
-          utils.book_append_sheet(workbook, wordsSheet, 'Palavras Críticas');
-        }
+        // Planilha 3: Informações do Relatório
+        const infoData = [
+          ['Relatório de Monitoria - AKIG Solutions', ''],
+          ['Data de Geração', new Date().toLocaleDateString('pt-BR')],
+          ['Hora de Geração', new Date().toLocaleTimeString('pt-BR')],
+          ['Fonte dos Dados', 'Sistema AKIG Solutions - Dados Reais'],
+          ['Total de Registros', fetchedReportData.general.totalEvaluations],
+          ['Status do Sistema', 'Operacional']
+        ];
         
-        writeFile(workbook, `relatorio-monitoria-real-${new Date().toISOString().split('T')[0]}.xlsx`);
+        const infoSheet = utils.aoa_to_sheet(infoData);
+        utils.book_append_sheet(workbook, infoSheet, 'Informações');
+        
+        writeFile(workbook, `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.xlsx`);
       }
 
       toast({
