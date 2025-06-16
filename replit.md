@@ -125,6 +125,11 @@ AKIG Solutions is a comprehensive intelligent call monitoring and evaluation sys
 
 ```
 Changelog:
+- June 16, 2025. Removida funcionalidade de relatórios de todos os perfis
+  * Removidos botões e links de "Relatórios" da sidebar de admin e supervisor
+  * Removidas rotas /reports do App.tsx
+  * Funcionalidade de exportação PDF/Excel desabilitada conforme solicitação
+  * Sistema focado agora em monitoria, avaliações e gamificação
 - June 16, 2025. Corrigidos problemas críticos do perfil admin e funcionalidades
   * Removida seção "Atividades Recentes" da dashboard conforme solicitado
   * Página de avaliações modificada para apenas visualização (sem edição)
