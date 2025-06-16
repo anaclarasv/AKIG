@@ -8,6 +8,7 @@ import fs from "fs";
 import { transcribeAudioWithAssemblyAI, analyzeTranscription, getTranscriptionStatus } from "./assemblyai-service";
 import { AudioTranscription } from "./audio-transcription";
 import { FixedChatAnalyzer } from "./fixed-chat-analyzer";
+import { ReportGenerator } from "./report-generator";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -560,6 +561,305 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error('Erro ao atualizar compra:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Endpoints de exportação de relatórios
+  app.get("/api/reports/export/pdf", isAuthenticated, async (req: any, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      // Buscar dados reais do banco
+      const evaluations = await storage.getEvaluations();
+      const contests = await storage.getEvaluationContests();
+      
+      // Filtrar por período se especificado
+      let filteredEvaluations = evaluations;
+      if (startDate && endDate) {
+        filteredEvaluations = evaluations.filter(evaluation => {
+          const evalDate = evaluation.createdAt ? new Date(evaluation.createdAt) : new Date();
+          return evalDate >= new Date(startDate) && evalDate <= new Date(endDate);
+        });
+      }
+
+      // Calcular métricas reais
+      const totalEvaluations = filteredEvaluations.length;
+      let totalScore = 0;
+      let scoreCount = 0;
+      let approvedCount = 0;
+      let criticalIncidents = 0;
+
+      filteredEvaluations.forEach(evaluation => {
+        if (evaluation.scores && typeof evaluation.scores === 'object') {
+          const scores = Object.values(evaluation.scores as Record<string, number>);
+          const validScores = scores.filter(score => typeof score === 'number' && score >= 0);
+          if (validScores.length > 0) {
+            const avgScore = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+            totalScore += avgScore;
+            scoreCount++;
+            
+            if (avgScore >= 7.0) approvedCount++;
+            if (avgScore < 5.0) criticalIncidents++;
+          }
+        }
+      });
+
+      const averageScore = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 100) / 100 : 0;
+      const approvalRate = totalEvaluations > 0 ? Math.round((approvedCount / totalEvaluations) * 100) : 0;
+      const unsignedForms = filteredEvaluations.filter(evaluation => evaluation.status === 'pending').length;
+      const contestedEvaluations = contests.filter(contest => contest.status === 'pending').length;
+
+      // Performance por agente
+      const agentStats = new Map();
+      filteredEvaluations.forEach(evaluation => {
+        const agentId = evaluation.agentId || 'Não identificado';
+        if (!agentStats.has(agentId)) {
+          agentStats.set(agentId, {
+            name: `Agente ${agentId}`,
+            totalEvaluations: 0,
+            totalScore: 0,
+            approvedCount: 0,
+            criticalIncidents: 0
+          });
+        }
+
+        const stats = agentStats.get(agentId);
+        stats.totalEvaluations++;
+
+        if (evaluation.scores && typeof evaluation.scores === 'object') {
+          const scores = Object.values(evaluation.scores as Record<string, number>);
+          const validScores = scores.filter(score => typeof score === 'number' && score >= 0);
+          if (validScores.length > 0) {
+            const avgScore = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+            stats.totalScore += avgScore;
+            if (avgScore >= 7.0) stats.approvedCount++;
+            if (avgScore < 5.0) stats.criticalIncidents++;
+          }
+        }
+      });
+
+      const agentPerformance = Array.from(agentStats.values()).map(stats => ({
+        name: stats.name,
+        totalEvaluations: stats.totalEvaluations,
+        averageScore: stats.totalEvaluations > 0 ? Math.round((stats.totalScore / stats.totalEvaluations) * 100) / 100 : 0,
+        approvalRate: stats.totalEvaluations > 0 ? Math.round((stats.approvedCount / stats.totalEvaluations) * 100) : 0,
+        criticalIncidents: stats.criticalIncidents
+      }));
+
+      // Gerar PDF usando jsPDF
+      const jsPDF = require('jspdf').jsPDF;
+      const doc = new jsPDF();
+      
+      let currentY = 20;
+      
+      // Cabeçalho
+      doc.setFontSize(20);
+      doc.text('AKIG Solutions - Relatório de Monitoria', 105, currentY, { align: 'center' });
+      currentY += 15;
+      
+      doc.setFontSize(12);
+      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, currentY, { align: 'center' });
+      currentY += 25;
+
+      // Métricas gerais
+      doc.setFontSize(16);
+      doc.text('Métricas Gerais', 20, currentY);
+      currentY += 15;
+
+      doc.setFontSize(11);
+      const metrics = [
+        ['Total de Avaliações:', totalEvaluations.toString()],
+        ['Pontuação Média:', `${averageScore}/10`],
+        ['Taxa de Aprovação:', `${approvalRate}%`],
+        ['Incidentes Críticos:', criticalIncidents.toString()],
+        ['Formulários Pendentes:', unsignedForms.toString()],
+        ['Contestações Pendentes:', contestedEvaluations.toString()]
+      ];
+
+      metrics.forEach(([label, value]) => {
+        doc.text(label, 25, currentY);
+        doc.text(value, 120, currentY);
+        currentY += 8;
+      });
+
+      currentY += 15;
+
+      // Performance por agente
+      if (agentPerformance.length > 0) {
+        doc.setFontSize(16);
+        doc.text('Performance por Agente', 20, currentY);
+        currentY += 15;
+
+        doc.setFontSize(10);
+        doc.text('Nome', 20, currentY);
+        doc.text('Avaliações', 80, currentY);
+        doc.text('Média', 120, currentY);
+        doc.text('Aprovação', 150, currentY);
+        doc.text('Incidentes', 180, currentY);
+        currentY += 10;
+
+        agentPerformance.slice(0, 20).forEach(agent => {
+          if (currentY > 270) {
+            doc.addPage();
+            currentY = 20;
+          }
+          
+          doc.text(agent.name.substring(0, 20), 20, currentY);
+          doc.text(agent.totalEvaluations.toString(), 80, currentY);
+          doc.text(agent.averageScore.toString(), 120, currentY);
+          doc.text(`${agent.approvalRate}%`, 150, currentY);
+          doc.text(agent.criticalIncidents.toString(), 180, currentY);
+          currentY += 7;
+        });
+      }
+
+      // Rodapé
+      doc.setFontSize(8);
+      doc.text('AKIG Solutions - Sistema de Monitoria Inteligente', 105, 285, { align: 'center' });
+
+      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf"`);
+      res.send(pdfBuffer);
+
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/reports/export/excel", isAuthenticated, async (req: any, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const XLSX = require('xlsx');
+      
+      // Buscar dados reais do banco
+      const evaluations = await storage.getEvaluations();
+      const contests = await storage.getEvaluationContests();
+      
+      // Filtrar por período se especificado
+      let filteredEvaluations = evaluations;
+      if (startDate && endDate) {
+        filteredEvaluations = evaluations.filter(evaluation => {
+          const evalDate = evaluation.createdAt ? new Date(evaluation.createdAt) : new Date();
+          return evalDate >= new Date(startDate) && evalDate <= new Date(endDate);
+        });
+      }
+
+      const workbook = XLSX.utils.book_new();
+
+      // Aba 1: Métricas Gerais
+      const totalEvaluations = filteredEvaluations.length;
+      let totalScore = 0;
+      let scoreCount = 0;
+      let approvedCount = 0;
+      let criticalIncidents = 0;
+
+      filteredEvaluations.forEach(evaluation => {
+        if (evaluation.scores && typeof evaluation.scores === 'object') {
+          const scores = Object.values(evaluation.scores as Record<string, number>);
+          const validScores = scores.filter(score => typeof score === 'number' && score >= 0);
+          if (validScores.length > 0) {
+            const avgScore = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+            totalScore += avgScore;
+            scoreCount++;
+            
+            if (avgScore >= 7.0) approvedCount++;
+            if (avgScore < 5.0) criticalIncidents++;
+          }
+        }
+      });
+
+      const averageScore = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 100) / 100 : 0;
+      const approvalRate = totalEvaluations > 0 ? Math.round((approvedCount / totalEvaluations) * 100) : 0;
+      const unsignedForms = filteredEvaluations.filter(evaluation => evaluation.status === 'pending').length;
+      const contestedEvaluations = contests.filter(contest => contest.status === 'pending').length;
+
+      const generalData = [
+        ['Métrica', 'Valor'],
+        ['Total de Avaliações', totalEvaluations],
+        ['Pontuação Média', averageScore],
+        ['Taxa de Aprovação (%)', approvalRate],
+        ['Incidentes Críticos', criticalIncidents],
+        ['Formulários Pendentes', unsignedForms],
+        ['Contestações Pendentes', contestedEvaluations],
+        [''],
+        ['Relatório gerado em:', new Date().toLocaleString('pt-BR')]
+      ];
+
+      const generalSheet = XLSX.utils.aoa_to_sheet(generalData);
+      XLSX.utils.book_append_sheet(workbook, generalSheet, 'Métricas Gerais');
+
+      // Aba 2: Avaliações Detalhadas
+      if (filteredEvaluations.length > 0) {
+        const evaluationHeaders = [
+          'ID Avaliação',
+          'ID Sessão',
+          'Avaliador',
+          'Status',
+          'Data Criação',
+          'Observações',
+          'Comentário Supervisor'
+        ];
+
+        const evaluationData = [
+          evaluationHeaders,
+          ...filteredEvaluations.slice(0, 1000).map(evaluation => [
+            evaluation.id,
+            evaluation.monitoringSessionId,
+            evaluation.evaluatorId || 'N/A',
+            evaluation.status || 'N/A',
+            evaluation.createdAt ? new Date(evaluation.createdAt).toLocaleString('pt-BR') : 'N/A',
+            evaluation.observations || '',
+            evaluation.supervisorComment || ''
+          ])
+        ];
+
+        const evaluationSheet = XLSX.utils.aoa_to_sheet(evaluationData);
+        XLSX.utils.book_append_sheet(workbook, evaluationSheet, 'Avaliações Detalhadas');
+      }
+
+      // Aba 3: Contestações
+      if (contests.length > 0) {
+        const contestHeaders = [
+          'ID Contestação',
+          'ID Avaliação',
+          'Agente ID',
+          'Motivo',
+          'Status',
+          'Data Solicitação',
+          'Resposta',
+          'Data Revisão'
+        ];
+
+        const contestData = [
+          contestHeaders,
+          ...contests.map(contest => [
+            contest.id,
+            contest.evaluationId,
+            contest.agentId || 'N/A',
+            contest.reason || '',
+            contest.status || 'pending',
+            contest.createdAt ? new Date(contest.createdAt).toLocaleString('pt-BR') : 'N/A',
+            contest.response || '',
+            contest.reviewedAt ? new Date(contest.reviewedAt).toLocaleString('pt-BR') : 'N/A'
+          ])
+        ];
+
+        const contestSheet = XLSX.utils.aoa_to_sheet(contestData);
+        XLSX.utils.book_append_sheet(workbook, contestSheet, 'Contestações');
+      }
+
+      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="relatorio-monitoria-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(excelBuffer);
+
+    } catch (error) {
+      console.error('Erro ao gerar Excel:', error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
