@@ -1088,7 +1088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint para análise específica de chat
+  // Chat analysis endpoint - FIXED version with preserved timestamps
   app.post('/api/monitoring-sessions/:id/analyze-chat', isAuthenticated, async (req: any, res) => {
     try {
       const sessionId = parseInt(req.params.id);
@@ -1102,42 +1102,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session is not a chat or has no content" });
       }
       
-      console.log('Starting FIXED chat analysis for session:', sessionId);
-      console.log('Chat content being analyzed:', session.chatContent);
+      console.log('=== ANÁLISE CORRIGIDA - PRESERVA HORÁRIOS ===');
+      console.log('Session ID:', sessionId);
       
       // Import fixed analyzer that preserves timestamps and detects real problems
       const { FixedChatAnalyzer } = await import('./fixed-chat-analyzer');
       
       // Análise corrigida do chat que preserva horários e detecta problemas reais
-      const fixedAnalysis = FixedChatAnalyzer.analyzeChatContent(session.chatContent);
+      const analysis = FixedChatAnalyzer.analyzeChatContent(session.chatContent);
       
-      console.log('FIXED Analysis completed:', {
-        sentiment: fixedAnalysis.analysis.overallSentiment,
-        satisfaction: fixedAnalysis.analysis.customerSatisfaction,
-        performance: fixedAnalysis.analysis.agentPerformance,
-        swearWords: fixedAnalysis.metrics.totalSwearWords,
-        maxResponseTime: fixedAnalysis.metrics.maxResponseTime,
-        escalation: fixedAnalysis.analysis.requiresEscalation,
-        criticalIssues: fixedAnalysis.analysis.criticalIssues,
-        conversationFlow: fixedAnalysis.conversationFlow.length
+      console.log('Resultado análise:', {
+        sentiment: analysis.analysis.overallSentiment,
+        satisfaction: analysis.analysis.customerSatisfaction,
+        performance: analysis.analysis.agentPerformance,
+        swearWords: analysis.metrics.totalSwearWords,
+        maxResponseTime: analysis.metrics.maxResponseTime,
+        escalation: analysis.analysis.requiresEscalation,
+        criticalIssues: analysis.analysis.criticalIssues
       });
-      
-      // Usar análise corrigida que preserva horários e detecta problemas reais
-      const analysisResults = {
-        overallSentiment: fixedAnalysis.analysis.overallSentiment,
-        customerSatisfaction: fixedAnalysis.analysis.customerSatisfaction,
-        agentPerformance: fixedAnalysis.analysis.agentPerformance,
-        maxResponseTime: fixedAnalysis.metrics.maxResponseTime,
-        totalSwearWords: fixedAnalysis.metrics.totalSwearWords,
-        criticalIssues: fixedAnalysis.analysis.criticalIssues,
-        requiresEscalation: fixedAnalysis.analysis.requiresEscalation
-      };
 
-      // Resultado da transcrição com horários preservados
-      const transcriptionResult = {
-        text: fixedAnalysis.conversationFlow.map(msg => `${msg.speaker}: ${msg.text}`).join('\n'),
-        segments: [],
-        conversationFlow: fixedAnalysis.conversationFlow.map((msg, index) => ({
+      // Prepare transcription result preserving original timestamps
+      const transcriptionData = {
+        text: analysis.conversationFlow.map(msg => `${msg.speaker}: ${msg.text}`).join('\n'),
+        segments: analysis.conversationFlow.map((msg, index) => ({
+          id: `msg_${index}`,
+          speaker: msg.speaker,
+          text: msg.text,
+          startTime: index * 30,
+          endTime: (index + 1) * 30,
+          confidence: 0.95,
+          criticalWords: msg.hasSwearing ? ['palavrão'] : []
+        })),
+        conversationFlow: analysis.conversationFlow.map((msg) => ({
           timestamp: msg.originalTimestamp,
           speaker: msg.speaker,
           message: msg.text,
@@ -1147,62 +1143,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasUrgency: msg.hasUrgency
         })),
         speakerAnalysis: {
-          totalMessages: fixedAnalysis.metrics.totalMessages,
-          agentMessages: fixedAnalysis.metrics.agentMessages,
-          clientMessages: fixedAnalysis.metrics.clientMessages,
-          averageResponseTime: fixedAnalysis.metrics.averageResponseTime,
-          maxResponseTime: fixedAnalysis.metrics.maxResponseTime,
-          totalSwearWords: fixedAnalysis.metrics.totalSwearWords,
-          escalationLevel: fixedAnalysis.metrics.escalationLevel,
-          problemSeverity: fixedAnalysis.metrics.problemSeverity,
-          overallSentiment: fixedAnalysis.analysis.overallSentiment,
-          customerSatisfaction: fixedAnalysis.analysis.customerSatisfaction,
-          agentPerformance: fixedAnalysis.analysis.agentPerformance,
-          serviceQuality: fixedAnalysis.analysis.serviceQuality,
-          requiresEscalation: fixedAnalysis.analysis.requiresEscalation,
-          criticalIssues: fixedAnalysis.analysis.criticalIssues,
-          timeline: fixedAnalysis.timeline
+          agent: {
+            messageCount: analysis.metrics.agentMessages,
+            averageResponseTime: analysis.metrics.averageResponseTime,
+            performance: analysis.analysis.agentPerformance,
+            professionalismScore: analysis.metrics.totalSwearWords > 0 ? 0.3 : 0.9
+          },
+          client: {
+            messageCount: analysis.metrics.clientMessages,
+            satisfactionLevel: analysis.analysis.customerSatisfaction,
+            escalationLevel: analysis.metrics.escalationLevel,
+            emotionalState: analysis.analysis.overallSentiment
+          }
         },
-        duration: fixedAnalysis.timeline.conversationDuration,
+        duration: analysis.timeline.conversationDuration,
         confidence: 0.95
       };
 
-      const aiAnalysis = {
-        sentiment: fixedAnalysis.analysis.overallSentiment === 'positive' ? 0.8 : 
-                  fixedAnalysis.analysis.overallSentiment === 'negative' ? 0.2 : 0.5,
-        keyTopics: fixedAnalysis.analysis.criticalIssues.length > 0 ? 
-                  fixedAnalysis.analysis.criticalIssues : ['atendimento', 'suporte'],
-        criticalMoments: fixedAnalysis.analysis.criticalIssues.map((issue, index) => ({
+      const analysisData = {
+        sentiment: analysis.analysis.overallSentiment === 'positive' ? 0.8 : 
+                  analysis.analysis.overallSentiment === 'negative' ? 0.2 : 0.5,
+        keyTopics: analysis.analysis.criticalIssues.length > 0 ? 
+                  analysis.analysis.criticalIssues : ['atendimento', 'suporte'],
+        criticalMoments: analysis.analysis.criticalIssues.map((issue, index) => ({
           timestamp: index * 60,
           description: issue,
           severity: 'high' as const
         })),
-        recommendations: fixedAnalysis.analysis.requiresEscalation ? 
+        recommendations: analysis.analysis.requiresEscalation ? 
           ['Escalação imediata necessária', 'Treinamento em atendimento ao cliente'] :
           ['Manter qualidade do atendimento'],
-        score: fixedAnalysis.analysis.serviceQuality === 'critical' ? 2 :
-               fixedAnalysis.analysis.serviceQuality === 'poor' ? 4 :
-               fixedAnalysis.analysis.serviceQuality === 'average' ? 6 : 8
+        score: analysis.analysis.serviceQuality === 'critical' ? 2 :
+               analysis.analysis.serviceQuality === 'poor' ? 4 :
+               analysis.analysis.serviceQuality === 'average' ? 6 : 8
       };
 
-      // Atualizar sessão com análise corrigida
+      // Update session with corrected analysis results
       await storage.updateMonitoringSession(sessionId, {
         status: 'completed',
-        transcription: transcriptionResult,
-        aiAnalysis
+        transcription: transcriptionData,
+        aiAnalysis: analysisData
       });
+
+      console.log('=== ANÁLISE SALVA COM SUCESSO ===');
 
       res.json({
         message: "Chat analysis completed successfully",
         sessionId,
         status: 'completed',
-        analysis: analysisResults,
-        transcription: transcriptionResult
+        analysis: {
+          overallSentiment: analysis.analysis.overallSentiment,
+          customerSatisfaction: analysis.analysis.customerSatisfaction,
+          agentPerformance: analysis.analysis.agentPerformance,
+          maxResponseTime: analysis.metrics.maxResponseTime,
+          totalSwearWords: analysis.metrics.totalSwearWords,
+          criticalIssues: analysis.analysis.criticalIssues,
+          requiresEscalation: analysis.analysis.requiresEscalation
+        },
+        transcription: transcriptionData
       });
       
     } catch (error) {
-      console.error('Manual chat analysis failed:', error);
-      res.status(500).json({ message: "Chat analysis failed" });
+      console.error('Chat analysis error:', error);
+      res.status(500).json({ message: "Failed to analyze chat", error: error.message });
     }
   });
 
