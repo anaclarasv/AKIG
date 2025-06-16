@@ -118,8 +118,12 @@ export default function Reports() {
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
     try {
+      // Debug: verificar dados antes da exportação
+      console.log('Dados para exportação:', fetchedReportData);
+      
       // Usar dados reais da API atual para gerar relatório
       if (!fetchedReportData) {
+        console.error('Dados não carregados para exportação');
         toast({
           title: "Erro na exportação",
           description: "Dados não carregados. Aguarde alguns segundos e tente novamente.",
@@ -127,6 +131,12 @@ export default function Reports() {
         });
         return;
       }
+      
+      console.log('Iniciando exportação', format, 'com dados:', {
+        totalEvals: fetchedReportData.general.totalEvaluations,
+        avgScore: fetchedReportData.general.averageScore,
+        agentsCount: fetchedReportData.agentPerformance?.length || 0
+      });
 
       if (format === 'pdf') {
         const { jsPDF } = await import('jspdf');

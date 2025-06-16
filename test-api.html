@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Reports</title>
+</head>
+<body>
+    <h1>Teste da API de Relatórios</h1>
+    <button onclick="testReportsAPI()">Testar /api/reports/data</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testReportsAPI() {
+            try {
+                const response = await fetch('/api/reports/data');
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                console.log('Dados da API:', data);
+            } catch(error) {
+                document.getElementById('result').textContent = 'Erro: ' + error.message;
+                console.error('Erro ao buscar dados:', error);
+            }
+        }
+    </script>
+</body>
+</html>
