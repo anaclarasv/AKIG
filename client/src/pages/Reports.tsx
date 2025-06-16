@@ -297,7 +297,7 @@ export default function Reports() {
           ['Data de Geração', new Date().toLocaleDateString('pt-BR')],
           ['Hora de Geração', new Date().toLocaleTimeString('pt-BR')],
           ['Fonte dos Dados', 'Sistema AKIG Solutions - Dados Reais'],
-          ['Total de Registros', fetchedReportData.general.totalEvaluations],
+          ['Total de Registros', freshData.general.totalEvaluations],
           ['Status do Sistema', 'Operacional']
         ];
         
