@@ -95,7 +95,7 @@ export default function Dashboard() {
             <TeamPerformanceChart />
           </div>
         )}
-        {canViewActivities && <ActivityTable />}
+
       </div>
     </div>
   );

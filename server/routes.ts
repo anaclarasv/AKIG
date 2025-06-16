@@ -192,34 +192,127 @@ export function registerRoutes(app: Express): Server {
     res.json(user);
   });
 
+  // Companies endpoints
   app.get("/api/companies", isAuthenticated, async (req, res) => {
-    const companies = await storage.getCompanies();
-    res.json(companies);
+    try {
+      const companies = await storage.getCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error('Erro ao buscar empresas:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   app.post("/api/companies", isAuthenticated, async (req, res) => {
-    const company = await storage.createCompany(req.body);
-    res.status(201).json(company);
+    try {
+      const company = await storage.createCompany(req.body);
+      res.status(201).json(company);
+    } catch (error) {
+      console.error('Erro ao criar empresa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
+  app.put("/api/companies/:id", isAuthenticated, async (req, res) => {
+    try {
+      const company = await storage.updateCompany(parseInt(req.params.id), req.body);
+      res.json(company);
+    } catch (error) {
+      console.error('Erro ao atualizar empresa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/companies/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteCompany(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Erro ao excluir empresa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Users endpoints
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
-    const users = await storage.getUsers();
-    res.json(users);
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   app.post("/api/users", isAuthenticated, async (req, res) => {
-    const user = await storage.createUser(req.body);
-    res.status(201).json(user);
+    try {
+      const user = await storage.createUser(req.body);
+      res.status(201).json(user);
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
+  app.put("/api/users/:id", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.updateUser(req.params.id, req.body);
+      res.json(user);
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/users/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Campaigns endpoints
   app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
-    const campaigns = await storage.getCampaigns();
-    res.json(campaigns);
+    try {
+      const campaigns = await storage.getCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      console.error('Erro ao buscar campanhas:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   app.post("/api/campaigns", isAuthenticated, async (req, res) => {
-    const campaign = await storage.createCampaign(req.body);
-    res.status(201).json(campaign);
+    try {
+      const campaign = await storage.createCampaign(req.body);
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error('Erro ao criar campanha:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.put("/api/campaigns/:id", isAuthenticated, async (req, res) => {
+    try {
+      const campaign = await storage.updateCampaign(parseInt(req.params.id), req.body);
+      res.json(campaign);
+    } catch (error) {
+      console.error('Erro ao atualizar campanha:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/campaigns/:id", isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteCampaign(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Erro ao excluir campanha:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   app.get("/api/evaluation-criteria", isAuthenticated, async (req: any, res) => {
@@ -287,6 +380,56 @@ export function registerRoutes(app: Express): Server {
     res.json(session);
   });
 
+  // Endpoint para transcrição de áudio
+  app.post("/api/monitoring-sessions/:id/transcribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      if (isNaN(sessionId)) {
+        return res.status(400).json({ error: "ID de sessão inválido" });
+      }
+
+      const session = await storage.getMonitoringSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Sessão não encontrada" });
+      }
+
+      if (!session.audioUrl) {
+        return res.status(400).json({ error: "Sessão não possui arquivo de áudio" });
+      }
+
+      // Atualizar status para processando
+      await storage.updateMonitoringSession(sessionId, { status: 'processing' });
+
+      // Processar transcrição usando o sistema de áudio
+      const audioPath = `uploads/${session.audioUrl.split('/').pop()}`;
+      
+      try {
+        const transcriptionResult = await AudioTranscription.transcribeAudio(audioPath);
+        const aiAnalysis = AudioTranscription.analyzeTranscription(transcriptionResult);
+
+        // Atualizar sessão com resultados
+        await storage.updateMonitoringSession(sessionId, {
+          status: 'completed',
+          transcription: transcriptionResult,
+          aiAnalysis: aiAnalysis
+        });
+
+        res.json({
+          success: true,
+          transcription: transcriptionResult,
+          analysis: aiAnalysis
+        });
+      } catch (transcriptionError) {
+        console.error('Erro na transcrição:', transcriptionError);
+        await storage.updateMonitoringSession(sessionId, { status: 'pending' });
+        res.status(500).json({ error: "Erro ao processar transcrição" });
+      }
+    } catch (error) {
+      console.error('Erro no endpoint de transcrição:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   app.get("/api/evaluations", isAuthenticated, async (req: any, res) => {
     const evaluations = await storage.getEvaluations();
     res.json(evaluations);
@@ -325,6 +468,88 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/team-performance", isAuthenticated, async (req: any, res) => {
     const teamPerformance = await storage.getTeamPerformanceEvolution(req.user.id, 6);
     res.json(teamPerformance);
+  });
+
+  // Rewards endpoints
+  app.get("/api/rewards", isAuthenticated, async (req: any, res) => {
+    try {
+      const { companyId } = req.query;
+      const rewards = await storage.getRewards(companyId ? parseInt(companyId) : req.user.companyId);
+      res.json(rewards);
+    } catch (error) {
+      console.error('Erro ao buscar recompensas:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/rewards", isAuthenticated, async (req: any, res) => {
+    try {
+      const reward = await storage.createReward(req.body);
+      res.status(201).json(reward);
+    } catch (error) {
+      console.error('Erro ao criar recompensa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.put("/api/rewards/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const reward = await storage.updateReward(parseInt(req.params.id), req.body);
+      res.json(reward);
+    } catch (error) {
+      console.error('Erro ao atualizar recompensa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/rewards/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteReward(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Erro ao excluir recompensa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/user/purchases", isAuthenticated, async (req: any, res) => {
+    try {
+      const purchases = await storage.getUserRewardPurchases(req.user.id);
+      res.json(purchases);
+    } catch (error) {
+      console.error('Erro ao buscar compras:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/reward-requests/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const requests = await storage.getRewardRequests();
+      res.json(requests.filter((r: any) => r.status === 'pending'));
+    } catch (error) {
+      console.error('Erro ao buscar solicitações pendentes:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/reward-purchases", isAuthenticated, async (req: any, res) => {
+    try {
+      const purchase = await storage.createRewardRequest(req.body);
+      res.status(201).json(purchase);
+    } catch (error) {
+      console.error('Erro ao criar compra:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.patch("/api/reward-purchases/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const purchase = await storage.updateRewardRequest(parseInt(req.params.id), req.body);
+      res.json(purchase);
+    } catch (error) {
+      console.error('Erro ao atualizar compra:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   // Contest evaluation endpoints
