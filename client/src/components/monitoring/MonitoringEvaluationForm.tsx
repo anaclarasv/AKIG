@@ -62,12 +62,14 @@ export default function MonitoringEvaluationForm({
   });
 
   // Fetch monitoring form with sections and criteria
-  const { data: monitoringForm, isLoading } = useQuery({
+  const { data: monitoringForm, isLoading, error } = useQuery({
     queryKey: ['/api/monitoring-forms', 'active'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/monitoring-forms/active');
       return response.json();
     },
+    retry: 3,
+    refetchOnMount: true,
   });
 
   // Calculate evaluation scores when responses change
@@ -202,7 +204,7 @@ export default function MonitoringEvaluationForm({
     );
   }
 
-  if (!monitoringForm) {
+  if (!monitoringForm && !isLoading) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -212,6 +214,11 @@ export default function MonitoringEvaluationForm({
             <p className="text-muted-foreground">
               Não foi possível carregar a ficha de monitoria.
             </p>
+            {error && (
+              <p className="text-red-500 text-xs mt-2">
+                Erro: {error.message}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
