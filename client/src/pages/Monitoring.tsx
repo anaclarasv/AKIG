@@ -590,19 +590,33 @@ export default function Monitoring() {
               {/* Chat and Email Channels - Conversation Flow */}
               {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
                 <div className="h-96 overflow-hidden">
-                  {/* Check if we have analysis results from transcription data */}
-                  {selectedSessionData.transcription?.conversationFlow?.length ? (
+                  {/* Check for any available analysis data */}
+                  {selectedSessionData.status === 'completed' && selectedSessionData.transcription?.conversationFlow?.length ? (
                     <ConversationFlow
                       messages={selectedSessionData.transcription.conversationFlow}
                       channelType={selectedSessionData.channelType}
                       speakerAnalysis={selectedSessionData.transcription.speakerAnalysis}
                     />
-                  ) : selectedSessionData.chatAnalysis?.conversationFlow?.length || selectedSessionData.emailAnalysis?.conversationFlow?.length ? (
-                    <ConversationFlow
-                      messages={selectedSessionData.chatAnalysis?.conversationFlow || selectedSessionData.emailAnalysis?.conversationFlow || []}
-                      channelType={selectedSessionData.channelType}
-                      speakerAnalysis={selectedSessionData.chatAnalysis?.speakerAnalysis || selectedSessionData.emailAnalysis?.speakerAnalysis}
-                    />
+                  ) : selectedSessionData.status === 'completed' && selectedSessionData.chatContent ? (
+                    <div className="space-y-4 p-4">
+                      <h4 className="font-medium text-green-600">Análise Concluída</h4>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <p className="text-sm text-green-800">
+                          Chat analisado com sucesso usando sistema manual baseado em regras práticas.
+                        </p>
+                        <div className="mt-2 text-xs text-green-600">
+                          Status: {selectedSessionData.status} | Engine: Manual Analysis
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 p-3 rounded">
+                        <p className="text-sm text-blue-800 font-medium">Conteúdo Original:</p>
+                        <div className="mt-2 text-xs text-blue-700 max-h-32 overflow-y-auto">
+                          {selectedSessionData.chatContent.split('\n').map((line, i) => (
+                            <div key={i} className="mb-1">{line}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   ) : selectedSessionData.status === 'pending' ? (
                     <div className="text-center py-8">
                       <div className="animate-pulse space-y-2">
