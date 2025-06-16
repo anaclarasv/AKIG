@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, Phone, MessageSquare, Mail, Eye, MoreVertical, Download, Archive, Trash2,
   ClipboardList, CheckCircle, AlertCircle, XCircle, Brain, Volume2, Play,
-  ArrowLeft, User, Building2, Calendar, Clock
+  ArrowLeft, User, Building2, Calendar, Clock, FileText, Mic, Loader2, AlertTriangle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/Header";
@@ -28,6 +28,7 @@ interface MonitoringSession {
   audioUrl?: string;
   chatContent?: string;
   emailContent?: string;
+  content?: string;
   transcription?: any;
   aiAnalysis?: any;
   duration: number;
@@ -62,6 +63,12 @@ export default function Monitoring() {
   });
   const [processingStatuses, setProcessingStatuses] = useState<Record<number, string>>({});
   const [transcriptionProgress, setTranscriptionProgress] = useState<Record<number, number>>({});
+  
+  // Transcription and analysis states
+  const [transcriptionData, setTranscriptionData] = useState<any>(null);
+  const [transcriptionLoading, setTranscriptionLoading] = useState(false);
+  const [chatAnalysisData, setChatAnalysisData] = useState<any>(null);
+  const [chatAnalysisLoading, setChatAnalysisLoading] = useState(false);
 
   // Fetch monitoring sessions
   const { data: monitoringSessions, isLoading } = useQuery<MonitoringSession[]>({
@@ -139,6 +146,54 @@ export default function Monitoring() {
 
   const handleStartTranscription = (sessionId: number) => {
     transcribingMutation.mutate(sessionId);
+  };
+
+  // Handle transcription for voice sessions
+  const handleTranscription = async (sessionId: number) => {
+    setTranscriptionLoading(true);
+    try {
+      const response = await apiRequest('POST', `/api/monitoring-sessions/${sessionId}/transcribe`);
+      const result = await response.json();
+      setTranscriptionData(result);
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Sucesso",
+        description: "Transcrição processada com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao processar transcrição",
+        variant: "destructive",
+      });
+    } finally {
+      setTranscriptionLoading(false);
+    }
+  };
+
+  // Handle chat analysis for chat/email sessions
+  const handleChatAnalysis = async (sessionId: number) => {
+    setChatAnalysisLoading(true);
+    try {
+      const response = await apiRequest('POST', `/api/analyze-chat`, {
+        sessionId: sessionId
+      });
+      const result = await response.json();
+      setChatAnalysisData(result);
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      toast({
+        title: "Sucesso",
+        description: "Análise de texto processada com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao processar análise",
+        variant: "destructive",
+      });
+    } finally {
+      setChatAnalysisLoading(false);
+    }
   };
 
   // Filter sessions
@@ -243,6 +298,95 @@ export default function Monitoring() {
                     </div>
                   )}
                   
+                  {/* Transcription Section for Voice */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-blue-800 flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Transcrição do Áudio
+                      </h4>
+                      {!transcriptionData && selectedSessionData.audioUrl && (
+                        <Button
+                          onClick={() => handleTranscription(selectedSession)}
+                          disabled={transcriptionLoading}
+                          variant="outline"
+                          size="sm"
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          {transcriptionLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Processando...
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="h-4 w-4 mr-2" />
+                              Transcrever Áudio
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {transcriptionLoading && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-blue-700">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm">Processando transcrição via AssemblyAI...</span>
+                        </div>
+                        <Progress value={transcriptionProgress[selectedSession] || 0} className="w-full" />
+                        <p className="text-xs text-blue-600">
+                          Aguarde enquanto processamos o áudio. Isso pode levar alguns minutos.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {transcriptionData && (
+                      <div className="space-y-4">
+                        <div className="bg-white p-4 rounded border">
+                          <h5 className="font-medium mb-2 text-gray-800">Texto Transcrito:</h5>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {transcriptionData.text || 'Nenhum texto foi detectado no áudio.'}
+                          </p>
+                        </div>
+                        
+                        {transcriptionData.segments && transcriptionData.segments.length > 0 && (
+                          <div className="bg-white p-4 rounded border">
+                            <h5 className="font-medium mb-3 text-gray-800">Conversa por Interlocutor:</h5>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {transcriptionData.segments.map((segment: any, index: number) => (
+                                <div key={index} className={`p-3 rounded-lg ${
+                                  segment.speaker === 'agent' 
+                                    ? 'bg-green-50 border-l-4 border-green-400' 
+                                    : 'bg-blue-50 border-l-4 border-blue-400'
+                                }`}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className={`text-xs font-medium ${
+                                      segment.speaker === 'agent' ? 'text-green-700' : 'text-blue-700'
+                                    }`}>
+                                      {segment.speaker === 'agent' ? 'Agente' : 'Cliente'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {Math.floor(segment.startTime / 60)}:{String(Math.floor(segment.startTime % 60)).padStart(2, '0')}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{segment.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!transcriptionData && !transcriptionLoading && (
+                      <div className="text-center py-6 text-gray-500">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Clique em "Transcrever Áudio" para processar o conteúdo</p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* AI Analysis Display */}
                   {selectedSessionData.aiAnalysis && (
                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
@@ -281,28 +425,138 @@ export default function Monitoring() {
                 </div>
               ) : (
                 // Chat/Email channel content
-                <div className="min-h-[400px] h-auto overflow-y-auto border rounded-lg p-4">
-                  {selectedSessionData.status === 'completed' && (selectedSessionData.transcription as any)?.conversationFlow?.length ? (
-                    <ConversationFlow
-                      messages={(selectedSessionData.transcription as any).conversationFlow}
-                      channelType={selectedSessionData.channelType}
-                      speakerAnalysis={(selectedSessionData.transcription as any).speakerAnalysis}
-                    />
-                  ) : selectedSessionData.status === 'completed' ? (
-                    <div className="space-y-4 p-4">
-                      <h4 className="font-medium text-green-600">Análise Concluída</h4>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          A análise foi processada com sucesso. Use a ficha de monitoria abaixo para avaliar o atendimento.
+                <div className="space-y-6">
+                  {/* Text Analysis Section for Chat/Email */}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-green-800 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5" />
+                        Análise de Texto
+                      </h4>
+                      {!chatAnalysisData && selectedSessionData.content && (
+                        <Button
+                          onClick={() => handleChatAnalysis(selectedSession)}
+                          disabled={chatAnalysisLoading}
+                          variant="outline"
+                          size="sm"
+                          className="bg-green-600 text-white hover:bg-green-700"
+                        >
+                          {chatAnalysisLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Analisando...
+                            </>
+                          ) : (
+                            <>
+                              <Brain className="h-4 w-4 mr-2" />
+                              Analisar Conversa
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {chatAnalysisLoading && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-green-700">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm">Processando análise de texto...</span>
+                        </div>
+                        <Progress value={50} className="w-full" />
+                        <p className="text-xs text-green-600">
+                          Analisando conversa para detectar sentimento, problemas e oportunidades.
                         </p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                      <Brain className="h-12 w-12 mb-2 opacity-50" />
-                      <p className="text-center">Aguardando processamento do conteúdo</p>
-                    </div>
-                  )}
+                    )}
+                    
+                    {chatAnalysisData && (
+                      <div className="space-y-4">
+                        {/* Analysis Metrics */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="p-3 bg-white rounded border">
+                            <p className={`font-bold text-lg text-center ${
+                              chatAnalysisData.analysis?.overallSentiment === 'positive' ? 'text-green-600' :
+                              chatAnalysisData.analysis?.overallSentiment === 'negative' ? 'text-red-600' : 'text-yellow-600'
+                            }`}>
+                              {chatAnalysisData.analysis?.overallSentiment === 'positive' ? 'Positivo' :
+                               chatAnalysisData.analysis?.overallSentiment === 'negative' ? 'Negativo' : 'Neutro'}
+                            </p>
+                            <p className="text-xs text-gray-700 text-center font-medium">Sentimento Geral</p>
+                          </div>
+                          <div className="p-3 bg-white rounded border">
+                            <p className="text-blue-600 font-bold text-lg text-center">
+                              {chatAnalysisData.metrics?.totalMessages || 0}
+                            </p>
+                            <p className="text-xs text-blue-700 text-center font-medium">Total Mensagens</p>
+                          </div>
+                          <div className="p-3 bg-white rounded border">
+                            <p className="text-amber-600 font-bold text-lg text-center">
+                              {Math.round(chatAnalysisData.metrics?.averageResponseTime || 0)}min
+                            </p>
+                            <p className="text-xs text-amber-700 text-center font-medium">Tempo Resposta</p>
+                          </div>
+                          <div className="p-3 bg-white rounded border">
+                            <p className={`font-bold text-lg text-center ${
+                              chatAnalysisData.analysis?.requiresEscalation ? 'text-red-600' : 'text-green-600'
+                            }`}>
+                              {chatAnalysisData.analysis?.requiresEscalation ? 'Sim' : 'Não'}
+                            </p>
+                            <p className="text-xs text-gray-700 text-center font-medium">Precisa Escalação</p>
+                          </div>
+                        </div>
+                        
+                        {/* Critical Issues */}
+                        {chatAnalysisData.analysis?.criticalIssues?.length > 0 && (
+                          <div className="bg-red-50 p-4 rounded border border-red-200">
+                            <h5 className="font-medium mb-2 text-red-800 flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              Problemas Críticos Detectados:
+                            </h5>
+                            <ul className="text-sm text-red-700 space-y-1">
+                              {chatAnalysisData.analysis.criticalIssues.map((issue: string, index: number) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-red-500 mt-1">•</span>
+                                  {issue}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!chatAnalysisData && !chatAnalysisLoading && (
+                      <div className="text-center py-6 text-gray-500">
+                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Clique em "Analisar Conversa" para processar o texto</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conversation Display */}
+                  <div className="min-h-[300px] border rounded-lg p-4">
+                    {selectedSessionData.status === 'completed' && (selectedSessionData.transcription as any)?.conversationFlow?.length ? (
+                      <ConversationFlow
+                        messages={(selectedSessionData.transcription as any).conversationFlow}
+                        channelType={selectedSessionData.channelType}
+                        speakerAnalysis={(selectedSessionData.transcription as any).speakerAnalysis}
+                      />
+                    ) : selectedSessionData.status === 'completed' ? (
+                      <div className="space-y-4 p-4">
+                        <h4 className="font-medium text-green-600">Análise Concluída</h4>
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <p className="text-sm text-green-800">
+                            A análise foi processada com sucesso. Use a ficha de monitoria abaixo para avaliar o atendimento.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-48 text-gray-500">
+                        <Brain className="h-12 w-12 mb-2 opacity-50" />
+                        <p className="text-center">Aguardando processamento do conteúdo</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
