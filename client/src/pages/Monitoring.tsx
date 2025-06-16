@@ -28,6 +28,10 @@ export default function Monitoring() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [chatContent, setChatContent] = useState("");
   const [emailContent, setEmailContent] = useState("");
+  const [chatFile, setChatFile] = useState<File | null>(null);
+  const [emailFile, setEmailFile] = useState<File | null>(null);
+  const [chatInputMode, setChatInputMode] = useState<'manual' | 'file'>('manual');
+  const [emailInputMode, setEmailInputMode] = useState<'manual' | 'file'>('manual');
   const [transcriptionProgress, setTranscriptionProgress] = useState<{[key: number]: number}>({});
   const [processingStatuses, setProcessingStatuses] = useState<{[key: number]: string}>({});
   const [formData, setFormData] = useState({
@@ -73,6 +77,10 @@ export default function Monitoring() {
       setAudioFile(null);
       setChatContent("");
       setEmailContent("");
+      setChatFile(null);
+      setEmailFile(null);
+      setChatInputMode('manual');
+      setEmailInputMode('manual');
       setFormData({ agentId: "", campaignId: "", channelType: "voice" });
       
       // Automatically select the new session to show transcription progress
@@ -302,6 +310,62 @@ export default function Monitoring() {
         toast({
           title: "Erro",
           description: "Por favor, selecione um arquivo de áudio válido.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleChatFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        setChatFile(file);
+        
+        // Read file content and populate chat content
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result as string;
+          setChatContent(content);
+        };
+        reader.readAsText(file);
+        
+        toast({
+          title: "Arquivo carregado",
+          description: `Arquivo ${file.name} carregado com sucesso.`,
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione um arquivo TXT válido.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleEmailFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        setEmailFile(file);
+        
+        // Read file content and populate email content
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result as string;
+          setEmailContent(content);
+        };
+        reader.readAsText(file);
+        
+        toast({
+          title: "Arquivo carregado",
+          description: `Arquivo ${file.name} carregado com sucesso.`,
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione um arquivo TXT válido.",
           variant: "destructive",
         });
       }
@@ -969,23 +1033,69 @@ export default function Monitoring() {
             )}
 
             {formData.channelType === 'chat' && (
-              <div>
+              <div className="space-y-4">
                 <Label htmlFor="chat">Conversa de Chat *</Label>
-                <textarea
-                  id="chat"
-                  value={chatContent}
-                  onChange={(e) => setChatContent(e.target.value)}
-                  placeholder="Cole aqui a conversa do chat...
+                
+                {/* Toggle between manual input and file upload */}
+                <div className="flex items-center space-x-4 mb-3">
+                  <Button
+                    type="button"
+                    variant={chatInputMode === 'manual' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setChatInputMode('manual')}
+                  >
+                    ✏️ Digitar Manualmente
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={chatInputMode === 'file' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setChatInputMode('file')}
+                  >
+                    📁 Upload de Arquivo TXT
+                  </Button>
+                </div>
+
+                {chatInputMode === 'manual' ? (
+                  <div>
+                    <textarea
+                      id="chat"
+                      value={chatContent}
+                      onChange={(e) => setChatContent(e.target.value)}
+                      placeholder="Cole aqui a conversa do chat...
 
 Exemplo:
 [10:30] Cliente: Olá, preciso de ajuda com meu pedido
 [10:31] Agente: Olá! Claro, vou te ajudar. Qual o número do seu pedido?
 [10:32] Cliente: É o pedido #12345"
-                  className="w-full h-40 p-3 border rounded-md resize-none"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Cole a conversa completa incluindo horários e identificação de quem está falando
-                </p>
+                      className="w-full h-40 p-3 border rounded-md resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cole a conversa completa incluindo horários e identificação de quem está falando
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="file"
+                        accept=".txt"
+                        onChange={handleChatFileChange}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      <Upload className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Faça upload de um arquivo TXT contendo a conversa completa do chat
+                    </p>
+                    {chatFile && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ Arquivo selecionado: {chatFile.name} ({(chatFile.size / 1024).toFixed(1)}KB)
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {chatContent.trim() && (
                   <p className="text-sm text-green-600 mt-1">
                     ✓ Conversa inserida ({chatContent.length} caracteres)
@@ -995,13 +1105,36 @@ Exemplo:
             )}
 
             {formData.channelType === 'email' && (
-              <div>
+              <div className="space-y-4">
                 <Label htmlFor="email">Thread de E-mail *</Label>
-                <textarea
-                  id="email"
-                  value={emailContent}
-                  onChange={(e) => setEmailContent(e.target.value)}
-                  placeholder="Cole aqui o thread completo de e-mails...
+                
+                {/* Toggle between manual input and file upload */}
+                <div className="flex items-center space-x-4 mb-3">
+                  <Button
+                    type="button"
+                    variant={emailInputMode === 'manual' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEmailInputMode('manual')}
+                  >
+                    ✏️ Digitar Manualmente
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={emailInputMode === 'file' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEmailInputMode('file')}
+                  >
+                    📁 Upload de Arquivo TXT
+                  </Button>
+                </div>
+
+                {emailInputMode === 'manual' ? (
+                  <div>
+                    <textarea
+                      id="email"
+                      value={emailContent}
+                      onChange={(e) => setEmailContent(e.target.value)}
+                      placeholder="Cole aqui o thread completo de e-mails...
 
 Exemplo:
 De: cliente@email.com
@@ -1021,11 +1154,34 @@ Data: 15/06/2025 11:15
 
 Olá,
 Obrigado pelo contato..."
-                  className="w-full h-48 p-3 border rounded-md resize-none"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Inclua cabeçalhos completos (De, Para, Assunto, Data) e todo o conteúdo das mensagens
-                </p>
+                      className="w-full h-48 p-3 border rounded-md resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Inclua cabeçalhos completos (De, Para, Assunto, Data) e todo o conteúdo das mensagens
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="file"
+                        accept=".txt"
+                        onChange={handleEmailFileChange}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                      />
+                      <Upload className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Faça upload de um arquivo TXT contendo o thread completo de e-mails
+                    </p>
+                    {emailFile && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ Arquivo selecionado: {emailFile.name} ({(emailFile.size / 1024).toFixed(1)}KB)
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {emailContent.trim() && (
                   <p className="text-sm text-green-600 mt-1">
                     ✓ E-mail inserido ({emailContent.length} caracteres)
