@@ -1,291 +1,184 @@
-import OpenAI from "openai";
-import fs from "fs";
-import path from "path";
+import OpenAI from 'openai';
+import fs from 'fs';
+import path from 'path';
 
-// Initialize OpenAI with API key
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY!
 });
 
-export async function transcribeAudioWithOpenAI(audioFilePath: string): Promise<{
+export interface OpenAITranscriptionResult {
   text: string;
   segments: Array<{
-    start: number;
-    end: number;
+    id: string;
     speaker: string;
     text: string;
-    criticalWords: string[];
+    startTime: number;
+    endTime: number;
+    confidence: number;
   }>;
   duration: number;
   confidence: number;
-  transcription_engine: string;
-  analysis: {
-    sentiment: number;
-    criticalWords: string[];
-    topics: string[];
-    recommendations: string[];
-  };
-}> {
-  try {
-    console.log(`Starting OpenAI Whisper transcription for: ${audioFilePath}`);
-    
-    // Check if file exists
-    if (!fs.existsSync(audioFilePath)) {
-      throw new Error(`Audio file not found: ${audioFilePath}`);
-    }
-
-    // Get file stats
-    const stats = fs.statSync(audioFilePath);
-    console.log(`File size: ${stats.size} bytes`);
-
-    // Create a read stream for the audio file
-    const audioStream = fs.createReadStream(audioFilePath);
-
-    // Transcribe using OpenAI Whisper API
-    // the newest OpenAI model is "whisper-1" which provides high-quality transcription
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioStream,
-      model: "whisper-1",
-      language: "pt", // Portuguese
-      response_format: "verbose_json",
-      timestamp_granularities: ["segment"]
-    });
-
-    console.log("OpenAI Whisper transcription completed successfully");
-    console.log(`Transcribed text length: ${transcription.text.length} characters`);
-    console.log(`Number of segments: ${transcription.segments?.length || 0}`);
-
-    // Process the transcription into our format
-    const processedSegments = processOpenAISegments(transcription);
-    
-    // Calculate duration
-    const duration = transcription.duration || calculateDurationFromSegments(processedSegments);
-
-    // Detect critical words
-    const criticalWords = detectCriticalWords(transcription.text);
-
-    // Analyze sentiment and generate recommendations
-    const analysis = analyzeTranscriptionContent(transcription.text, criticalWords);
-
-    return {
-      text: transcription.text,
-      segments: processedSegments,
-      duration: duration,
-      confidence: 0.95, // OpenAI Whisper typically has high confidence
-      transcription_engine: "openai_whisper",
-      analysis: analysis
-    };
-
-  } catch (error: any) {
-    console.error("Error in OpenAI Whisper transcription:", error);
-    throw new Error(`Failed to transcribe with OpenAI: ${error.message}`);
-  }
+  audioUrl?: string;
 }
 
-function processOpenAISegments(transcription: any): Array<{
-  start: number;
-  end: number;
-  speaker: string;
-  text: string;
-  criticalWords: string[];
-}> {
-  const segments = [];
-  
-  if (transcription.segments && transcription.segments.length > 0) {
-    for (let i = 0; i < transcription.segments.length; i++) {
-      const segment = transcription.segments[i];
+export class OpenAITranscriber {
+  /**
+   * Transcreve áudio usando OpenAI Whisper API
+   */
+  static async transcribeAudio(audioFilePath: string): Promise<OpenAITranscriptionResult> {
+    try {
+      if (!fs.existsSync(audioFilePath)) {
+        throw new Error('Arquivo de áudio não encontrado');
+      }
+
+      const audioFile = fs.createReadStream(audioFilePath);
       
-      // Detect speaker based on content analysis
-      const speaker = detectSpeaker(segment.text, i);
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: 'pt',
+        response_format: 'verbose_json',
+        timestamp_granularities: ['segment']
+      });
+
+      // Processar transcrição do OpenAI
+      const processedResult = this.processOpenAITranscription(transcription, audioFilePath);
       
-      // Detect critical words in this segment
-      const criticalWords = detectCriticalWords(segment.text);
-      
-      segments.push({
-        start: segment.start,
-        end: segment.end,
-        speaker: speaker,
-        text: segment.text,
-        criticalWords: criticalWords
+      return processedResult;
+    } catch (error: any) {
+      console.error('Erro na transcrição OpenAI:', error);
+      throw new Error(`Erro na transcrição: ${error?.message || 'Erro desconhecido'}`);
+    }
+  }
+
+  /**
+   * Processa resultado da transcrição OpenAI
+   */
+  private static processOpenAITranscription(transcription: any, audioFilePath: string): OpenAITranscriptionResult {
+    const segments = [];
+    
+    if (transcription.segments && transcription.segments.length > 0) {
+      transcription.segments.forEach((segment: any, index: number) => {
+        // Determinar speaker baseado no padrão de alternância
+        const speaker = index % 2 === 0 ? 'agent' : 'client';
+        
+        segments.push({
+          id: `segment_${index}`,
+          speaker: speaker,
+          text: segment.text.trim(),
+          startTime: segment.start,
+          endTime: segment.end,
+          confidence: 0.9 // OpenAI não fornece confidence por segmento
+        });
       });
     }
-  } else {
-    // If no segments, create one segment with the full text
-    segments.push({
-      start: 0,
-      end: transcription.duration || 60,
-      speaker: "Desconhecido",
-      text: transcription.text,
-      criticalWords: detectCriticalWords(transcription.text)
-    });
+
+    return {
+      text: transcription.text || '',
+      segments: segments,
+      duration: transcription.duration || 0,
+      confidence: 0.9,
+      audioUrl: audioFilePath
+    };
   }
 
-  return segments;
-}
-
-function detectSpeaker(text: string, index: number): string {
-  const lowerText = text.toLowerCase();
-  
-  // Keywords that suggest customer service agent
-  const agentKeywords = [
-    'bom dia', 'boa tarde', 'boa noite',
-    'como posso ajudar', 'posso ajudá',
-    'obrigad', 'de nada',
-    'vou verificar', 'vou consultar',
-    'posso oferecer', 'vamos resolver',
-    'sinto muito', 'peço desculpas'
-  ];
-  
-  // Keywords that suggest customer
-  const customerKeywords = [
-    'estou ligando', 'preciso de',
-    'tenho um problema', 'gostaria de',
-    'recebi', 'comprei',
-    'não funciona', 'está quebrado',
-    'quero reclamar', 'estou insatisfeit'
-  ];
-  
-  // Check for agent keywords
-  for (const keyword of agentKeywords) {
-    if (lowerText.includes(keyword)) {
-      return 'Atendente';
-    }
-  }
-  
-  // Keywords that suggest customer
-  const customerKeywords = [
-    'estou ligando', 'preciso de',
-    'tenho um problema', 'gostaria de',
-    'recebi', 'comprei',
-    'não funciona', 'está quebrado',
-    'quero reclamar', 'estou insatisfeit'
-  ];
-  
-  // Check for customer keywords
-  for (const keyword of customerKeywords) {
-    if (lowerText.includes(keyword)) {
-      return 'Cliente';
-    }
-  }
-  
-  // Alternate speakers if no clear indication
-  return index % 2 === 0 ? 'Atendente' : 'Cliente';
-}
-
-function detectCriticalWords(text: string): string[] {
-  const criticalKeywords = [
-    'problema', 'problemas',
-    'danificado', 'quebrado', 'defeito', 'defeituoso',
-    'reclamação', 'reclamar',
-    'insatisfeito', 'insatisfeita', 'insatisfação',
-    'cancelar', 'cancelamento',
-    'reembolso', 'devolver', 'devolução',
-    'urgente', 'emergência',
-    'transtorno', 'inconveniente',
-    'atrasado', 'atraso',
-    'errado', 'incorreto',
-    'não funciona', 'não está funcionando'
-  ];
-  
-  const foundWords = [];
-  const lowerText = text.toLowerCase();
-  
-  for (const keyword of criticalKeywords) {
-    if (lowerText.includes(keyword)) {
-      foundWords.push(keyword);
-    }
-  }
-  
-  return foundWords;
-}
-
-function calculateDurationFromSegments(segments: any[]): number {
-  if (segments.length === 0) return 0;
-  
-  const lastSegment = segments[segments.length - 1];
-  return lastSegment.end || 60;
-}
-
-function analyzeTranscriptionContent(text: string, criticalWords: string[]): {
-  sentiment: number;
-  criticalWords: string[];
-  topics: string[];
-  recommendations: string[];
-} {
-  const lowerText = text.toLowerCase();
-  
-  // Sentiment analysis based on keywords
-  const positiveWords = ['obrigad', 'excelente', 'ótimo', 'perfeito', 'satisfeit', 'bom'];
-  const negativeWords = ['problema', 'ruim', 'péssimo', 'terrível', 'insatisfeit', 'reclamação'];
-  
-  let sentimentScore = 0.5; // neutral
-  
-  for (const word of positiveWords) {
-    if (lowerText.includes(word)) sentimentScore += 0.1;
-  }
-  
-  for (const word of negativeWords) {
-    if (lowerText.includes(word)) sentimentScore -= 0.1;
-  }
-  
-  sentimentScore = Math.max(0, Math.min(1, sentimentScore));
-  
-  // Extract topics
-  const topics = extractTopics(text);
-  
-  // Generate recommendations
-  const recommendations = generateRecommendations(sentimentScore, criticalWords.length);
-  
-  return {
-    sentiment: sentimentScore,
-    criticalWords: criticalWords,
-    topics: topics,
-    recommendations: recommendations
-  };
-}
-
-function extractTopics(text: string): string[] {
-  const topics = [];
-  const lowerText = text.toLowerCase();
-  
-  const topicKeywords = {
-    'produto': ['produto', 'item', 'mercadoria'],
-    'entrega': ['entrega', 'entregar', 'envio', 'correios'],
-    'pagamento': ['pagamento', 'cobrança', 'fatura', 'cartão'],
-    'atendimento': ['atendimento', 'atender', 'suporte'],
-    'devolução': ['devolução', 'devolver', 'trocar', 'troca'],
-    'garantia': ['garantia', 'defeito', 'conserto']
-  };
-  
-  for (const [topic, keywords] of Object.entries(topicKeywords)) {
-    for (const keyword of keywords) {
-      if (lowerText.includes(keyword)) {
-        topics.push(topic);
-        break;
+  /**
+   * Analisa transcrição para insights de negócio
+   */
+  static analyzeTranscription(transcriptionResult: OpenAITranscriptionResult) {
+    const text = transcriptionResult.text.toLowerCase();
+    const segments = transcriptionResult.segments;
+    
+    // Análise de sentimento básica
+    const positiveWords = ['obrigado', 'perfeito', 'excelente', 'ótimo', 'satisfeito', 'resolvido'];
+    const negativeWords = ['problema', 'ruim', 'péssimo', 'insatisfeito', 'reclamação', 'cancelar'];
+    
+    const positiveCount = positiveWords.filter(word => text.includes(word)).length;
+    const negativeCount = negativeWords.filter(word => text.includes(word)).length;
+    
+    let sentiment = 0;
+    if (positiveCount > negativeCount) sentiment = 1;
+    else if (negativeCount > positiveCount) sentiment = -1;
+    
+    // Tópicos principais
+    const keyTopics = [];
+    if (text.includes('pedido')) keyTopics.push('Pedidos');
+    if (text.includes('pagamento')) keyTopics.push('Pagamento');
+    if (text.includes('entrega')) keyTopics.push('Entrega');
+    if (text.includes('produto')) keyTopics.push('Produto');
+    if (text.includes('suporte')) keyTopics.push('Suporte Técnico');
+    
+    // Momentos críticos
+    const criticalMoments = [];
+    segments.forEach((segment, index) => {
+      const segmentText = segment.text.toLowerCase();
+      if (negativeWords.some(word => segmentText.includes(word))) {
+        criticalMoments.push({
+          timestamp: segment.startTime,
+          description: `Possível insatisfação detectada: "${segment.text}"`,
+          severity: 'medium' as const
+        });
       }
-    }
+    });
+    
+    // Score geral
+    const score = Math.max(0, Math.min(100, 70 + (sentiment * 15) + (positiveCount * 5) - (negativeCount * 10)));
+    
+    return {
+      sentiment,
+      keyTopics,
+      criticalMoments,
+      recommendations: this.generateRecommendations(sentiment, negativeCount, keyTopics),
+      score,
+      silenceAnalysis: {
+        totalSilenceTime: 0,
+        silencePeriods: [],
+        averageSilenceDuration: 0
+      },
+      criticalWordsFound: negativeWords.filter(word => text.includes(word)).map(word => ({
+        word,
+        count: (text.match(new RegExp(word, 'g')) || []).length,
+        timestamps: segments
+          .filter(s => s.text.toLowerCase().includes(word))
+          .map(s => s.startTime)
+      })),
+      responseTimeAnalysis: {
+        averageResponseTime: segments.length > 1 ? 
+          segments.slice(1).reduce((acc, seg, i) => acc + (seg.startTime - segments[i].endTime), 0) / (segments.length - 1) : 0,
+        maxResponseTime: 0,
+        responseTimesBySegment: []
+      }
+    };
   }
-  
-  return topics;
-}
 
-function generateRecommendations(sentiment: number, criticalCount: number): string[] {
-  const recommendations = [];
-  
-  if (sentiment < 0.4) {
-    recommendations.push("Melhorar treinamento da equipe de atendimento");
-    recommendations.push("Implementar follow-up proativo com clientes");
+  /**
+   * Gera recomendações baseadas na análise
+   */
+  private static generateRecommendations(sentiment: number, negativeCount: number, keyTopics: string[]): string[] {
+    const recommendations = [];
+    
+    if (sentiment < 0) {
+      recommendations.push('Melhorar o tom e abordagem no atendimento');
+      recommendations.push('Implementar treinamento adicional em resolução de conflitos');
+    }
+    
+    if (negativeCount > 2) {
+      recommendations.push('Revisar processos para reduzir pontos de atrito');
+      recommendations.push('Considerar escalação para supervisor');
+    }
+    
+    if (keyTopics.includes('Pagamento')) {
+      recommendations.push('Verificar processos de cobrança e faturamento');
+    }
+    
+    if (keyTopics.includes('Entrega')) {
+      recommendations.push('Revisar logística e prazos de entrega');
+    }
+    
+    if (sentiment >= 0) {
+      recommendations.push('Manter padrão de qualidade no atendimento');
+    }
+    
+    return recommendations;
   }
-  
-  if (criticalCount > 2) {
-    recommendations.push("Revisar processos de qualidade");
-    recommendations.push("Aumentar monitoramento de produtos/serviços");
-  }
-  
-  if (sentiment > 0.7) {
-    recommendations.push("Documentar boas práticas do atendimento");
-    recommendations.push("Reconhecer performance do agente");
-  }
-  
-  return recommendations;
 }

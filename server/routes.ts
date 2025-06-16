@@ -486,8 +486,12 @@ export function registerRoutes(app: Express): Server {
       const audioPath = `uploads/${session.audioUrl.split('/').pop()}`;
       
       try {
-        const transcriptionResult = await AudioTranscription.transcribeAudio(audioPath);
-        const aiAnalysis = AudioTranscription.analyzeTranscription(transcriptionResult);
+        // Import OpenAI transcription service
+        const { OpenAITranscriber } = await import('./openai-transcription');
+        
+        // Use OpenAI Whisper for real transcription
+        const transcriptionResult = await OpenAITranscriber.transcribeAudio(audioPath);
+        const aiAnalysis = OpenAITranscriber.analyzeTranscription(transcriptionResult);
 
         // Atualizar sessão com resultados
         await storage.updateMonitoringSession(sessionId, {
