@@ -1110,75 +1110,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Análise melhorada do chat que detecta problemas reais
       const improvedAnalysis = ImprovedChatAnalyzer.analyzeChatContent(session.chatContent);
       
-      // Prepare transcription result
+      // Log detailed analysis results
+      console.log('Improved Analysis Results:', {
+        overallSentiment: improvedAnalysis.analysis.overallSentiment,
+        customerSatisfaction: improvedAnalysis.analysis.customerSatisfaction,
+        agentPerformance: improvedAnalysis.analysis.agentPerformance,
+        maxResponseTime: improvedAnalysis.metrics.maxResponseTime,
+        totalSwearWords: improvedAnalysis.metrics.totalSwearWords,
+        criticalIssues: improvedAnalysis.analysis.criticalIssues,
+        requiresEscalation: improvedAnalysis.analysis.requiresEscalation
+      });
+
+      // Prepare transcription result with real analysis data
       const transcriptionResult = {
-        conversationFlow: manualAnalysis.conversationFlow.map((msg, index) => ({
-          timestamp: msg.timestamp,
+        conversationFlow: improvedAnalysis.conversationFlow.map((msg, index) => ({
+          timestamp: msg.realTime || msg.timestamp,
           speaker: msg.speaker,
           message: msg.text,
-          sentiment: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
-                    manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
-          responseTime: index > 0 ? 45 : undefined
+          sentiment: msg.sentiment === 'positive' ? 0.8 : 
+                    msg.sentiment === 'negative' ? 0.1 : 0.5,
+          responseTime: improvedAnalysis.timeline.responseDelays[index]?.delay || 0,
+          hasSwearing: msg.hasSwearing,
+          hasUrgency: msg.hasUrgency
         })),
         speakerAnalysis: {
           agent: {
-            messageCount: manualAnalysis.metrics.agentMessages,
-            avgResponseTime: manualAnalysis.metrics.responseTime,
-            sentimentScore: 0.7,
-            professionalismScore: manualAnalysis.summary.agentPerformance === 'excellent' ? 9 :
-                                 manualAnalysis.summary.agentPerformance === 'good' ? 7 :
-                                 manualAnalysis.summary.agentPerformance === 'poor' ? 4 : 6
+            messageCount: improvedAnalysis.metrics.agentMessages,
+            avgResponseTime: improvedAnalysis.metrics.averageResponseTime,
+            maxResponseTime: improvedAnalysis.metrics.maxResponseTime,
+            sentimentScore: improvedAnalysis.analysis.agentPerformance === 'excellent' ? 0.9 :
+                           improvedAnalysis.analysis.agentPerformance === 'good' ? 0.7 :
+                           improvedAnalysis.analysis.agentPerformance === 'average' ? 0.5 :
+                           improvedAnalysis.analysis.agentPerformance === 'poor' ? 0.3 : 0.1,
+            professionalismScore: improvedAnalysis.analysis.serviceQuality === 'excellent' ? 0.9 :
+                                 improvedAnalysis.analysis.serviceQuality === 'good' ? 0.7 :
+                                 improvedAnalysis.analysis.serviceQuality === 'average' ? 0.5 :
+                                 improvedAnalysis.analysis.serviceQuality === 'poor' ? 0.3 : 0.1,
+            criticalIssues: improvedAnalysis.analysis.criticalIssues
           },
           client: {
-            messageCount: manualAnalysis.metrics.clientMessages,
-            sentimentScore: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
-                           manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
-            satisfactionLevel: manualAnalysis.summary.customerSatisfaction === 'high' ? 9 :
-                              manualAnalysis.summary.customerSatisfaction === 'low' ? 4 : 6
+            messageCount: improvedAnalysis.metrics.clientMessages,
+            sentimentScore: improvedAnalysis.analysis.overallSentiment === 'positive' ? 0.8 : 
+                           improvedAnalysis.analysis.overallSentiment === 'negative' ? 0.1 : 0.5,
+            satisfactionLevel: improvedAnalysis.analysis.customerSatisfaction === 'high' ? 9 :
+                              improvedAnalysis.analysis.customerSatisfaction === 'medium' ? 6 :
+                              improvedAnalysis.analysis.customerSatisfaction === 'low' ? 3 : 1,
+            swearWords: improvedAnalysis.metrics.totalSwearWords,
+            escalationLevel: improvedAnalysis.metrics.escalationLevel,
+            requiresEscalation: improvedAnalysis.analysis.requiresEscalation
           }
         },
-        segments: manualAnalysis.conversationFlow.map((msg, index) => ({
-          id: `chat_${index}`,
+        segments: improvedAnalysis.conversationFlow.map((msg, index) => ({
+          id: `improved_${index}`,
           speaker: msg.speaker,
           text: msg.text,
           startTime: index * 30,
           endTime: (index + 1) * 30,
-          confidence: 1.0,
-          criticalWords: msg.hasProblem ? ['problema'] : msg.hasSolution ? ['solução'] : []
+          confidence: 0.95,
+          criticalWords: msg.hasSwearing ? ['linguagem_ofensiva'] : 
+                        msg.hasUrgency ? ['urgencia'] : []
         })),
-        totalDuration: manualAnalysis.metrics.totalMessages * 30
+        totalDuration: improvedAnalysis.timeline.conversationDuration
       };
       
       const aiAnalysis = {
-        score: manualAnalysis.summary.agentPerformance === 'excellent' ? 9 :
-               manualAnalysis.summary.agentPerformance === 'good' ? 7 :
-               manualAnalysis.summary.agentPerformance === 'poor' ? 4 : 6,
-        engine: 'manual_chat_analysis',
-        keyTopics: [...manualAnalysis.keywords.problems, ...manualAnalysis.keywords.solutions],
-        sentiment: manualAnalysis.summary.sentiment === 'positive' ? 0.8 : 
-                  manualAnalysis.summary.sentiment === 'negative' ? 0.3 : 0.6,
-        criticalMoments: [{
-          timestamp: "00:30",
-          type: manualAnalysis.summary.resolution === 'resolved' ? 'excellent_response' : 'missed_opportunity',
-          description: `Resolução: ${manualAnalysis.summary.resolution}`,
-          severity: manualAnalysis.summary.customerSatisfaction === 'low' ? 'high' : 'low',
-          speaker: 'agent'
-        }],
-        recommendations: [
-          `Satisfação do cliente: ${manualAnalysis.summary.customerSatisfaction}`,
-          `Performance do agente: ${manualAnalysis.summary.agentPerformance}`,
-          `Status da resolução: ${manualAnalysis.summary.resolution}`
+        score: improvedAnalysis.analysis.serviceQuality === 'excellent' ? 9 :
+               improvedAnalysis.analysis.serviceQuality === 'good' ? 7 :
+               improvedAnalysis.analysis.serviceQuality === 'average' ? 5 :
+               improvedAnalysis.analysis.serviceQuality === 'poor' ? 2 : 1,
+        engine: 'improved_chat_analysis_v2',
+        keyTopics: [
+          ...improvedAnalysis.analysis.criticalIssues,
+          `Satisfação: ${improvedAnalysis.analysis.customerSatisfaction}`,
+          `Performance: ${improvedAnalysis.analysis.agentPerformance}`,
+          `Tempo máximo resposta: ${improvedAnalysis.metrics.maxResponseTime}min`
         ],
-        responseTime: manualAnalysis.metrics.responseTime,
+        sentiment: improvedAnalysis.analysis.overallSentiment === 'positive' ? 0.8 : 
+                  improvedAnalysis.analysis.overallSentiment === 'negative' ? 0.1 : 0.5,
+        criticalMoments: improvedAnalysis.analysis.criticalIssues.map((issue, index) => ({
+          timestamp: `${8 + Math.floor(index * 20 / 60)}:${43 + (index * 20) % 60}`,
+          type: improvedAnalysis.analysis.requiresEscalation ? 'critical_issue' : 'attention_needed',
+          description: issue,
+          severity: improvedAnalysis.metrics.problemSeverity,
+          speaker: 'system'
+        })),
+        recommendations: [
+          ...improvedAnalysis.analysis.criticalIssues,
+          improvedAnalysis.analysis.requiresEscalation ? 
+            '🚨 ESCALAÇÃO NECESSÁRIA - Cliente extremamente insatisfeito' : 
+            'Atendimento precisa de melhorias',
+          `Palavrões detectados: ${improvedAnalysis.metrics.totalSwearWords}`,
+          `Tempo resposta máximo: ${improvedAnalysis.metrics.maxResponseTime} minutos`,
+          `Nível de escalação: ${improvedAnalysis.metrics.escalationLevel}/10`
+        ],
+        responseTime: improvedAnalysis.metrics.averageResponseTime,
         conversationFlow: transcriptionResult.conversationFlow,
         speakerAnalysis: transcriptionResult.speakerAnalysis
       };
       
-      // Update session with analysis results
+      // Update session with detailed analysis results
       await storage.updateMonitoringSession(sessionId, {
         transcription: transcriptionResult,
         aiAnalysis,
-        duration: manualAnalysis.metrics.totalMessages * 30,
+        duration: improvedAnalysis.timeline.conversationDuration,
         status: 'completed'
       });
       
