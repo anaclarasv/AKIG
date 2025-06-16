@@ -486,12 +486,60 @@ export function registerRoutes(app: Express): Server {
       const audioPath = `uploads/${session.audioUrl.split('/').pop()}`;
       
       try {
-        // Import OpenAI transcription service
-        const { OpenAITranscriber } = await import('./openai-transcription');
+        // Primeira tentativa: OpenAI Whisper API
+        let transcriptionResult;
+        let aiAnalysis;
         
-        // Use OpenAI Whisper for real transcription
-        const transcriptionResult = await OpenAITranscriber.transcribeAudio(audioPath);
-        const aiAnalysis = OpenAITranscriber.analyzeTranscription(transcriptionResult);
+        try {
+          const { OpenAITranscriber } = await import('./openai-transcription');
+          transcriptionResult = await OpenAITranscriber.transcribeAudio(audioPath);
+          aiAnalysis = OpenAITranscriber.analyzeTranscription(transcriptionResult);
+          console.log('Transcrição realizada com OpenAI Whisper API');
+        } catch (openaiError: any) {
+          console.log('OpenAI indisponível, usando sistema local:', openaiError.message);
+          
+          // Fallback: Sistema local Python
+          const { spawn } = require('child_process');
+          
+          // Usar o script Python local para transcrição
+          const pythonProcess = spawn('python3', ['server/local-whisper-transcriber.py', audioPath]);
+          
+          let pythonOutput = '';
+          let pythonError = '';
+          
+          pythonProcess.stdout.on('data', (data: any) => {
+            pythonOutput += data.toString();
+          });
+          
+          pythonProcess.stderr.on('data', (data: any) => {
+            pythonError += data.toString();
+          });
+          
+          await new Promise((resolve, reject) => {
+            pythonProcess.on('close', (code: number) => {
+              if (code === 0 && pythonOutput) {
+                try {
+                  const result = JSON.parse(pythonOutput);
+                  transcriptionResult = {
+                    text: result.transcription || '',
+                    segments: result.segments || [],
+                    duration: result.duration || 0,
+                    confidence: result.confidence || 0.8,
+                    audioUrl: audioPath
+                  };
+                  
+                  aiAnalysis = result.analysis || {};
+                  console.log('Transcrição realizada com sistema Python local');
+                  resolve(true);
+                } catch (e) {
+                  reject(new Error('Erro ao processar resultado Python'));
+                }
+              } else {
+                reject(new Error(`Processo Python falhou: ${pythonError}`));
+              }
+            });
+          });
+        }
 
         // Atualizar sessão com resultados
         await storage.updateMonitoringSession(sessionId, {

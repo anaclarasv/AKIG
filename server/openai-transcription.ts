@@ -55,7 +55,14 @@ export class OpenAITranscriber {
    * Processa resultado da transcrição OpenAI
    */
   private static processOpenAITranscription(transcription: any, audioFilePath: string): OpenAITranscriptionResult {
-    const segments = [];
+    const segments: Array<{
+      id: string;
+      speaker: string;
+      text: string;
+      startTime: number;
+      endTime: number;
+      confidence: number;
+    }> = [];
     
     if (transcription.segments && transcription.segments.length > 0) {
       transcription.segments.forEach((segment: any, index: number) => {
@@ -109,7 +116,11 @@ export class OpenAITranscriber {
     if (text.includes('suporte')) keyTopics.push('Suporte Técnico');
     
     // Momentos críticos
-    const criticalMoments = [];
+    const criticalMoments: Array<{
+      timestamp: number;
+      description: string;
+      severity: 'low' | 'medium' | 'high';
+    }> = [];
     segments.forEach((segment, index) => {
       const segmentText = segment.text.toLowerCase();
       if (negativeWords.some(word => segmentText.includes(word))) {
