@@ -524,8 +524,8 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/reward-requests/pending", isAuthenticated, async (req: any, res) => {
     try {
-      const requests = await storage.getRewardPurchases();
-      res.json(requests.filter((r: any) => r.status === 'pending'));
+      const requests = await storage.getPendingRewardRequests();
+      res.json(requests);
     } catch (error) {
       console.error('Erro ao buscar solicitações pendentes:', error);
       res.status(500).json({ error: "Erro interno do servidor" });
@@ -534,7 +534,11 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/reward-purchases", isAuthenticated, async (req: any, res) => {
     try {
-      const purchase = await storage.createRewardPurchase(req.body);
+      const purchaseData = {
+        ...req.body,
+        userId: req.user.id
+      };
+      const purchase = await storage.requestReward(purchaseData);
       res.status(201).json(purchase);
     } catch (error) {
       console.error('Erro ao criar compra:', error);
@@ -544,8 +548,16 @@ export function registerRoutes(app: Express): Server {
 
   app.patch("/api/reward-purchases/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const purchase = await storage.updateRewardPurchase(parseInt(req.params.id), req.body);
-      res.json(purchase);
+      const { status, rejectionReason } = req.body;
+      if (status === 'approved') {
+        const purchase = await storage.approveRewardRequest(parseInt(req.params.id), req.user.id);
+        res.json(purchase);
+      } else if (status === 'rejected') {
+        const purchase = await storage.rejectRewardRequest(parseInt(req.params.id), req.user.id, rejectionReason);
+        res.json(purchase);
+      } else {
+        res.status(400).json({ error: "Status inválido" });
+      }
     } catch (error) {
       console.error('Erro ao atualizar compra:', error);
       res.status(500).json({ error: "Erro interno do servidor" });
