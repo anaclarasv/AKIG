@@ -334,7 +334,7 @@ export default function Monitoring() {
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span className="text-sm">Processando transcrição via AssemblyAI...</span>
                         </div>
-                        <Progress value={transcriptionProgress[selectedSession] || 0} className="w-full" />
+                        <Progress value={selectedSession ? (transcriptionProgress[selectedSession] || 0) : 0} className="w-full" />
                         <p className="text-xs text-blue-600">
                           Aguarde enquanto processamos o áudio. Isso pode levar alguns minutos.
                         </p>
