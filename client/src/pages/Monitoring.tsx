@@ -59,7 +59,9 @@ export default function Monitoring() {
   const [createFormData, setCreateFormData] = useState({
     agentId: '',
     campaignId: null as number | null,
-    channelType: '' as 'voice' | 'chat' | 'email' | ''
+    channelType: '' as 'voice' | 'chat' | 'email' | '',
+    file: null as File | null,
+    content: ''
   });
   const [processingStatuses, setProcessingStatuses] = useState<Record<number, string>>({});
   const [transcriptionProgress, setTranscriptionProgress] = useState<Record<number, number>>({});
@@ -88,13 +90,35 @@ export default function Monitoring() {
   // Create monitoring session mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/monitoring-sessions', data);
+      const formData = new FormData();
+      formData.append('agentId', data.agentId);
+      formData.append('campaignId', data.campaignId.toString());
+      formData.append('channelType', data.channelType);
+      
+      if (data.file) {
+        formData.append('file', data.file);
+      }
+      
+      if (data.content) {
+        formData.append('content', data.content);
+      }
+
+      const response = await fetch('/api/monitoring-sessions', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       setShowCreateModal(false);
-      setCreateFormData({ agentId: '', campaignId: null, channelType: '' });
+      setCreateFormData({ agentId: '', campaignId: null, channelType: '', file: null, content: '' });
       toast({
         title: "Sucesso",
         description: "Sessão de monitoria criada com sucesso",
@@ -668,6 +692,44 @@ export default function Monitoring() {
                   </SelectItem>
                 </SafeSelect>
               </div>
+
+              {/* File Upload for Voice */}
+              {createFormData.channelType === 'voice' && (
+                <div className="space-y-2">
+                  <Label htmlFor="audioFile">Arquivo de Áudio *</Label>
+                  <input
+                    type="file"
+                    id="audioFile"
+                    accept=".mp3,.wav,.m4a,.ogg"
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Formatos aceitos: MP3, WAV, M4A, OGG (máx. 50MB)
+                  </p>
+                </div>
+              )}
+
+              {/* Content Input for Chat/Email */}
+              {(createFormData.channelType === 'chat' || createFormData.channelType === 'email') && (
+                <div className="space-y-2">
+                  <Label htmlFor="content">
+                    {createFormData.channelType === 'chat' ? 'Conteúdo do Chat *' : 'Conteúdo do E-mail *'}
+                  </Label>
+                  <textarea
+                    id="content"
+                    value={createFormData.content}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, content: e.target.value }))}
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder={createFormData.channelType === 'chat' ? 'Cole aqui o conteúdo da conversa de chat...' : 'Cole aqui o conteúdo do e-mail...'}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Cole o conteúdo completo da {createFormData.channelType === 'chat' ? 'conversa' : 'troca de e-mails'}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between space-x-3 pt-4">

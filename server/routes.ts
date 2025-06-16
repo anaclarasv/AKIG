@@ -237,9 +237,45 @@ export function registerRoutes(app: Express): Server {
     res.json(sessions);
   });
 
-  app.post("/api/monitoring-sessions", isAuthenticated, async (req, res) => {
-    const session = await storage.createMonitoringSession(req.body);
-    res.status(201).json(session);
+  app.post("/api/monitoring-sessions", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const { agentId, campaignId, channelType, content } = req.body;
+      
+      if (!agentId || !campaignId || !channelType) {
+        return res.status(400).json({ error: "Dados obrigatórios não fornecidos" });
+      }
+
+      let sessionData: any = {
+        agentId,
+        campaignId: parseInt(campaignId),
+        channelType,
+        status: 'pending',
+        duration: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      // Handle file upload for voice
+      if (channelType === 'voice' && req.file) {
+        const audioUrl = `/uploads/${req.file.filename}`;
+        sessionData.audioUrl = audioUrl;
+      }
+
+      // Handle content for chat/email
+      if ((channelType === 'chat' || channelType === 'email') && content) {
+        if (channelType === 'chat') {
+          sessionData.chatContent = content;
+        } else {
+          sessionData.emailContent = content;
+        }
+        sessionData.content = content;
+      }
+
+      const session = await storage.createMonitoringSession(sessionData);
+      res.status(201).json(session);
+    } catch (error) {
+      console.error('Erro ao criar sessão de monitoria:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   app.get("/api/monitoring-sessions/:id", isAuthenticated, async (req, res) => {
