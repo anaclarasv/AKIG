@@ -1017,13 +1017,14 @@ export default function Monitoring() {
               <div className="space-y-4">
                 <Label htmlFor="chat">Conversa de Chat *</Label>
                 
-                {/* Toggle between manual input and file upload */}
-                <div className="flex items-center space-x-4 mb-3">
+                {/* Toggle between manual input and file upload - FIXED */}
+                <div className="flex items-center space-x-4 mb-3 bg-gray-50 p-2 rounded-lg">
                   <Button
                     type="button"
                     variant={chatInputMode === 'manual' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setChatInputMode('manual')}
+                    className="flex-1"
                   >
                     ✏️ Digitar Manualmente
                   </Button>
@@ -1032,6 +1033,7 @@ export default function Monitoring() {
                     variant={chatInputMode === 'file' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setChatInputMode('file')}
+                    className="flex-1"
                   >
                     📁 Upload de Arquivo TXT
                   </Button>
@@ -1089,13 +1091,14 @@ Exemplo:
               <div className="space-y-4">
                 <Label htmlFor="email">Thread de E-mail *</Label>
                 
-                {/* Toggle between manual input and file upload */}
-                <div className="flex items-center space-x-4 mb-3">
+                {/* Toggle between manual input and file upload - FIXED */}
+                <div className="flex items-center space-x-4 mb-3 bg-gray-50 p-2 rounded-lg">
                   <Button
                     type="button"
                     variant={emailInputMode === 'manual' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEmailInputMode('manual')}
+                    className="flex-1"
                   >
                     ✏️ Digitar Manualmente
                   </Button>
@@ -1104,6 +1107,7 @@ Exemplo:
                     variant={emailInputMode === 'file' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEmailInputMode('file')}
+                    className="flex-1"
                   >
                     📁 Upload de Arquivo TXT
                   </Button>
