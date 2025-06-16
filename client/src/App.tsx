@@ -91,7 +91,7 @@ function Router() {
             )} />
             <Route path="/rewards" component={RewardsStore} />
             <Route path="/reward-approval" component={() => (
-              <ProtectedRoute allowedRoles={['admin', 'evaluator']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <RewardApproval />
               </ProtectedRoute>
             )} />
