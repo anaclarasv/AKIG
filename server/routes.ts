@@ -701,12 +701,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Process based on channel type
+      // Fix audio path resolution for voice transcription
+      let resolvedPath: string | undefined;
       if (session.channelType === 'voice') {
         console.log('Processing voice transcription with OpenAI Whisper API...');
         
-        // Fix audio path resolution - handle absolute paths correctly
-        let resolvedPath;
         const audioPath = session.audioUrl!;
         
         if (path.isAbsolute(audioPath)) {
@@ -880,12 +879,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const { spawn } = await import('child_process');
         
+        if (!resolvedPath) {
+          throw new Error('Audio file path not resolved');
+        }
+        
         const pythonProcess = spawn('python3', [
           '/home/runner/workspace/server/assemblyai-transcription.py',
           resolvedPath
-        ], {
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        ]);
         
         let stdout = '';
         let stderr = '';

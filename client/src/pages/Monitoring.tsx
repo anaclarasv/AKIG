@@ -61,7 +61,7 @@ export default function Monitoring() {
     queryKey: ['/api/campaigns'],
   });
 
-  const { data: agents } = useQuery<UserType[]>({
+  const { data: agents } = useQuery<User[]>({
     queryKey: ['/api/agents'],
   });
 
