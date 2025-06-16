@@ -1,0 +1,371 @@
+[33mb64e698[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Prepare the system for production deployment by removing all test data
+[33mf8f5ef9[m Provide guidelines for deploying the application to various platforms
+[33m7627099[m Improve user login process and ensure authentication status is always up-to-date
+[33m5fb4efa[m Improve loading and error handling for monitoring evaluation forms
+[33m46cd75d[m Improve data processing and add ability to retrieve active monitoring forms
+[33mbd72501[m Revert to previous audio processing method for more accurate analysis
+[33m454ca57[m Improve audio transcription and enhance realism of customer service dialogues
+[33mb144040[m Add local audio processing as a backup for external transcription
+[33mef050f2[m Use AI to generate transcriptions of audio recordings for improved analysis
+[33mc2ab32b[m Correctly record the time a monitoring session is created in the system
+[33m5952fe9[m Improve platform stability with bug fixes and enhancements
+[33m7f6f403[m Give supervisors access to monitoring and saves session cookie
+[33mca133cd[m Improve agent selection and fix critical system errors reported by user
+[33mc2490e4[m Enable selection of agents and improve data fetching for new reviews
+[33m811f5c3[m Improve error handling and user experience during reward requests
+[33m932cdef[m Restrict reward approvals to administrators for enhanced security
+[33m450c171[m Add ability to approve or reject reward requests within the admin panel
+[33m4613c77[m Remove the report generation feature from all user profiles
+[33m26680a2[m Remove report feature from all user profiles on the communication platform
+[33ma118549[m Enable professional-grade report exports in PDF and Excel formats
+[33m1843ccc[m Show the most current number of evaluations in report summaries
+[33mc021ff4[m Ensure report exports use fresh data for more accurate results
+[33ma7e32f8[m Improve calculation of key performance metrics and agent statistics
+[33m266415b[m Improve report generation and add API test to identify potential issues
+[33m7337f28[m Improve report generation with real data and a refined visual format
+[33m57591ec[m Generate reports using real-time data for improved accuracy
+[33m9c41795[m Improve report generation and agent performance data retrieval
+[33ma2e5ace[m Generate complete monitoring reports for supervisors to track agent performance
+[33mfa668f6[m Enable users to download monitoring reports in PDF and Excel formats
+[33m2f6e4ab[m Restrict contest review access to authorized personnel for data security
+[33m354b95c[m Improve the reward request process and add approval/rejection features
+[33ma47bb1a[m Refine evaluation process and improve reward purchase handling
+[33m9ca5ece[m Refactor evaluation page to streamline the user experience
+[33m70610f6[m Improve the system's stability and reliability when handling user data
+[33m5e1d12f[m Enable users to create monitoring sessions with audio files and text content
+[33m3f3fe05[m Refine user interface by removing the gift shop reward system section
+[33m0977f91[m Enable users to dispute AI evaluation results and track their status
+[33m8205df8[m Improve data accuracy and add new performance metrics to the dashboard
+[33m53d9d64[m Fix application errors and improve report generation and data handling
+[33me3ed1db[m Add functionality to retrieve users, stats, and ranking information
+[33mc0679a4[m Enable access to platform data universally across all associated companies
+[33m55e4d22[m Revamp report generation with real-time data and improved analytics
+[33m0acc42f[m Improve report generation and analyze audio transcriptions more comprehensively
+[33mae14acd[m Update session management to address issues when assigning agents
+[33m08ba241[m Enable selection of agents and improve campaign/evaluator filter options
+[33mecd35c1[m Improve the stability of the reports page when data is not available
+[33m902c8d2[m Improve report page with date range selection and chart data handling
+[33mcb53634[m Enhance reports page with comprehensive data visualization and filtering
+[33m16da7cc[m Show real-time report data with loading indicator while fetching info
+[33m737c1c8[m Add a feature to generate reports on team performance and evaluation data
+[33m5e92c31[m Restrict monitoring evaluation creation to admins/evaluators, fix reward sorting
+[33m3b79413[m Improve data handling and streamline user registration processes
+[33m8a46d5e[m Enhance user security and admin control by adding validation and deletion
+[33m3e55a47[m Show user progress during audio transcription within the platform
+[33m3b9892c[m Enable audio transcription and text analysis for monitoring sessions
+[33me230da6[m Refactor selection interface for improved accessibility and usability
+[33mbb5e6ba[m Reorder monitoring data for improved readability and user experience
+[33m1a16b86[m Improve error handling and data processing for improved platform stability
+[33m2c47fcb[m Improve voice call transcription process and fix user data type
+[33m145522b[m Improve voice call transcription reliability and display detailed session data
+[33m3e3683d[m Show audio controls only when analyzing voice communication sessions
+[33md3392f9[m Show the upload buttons and input fields on the monitoring page
+[33m3dd47e5[m Restore dynamic evaluation form and fix issues with creating new monitoring
+[33m060a0a7[m Restore evaluation form and fix upload button visibility in monitoring
+[33m7abf683[m Add image showing users where to upload files
+[33m57e4c5c[m Allow users to upload text files when setting up chat and email monitoring
+[33m773c2b1[m Enable uploading chat and email transcripts directly to monitoring tool
+[33mb928da2[m Melhora a análise de conversas de chat mantendo horários e corrigindo erros
+[33m4c61fc0[m Refine chat analysis to better identify and flag critical conversation issues
+[33m6b48002[m Enable more accurate chat analysis and timestamp preservation for sessions
+[33m7a29a96[m Improve chat display and analysis with enhanced conversation flow
+[33ma716d46[m Improve chat analysis to accurately identify customer service issues
+[33mf77cc1e[m Improve chat analysis to better understand customer issues and needs
+[33m12a3ed7[m Show chat analysis when complete and display original messages
+[33m101e39d[m Improve chat analysis display and add manual analysis testing capabilities
+[33m97a8867[m Implement manual chat analysis using rules instead of AI models
+[33m51b806a[m Add ability to analyze chat sessions directly from the monitoring page
+[33mb763e95[m Enable AI to analyze chat conversations and extract key insights
+[33mdd974d0[m Improve the speed of chat and email processing with simplified system
+[33m2f84558[m Improve chat and email analysis with simplified, non-AI driven metrics
+[33m3c9311a[m Disable external AI analysis to ensure consistent functionality
+[33m7e358d3[m Improve the AI's ability to identify conversation speakers more accurately
+[33m087d417[m Improve analysis by adding support for chat and email channel types
+[33m6449bfd[m Enhance monitoring to differentiate agent and client interactions
+[33m839bbb8[m Improve the monitoring interface by distinguishing agent and client interactions
+[33md1c38f1[m Fix an issue preventing administrators from logging into their accounts
+[33m0887bf1[m Improve report generation and clarify score distribution in supervisor view
+[33m6c530e1[m Enable report exporting and visualize score distribution clearly
+[33m8073fc5[m Check system for errors and issues to ensure platform stability
+[33m5b676fe[m Update user session information to maintain secure access and data integrity
+[33mfdd6b7e[m Provide tools for developers to query and inspect the database directly
+[33m6737e63[m Perform a maintenance sweep to confirm system functionality and stability
+[33m961bf96[m Enable user registration during initial setup of the application
+[33m58853f7[m Remove potentially sensitive session data from configuration files
+[33m09cf16d[m Add support for analyzing chat and email interactions in the system
+[33m5b8ab15[m Enable analysis of customer interactions from chat, email, and voice
+[33m5c374b3[m Add functionality for analyzing chat and email interactions
+[33m61f8ac5[m Restrict access to monitoring evaluations and sessions for supervisors
+[33md70ddb7[m Improve data display, handling missing information and fixing login errors
+[33ma4bb8df[m Update the login and landing pages by increasing logo size and removing test users
+[33m58f9b3e[m Show company logo on the login and landing pages for brand recognition
+[33mb054f80[m Improve display of agent activities with loading states and pagination
+[33m9ba4ab1[m Fix data display issues when navigating pages of user activities
+[33m37b76a3[m Display the correct number of campaigns and active users for companies
+[33mf15e3de[m Integrate external service to automatically transcribe audio from conversations
+[33m356eb15[m Show supervisors specific to the selected company when creating users
+[33m8ab897c[m Enable selecting a supervisor for all users, with agent validation
+[33m18225ea[m Improve user input validation and fix role selection issues on user page
+[33m5441571[m Improve the selection interface for a more robust user experience
+[33m320ce25[m Improve user creation and role assignment when adding users to the system
+[33mc74d088[m Improve user creation and selection while ensuring data integrity
+[33m5a4eaaa[m Use unified data types for users and companies across application
+[33mc7ab389[m Improve user creation process with comprehensive data validation and error handling
+[33md422e70[m Fixes error when creating new users and adjusts reward request details
+[33mba033a5[m Allow admins and evaluators to manage rewards like adding or removing items
+[33mf4723a4[m Remove a button that directs users to the rewards store on the dashboard
+[33m01613b8[m Stores session data to keep users logged in while using the platform
+[33m234a862[m Set up the project structure for the communication analysis platform
+[33me925797[m Update configuration settings for platform deployment and monitoring
+[33mc469216[m Ensure evaluation scores display correctly on supervisor profiles
+[33mbbfe3ad[m Resolve error preventing users from accessing the promotional items page
+[33m0baa101[m Improve reward store access and resolve company ID issues for all users
+[33m1c5bb32[m Give supervisors the ability to earn points based on team performance
+[33m1193bc2[m Enable agents and supervisors to redeem rewards and earn team performance bonuses
+[33me1bba34[m Add navigation link, allowing evaluators to manage the rewards store
+[33me6df834[m Show how team performance changes over time for supervisors to monitor
+[33mb362a55[m Separate tracking of team performance from individual agent progress
+[33ma67f18d[m Enable separation of monitoring and team evolution tracking capabilities
+[33m095a961[m Improve session archiving and user management workflows for better control
+[33m0079377[m Update how pending reward requests are sorted in the admin dashboard
+[33m70d5343[m Restored to '4e4374675298aae4a81a4695a7e3b0f3603737e4'
+[33mcf59eca[m Saved your changes before rolling back
+[33mb0a7d01[m Revert monitoring tabs to their original state and hide evaluation form button
+[33m48ca9e0[m Improve platform's AI analysis to better understand customer interactions
+[33mf315426[m Standardize the way evaluation data is stored and accessed in the platform
+[33m1b8b1eb[m Create intelligent platform that analyzes enterprise communications
+[33m611435d[m Display evaluation form after transcription and save completed evaluations
+[33m1a90654[m Enable agents and supervisors to view and sign monitoring evaluation forms
+[33mf5a3564[m Implement dynamic evaluation form for monitoring agent performance
+[33mb3c2026[m Fix critical issues related to transcription accuracy and monitoring form
+[33m2b2cc14[m Fixes transcription errors and missing data on monitoring session details
+[33med2a93f[m Simulate processing and analysis of a customer service monitoring session
+[33m876538e[m Fix error loading monitoring data by correcting table name reference
+[33mdb6189b[m Restore ability to track and evaluate agent performance and communication quality
+[33meecde35[m Use OpenAI for call transcriptions and improve the accuracy of results
+[33m357a9e6[m Add the ability to upload new files to the platform for processing
+[33mb246fc1[m Show AI analysis results for calls using new data structure
+[33mb6905f3[m Analyze conversations to identify positive, neutral, and negative feedback
+[33me150c7a[m Improve audio upload reliability and notification handling for all users
+[33m639106a[m Refine the monitoring details interface and streamline server routing
+[33mfe1fddf[m Enable basic functionality for user authentication and audio uploads
+[33m4bf87a7[m Integrate AI-powered analysis and dynamic forms for performance monitoring
+[33mcdee466[m Add AI-powered insights and expand company data structure for better service
+[33m24e29b8[m Improve the accuracy of the customer service quality assessment
+[33m4e43746[m Change how pending reward requests are ordered for better processing
+[33mff5df53[m Grant reward store access to evaluators and adjust the approval process
+[33m55ed0a3[m Update rewards section and fix the company ID retrieval logic for users
+[33m8762d53[m Allow admins and evaluators to manage the rewards store
+[33m06e4d2f[m Generate slides and instructions to quickly present the platform
+[33mb6b4245[m Create user guides and restrict admin roles for certain functionalities
+[33m09da3af[m Provide instructions to deploy the application on various platforms
+[33mf66500a[m Fix issue preventing users from accessing the dashboard after logging in
+[33md91109b[m Preserve user login information to prevent problems accessing the dashboard
+[33m36e623e[m Fix login redirect issue and improve data calculation accuracy
+[33m319fefb[m Improve accuracy of agent performance scores displayed on dashboards
+[33m7740c3d[m Add sample evaluation data to help with initial platform testing
+[33mc88ffbf[m Enable supervisors to oversee agents and track team performance metrics
+[33m7abe788[m Empower supervisors with team performance insights and user management
+[33m91bcbcd[m Show team performance and top performers on supervisor dashboards
+[33mdcddb48[m Enable administrators to review and handle user reward redemption requests
+[33mc4175ca[m Enable reward requests and approvals based on user roles
+[33m56269eb[m Improve the evaluator profile and update activity display in the dashboard
+[33m9c81ce2[m Update chart to display total evaluations and show quality trends
+[33mdf57750[m Improve agent performance chart appearance and readability
+[33ma063a4f[m Improve agent performance chart with dual scores and trend indicators
+[33m5b6b72b[m Improve agent performance chart with historical data and display options
+[33mad98117[m Show performance scores in a dashboard bar graph for agent monitoring
+[33md74f125[m Enable agents to sign monitoring evaluations and fix authentication issues
+[33mb19df59[m Enable agents to sign evaluations and fix errors related to signing evaluations
+[33m4725ded[m Add file that stores login information to improve user experience
+[33m4245a26[m Show more comprehensive evaluation details for agents and supervisors
+[33m2787b8b[m Show users detailed information about their individual performance reviews
+[33m9a9f874[m Enable agents to review the details of their performance evaluations
+[33m0c98e71[m Show agent evaluations with details and add ability to sign evaluations
+[33mf1b2576[m Enable agents to see their performance reviews and sign off on them
+[33ma7ccfed[m Enable agents to properly see their monitoring data and related details
+[33m49d21d7[m Ensure agents can properly see and interact with their performance reviews
+[33m962382f[m Show agents a summary of their evaluations and highlight pending reviews
+[33mad038ce[m Improve agent experience by displaying evaluations and contest options
+[33mdf9ef0b[m Improve agent dashboard to display evaluation information correctly
+[33m9e31c32[m Improve agent dashboards by showing performance and evaluation data
+[33m9b48b88[m Improve agent dashboard with performance charts and contest options
+[33mafcd2b4[m Add cookie file to store user session data for authentication
+[33m7286ec7[m Refine evaluation display and scoring for improved user feedback
+[33mbc63e35[m Show evaluation results with more details on the agent dashboard
+[33me70080f[m Update agent profile to properly display agent evaluations and details
+[33m54d85cf[m Give agents access to view their own monitoring session evaluations
+[33m9e698d3[m Restrict access and add evaluation options to the monitoring interface
+[33m92a7f3c[m Ensure monitoring sessions are created correctly without data errors
+[33ma1befc4[m Fix display and editing issues with monitoring session details
+[33m724589e[m Allow users to correct transcriptions and identify speakers accurately
+[33mba48305[m Enable correction of transcriptions and identification of speakers
+[33m32b49c9[m Enable supervisors and agents to view monitoring details and evaluation forms
+[33m36abe03[m Enable supervisors and agents to view monitoring details and sign evaluations
+[33m50016df[m Enable a simple evaluation form for testing the assessment process
+[33m2cb84bf[m Update user session information to maintain connection stability
+[33m163e923[m Improve the assessment tool by adding options to evaluation categories
+[33md0beae4[m Adjust the scoring and criteria for evaluating customer service calls
+[33meb1bd29[m Add a test form to dynamically evaluate agent performance using a form
+[33mc141822[m Add dynamic evaluation form for monitoring sessions with data input
+[33mda802d6[m Enable evaluation of agent performance and gather feedback on interactions
+[33mef9da0b[m Implement evaluation form for monitoring call quality and agent performance
+[33mcd196df[m Add dynamic evaluation forms for monitoring call center agent performance
+[33madeb9ff[m Adjust visibility of contestation tabs based on user roles
+[33m80842cc[m Show contestation details for agents and supervisors on evaluation pages
+[33m61cdaad[m Enable supervisors to oversee and respond to agent evaluation disputes
+[33m620f1e6[m Add ability for supervisors to comment on agent performance evaluations
+[33m45b8e47[m Improve access control and fix display issues for evaluation contests
+[33m4008597[m Refine evaluation contestation process for different user roles
+[33m4420bd5[m Adjust evaluation contestation flow based on user roles and fix errors
+[33m807d5e6[m Allow users to view and restore archived and deleted monitoring sessions
+[33mf86c069[m Enable viewing and restoring archived or deleted monitoring sessions
+[33mf459f8b[m Enable archiving and deletion of monitoring sessions for better management
+[33m49a5071[m Update user session data for better handling of secure cookie storage
+[33md62bdf5[m Update user session data to maintain functionality during testing
+[33m4fd19d3[m Remove sensitive cookie data and add placeholder for agent cookies
+[33m0c4fe6e[m Refine stored evaluation details and include demo agent cookie files
+[33m4dbb3a8[m Add a place to store login information from automated system tests
+[33m70cf61a[m Update navigation labels and improve display of evaluation scores
+[33m9f97e2d[m Show agent evaluation results with scores and personalized feedback
+[33m8afee2c[m Fix issues with deleting and archiving monitorings across the platform
+[33m1508b1f[m Improve monitoring deletion and archiving with error handling and confirmation
+[33m870309d[m Improve access to evaluation criteria and ensure data consistency
+[33m17e5b7e[m Fix issue preventing users from accessing the dashboard after logging in
+[33m303340e[m Update the process for AI transcription and allow archiving of old sessions
+[33m3b66ced[m Enable supervisors to archive or delete monitoring sessions from sidebar
+[33m61ddbbb[m Provide options to remove or archive monitored sessions from the display
+[33m58be352[m Improve accuracy of call length by rounding duration to nearest integer
+[33m284db70[m Switch audio transcription service to improve accuracy and reliability
+[33m9de6100[m Use local processing to transcribe audio and improve platform responsiveness
+[33m514e9b0[m Use AI for more accurate audio transcription and analysis
+[33m3547807[m Improve real-time audio transcription status updates for user clarity
+[33mc95554b[m Add support for including pictures to improve clarity and understanding
+[33m6a7d763[m Use Python script for more reliable and accurate audio transcriptions
+[33me8cb18c[m Improve audio transcription reliability using local processing fallback
+[33m9a67ef6[m Improve audio processing by enabling faster and more reliable transcriptions
+[33me23a860[m Improve audio activity detection and use real audio transcriber
+[33mfda195d[m Transcribe audio using local processing to ensure accurate content analysis
+[33m8d84688[m Improve audio transcription accuracy and prevent generation of fake dialogs
+[33m62ff4af[m Improve audio transcription accuracy and processing for better results
+[33m897ee09[m Improve audio transcription accuracy using enhanced offline analysis
+[33m7bc650e[m Improve audio analysis with realistic transcriptions and real speech recognition
+[33m96f2875[m Refactor audio processing to improve transcription reliability and speed
+[33mdfdc679[m Implement more accurate audio transcription using Python-based engine
+[33m7e1fae2[m Improve audio file processing and handle various file types correctly
+[33m97ea3c9[m Process real audio files to provide basic file information
+[33m66efcac[m Improve audio processing by using FFmpeg for enhanced media analysis
+[33m603f660[m Transcribe uploaded audio using local processing instead of a placeholder
+[33m28d017f[m Process audio transcriptions immediately and provide clear error feedback
+[33mfd45007[m Improve transcription accuracy by using OpenAI's Whisper model
+[33m8922a1f[m Implement actual audio analysis, processing and transcription functionality
+[33m97839cf[m Use a local AI model to transcribe audio files accurately
+[33m9818d7d[m Fix issue where session status remains pending despite completed transcription
+[33m54aeb50[m Enable users to view, edit, and contest activities on their profile
+[33m19092c8[m Improve audio transcription reliability by using a faster backup method
+[33m8b248e3[m Make evaluation actions visible for testing and improves transcription speed
+[33m6bd1482[m Improve audio transcription with faster, more reliable AI services
+[33m4d05b56[m Improve transcription speed by saving successful transcriptions for later use
+[33mf960a6b[m Enable supervisors to add comments and speed up audio transcriptions
+[33m2c4b69b[m Enable supervisors to view, edit, and contest evaluations with comments
+[33m0b55264[m Add the ability to upload files to the system using a secure endpoint
+[33mdde2a51[m Enhance audio processing with authentic transcription management
+[33mf5c3bc4[m Enhance audio transcription using the OpenAI Whisper API
+[33m2da923c[m Improve audio transcription process for better compatibility and reliability
+[33m6436012[m Implement actual audio transcription using node-whisper for analysis
+[33mbb2e402[m Use local audio processing to accurately transcribe speech in Portuguese
+[33mc35cbdb[m Update user session information to ensure continued access
+[33m1d24620[m Enable free, accurate audio transcriptions using local processing
+[33m5a912dd[m Switch back to local transcription for enhanced accuracy
+[33m88c7ec6[m Enable evaluators to view, edit, and contest evaluations on their profile
+[33m05d6af1[m Improve call transcription reliability by using optimized local system
+[33m014204b[m Use a local AI model to analyze real-time audio transcriptions
+[33mbdc1073[m Improve audio transcription speed and reliability using local processing
+[33mcfe1538[m Implement faster local audio transcription using AI without API limits
+[33me1ecdf8[m Enable background audio transcription and real-time progress updates
+[33mb63db5f[m Process audio transcriptions quickly using local processing and background tasks
+[33m17a4a2f[m Enable local audio transcription using open-source Whisper technology
+[33mdbfbec3[m Correctly locate audio files for transcription preventing failures
+[33m4af69a7[m Improve transcription speed and ensure processing of all customer interactions
+[33m58ba09a[m Enable instant audio transcription for faster access to monitoring data
+[33meacfef5[m Improve the accuracy of our AI's audio analysis when identifying critical words
+[33me69e167[m Improve speed of transcription analysis by using a local analysis function
+[33m80a3bab[m Provide unlimited, instant transcriptions of customer interactions
+[33m5704632[m Ensure consistent access control for admin and supervisor roles
+[33m77473cf[m Resolve error displaying monitoring data for admins, supervisors, evaluators
+[33m0165456[m Prevent errors when monitoring data is missing for supervisors and admins
+[33m4cfbd86[m Fix error preventing agents from viewing gift shop and improve logging
+[33m03e54fc[m Resolve error preventing agents from accessing the rewards store
+[33m0214770[m Fix error preventing agents and supervisors from accessing specific pages
+[33m378c9ac[m Fix error preventing agents from accessing the rewards store page
+[33m5104962[m Update user login session information for improved security and stability
+[33m28e1709[m Improve login reliability and speed up access for agents during development
+[33mee7c455[m Fixes error when agents try to view rewards in their profile
+[33md2f6878[m Remove outdated login information from the system's temporary storage file
+[33m9bf6662[m Record user's session information securely to improve user experience
+[33m20b494a[m Ensure the platform consistently displays LGPD compliance information
+[33m9e0efd6[m Improve accuracy of score calculations and address data handling issues
+[33m2d7e0e4[m Enable supervisors and agents to manage disputes within the platform
+[33mece27be[m Add functionality for supervisors and agents to manage disputes easily
+[33m0ec365b[m Enable agents and supervisors to raise and monitor customer service disputes
+[33m666161e[m Remove outdated cookie information for administrators in the system
+[33mb358a02[m Add link to data protection information page within the sidebar menu
+[33m6324ed5[m Implement data privacy and compliance features based on LGPD guidelines
+[33md0b088f[m Improve data protection and comply with data privacy regulations
+[33m4673159[m Enhance security and privacy protections in the customer service platform
+[33m6777706[m Enable users to view and manage their in-app notification history
+[33m2df9f22[m Improve user experience by adding notifications and agent performance insights
+[33m1780cbe[m Enable agents to view performance trends and request evaluation reviews
+[33mc1148bc[m Enable agents to track performance and dispute evaluations on their profile
+[33m304fddc[m Improve audio transcription using OpenAI for more accurate results
+[33maa9d032[m Improve speed of voice-to-text feature while preserving accuracy
+[33m5d3b476[m Improve audio processing speed while keeping transcription quality
+[33m05cfe24[m Implement free, unlimited, and accurate local audio transcription
+[33mb560084[m Enable accurate and free audio transcription for customer service calls
+[33m41ac7f1[m Improve speed of audio transcription processing and data display
+[33m87f5c20[m Make audio controls functional and transcription layout consistent
+[33m0b8401d[m Improve audio playback and real-time transcription within monitoring view
+[33m60c5d3c[m Enable audio uploads by preparing form data correctly for the server
+[33m70e7a97[m Allow users to upload more audio file types when creating a new monitor
+[33m5e1a644[m Improves user session security by updating stored login credentials
+[33m6d2d79d[m Automatically assign agent ID during monitoring based on the company
+[33m0e9d5dd[m Improve the agent dashboard layout to offer a clearer view of performance
+[33m189266a[m Show agent performance and evaluation forms in the agent's dashboard
+[33m1842b76[m Adjust agent profile view to display only relevant information sections
+[33m5b5e7ff[m Enable audio uploads and detailed monitoring session views for users
+[33ma11fdad[m Enable new monitoring functionality and improve audio upload experience
+[33m17874e6[m Show accurate comparison data on the dashboard metrics display
+[33m8b63a8d[m Update session cookie for improved security when accessing the platform
+[33m99c8d0e[m Show up-to-date and accurate performance data on the main dashboard
+[33md349417[m Update user session information for enhanced security and reliability
+[33m03f5bd4[m Refresh user session data to maintain proper access and security
+[33m0c50b66[m Fix error when creating/updating users and optimize admin user interface
+[33md23d0db[m Add ability to manage virtual currency for users within the admin panel
+[33m9143550[m Revamp user management interface and fix a data handling error
+[33m731b6da[m Restrict access to monitoring tools based on user roles and permissions
+[33mb1d41e4[m Restrict agent roles from creating monitorings and viewing recent activity
+[33m1ce1599[m Enable administrators to manage user accounts within the team dashboard
+[33mfdb877a[m Enable administrators to manage user accounts within the application
+[33m6250634[m Enable automatic call analysis and feedback using AI after audio upload
+[33m83695bc[m Restrict access to certain pages based on the user's assigned role
+[33mdd6e073[m Restrict agent access and add protected routes based on user roles
+[33ma0f8c82[m Restrict agent access to evaluations and add rewards store navigation
+[33m07e4f64[m Enable campaign management and rewards store features for admin users
+[33ma564ec2[m Restrict monitoring creation and add customizable evaluation criteria
+[33mc71f7ba[m Fix navigation and add audio upload to enhance the monitoring process
+[33mc26f974[m Fix layout issues and navigation problems across different user roles
+[33m830f2d5[m Improve the user interface and fix issues related to logging out
+[33mfbd07e2[m Improve user role handling and data fetching for a smoother experience
+[33mae33244[m Enhance page layout and navigation for a more consistent user experience
+[33me320b12[m Restrict user registration to admins and create test user cookies
+[33m77b356d[m Streamline user access by removing self-registration functionality
+[33m6e0fa8c[m Ensure correct user identification when verifying user permissions
+[33mf96d984[m Improve user data handling and access across different platform features
+[33m9375e64[m Enable user authentication and improve data handling across the application
+[33mf488134[m Implement username/password login and remove Replit authentication
+[33m9b9342b[m Implement standard username/password login and registration for users
+[33m0755830[m Enable users to select date ranges and improve data filtering and storage
+[33mf0b81e5[m Improve data retrieval and add date selection for enhanced platform use
+[33mb24e8d8[m Initialize core components and project structure for the platform
+[33mab1c7cb[m Started building your app
+[33m0ac5336[m Initial commit
