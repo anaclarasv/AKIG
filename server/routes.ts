@@ -610,10 +610,16 @@ export function registerRoutes(app: Express): Server {
       const unsignedForms = filteredEvaluations.filter(evaluation => evaluation.status === 'pending').length;
       const contestedEvaluations = contests.filter(contest => contest.status === 'pending').length;
 
+      // Buscar sessões de monitoria para obter agentId
+      const sessions = await storage.getMonitoringSessions();
+      
       // Performance por agente
       const agentStats = new Map();
       filteredEvaluations.forEach(evaluation => {
-        const agentId = evaluation.agentId || 'Não identificado';
+        // Encontrar a sessão correspondente para obter o agentId
+        const session = sessions.find(s => s.id === evaluation.monitoringSessionId);
+        const agentId = session?.agentId || 'Não identificado';
+        
         if (!agentStats.has(agentId)) {
           agentStats.set(agentId, {
             name: `Agente ${agentId}`,
@@ -738,6 +744,7 @@ export function registerRoutes(app: Express): Server {
       // Buscar dados reais do banco
       const evaluations = await storage.getEvaluations();
       const contests = await storage.getEvaluationContests();
+      const sessions = await storage.getMonitoringSessions();
       
       // Filtrar por período se especificado
       let filteredEvaluations = evaluations;

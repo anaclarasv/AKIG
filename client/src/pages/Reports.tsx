@@ -132,42 +132,20 @@ export default function Reports() {
         params.append('evaluator', selectedEvaluator);
       }
 
+      // Abrir em nova aba para download
       const url = `/api/reports/export/${format}?${params.toString()}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      
-      const fileName = format === 'pdf' 
-        ? `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf`
-        : `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+      window.open(url, '_blank');
 
       toast({
-        title: "Relatório exportado",
-        description: `Relatório ${format.toUpperCase()} gerado com dados reais do banco de dados`,
+        title: "Exportação iniciada",
+        description: `Relatório ${format.toUpperCase()} será baixado em breve com dados reais`,
       });
       
     } catch (error) {
       console.error('Erro ao exportar relatório:', error);
       toast({
         title: "Erro na exportação",
-        description: "Não foi possível gerar o relatório. Verifique sua conexão.",
+        description: "Não foi possível gerar o relatório.",
         variant: "destructive",
       });
     }
