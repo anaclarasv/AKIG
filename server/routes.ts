@@ -20,9 +20,9 @@ export function registerRoutes(app: Express): Server {
       const companyId = req.user?.companyId;
       
       // Buscar dados reais das avaliações
-      const evaluations = await storage.getEvaluationsByCompany(companyId);
-      const sessions = await storage.getMonitoringSessionsByCompany(companyId);
-      const agents = await storage.getUsersByCompanyAndRole(companyId, 'agent');
+      const evaluations = await storage.getEvaluations();
+      const sessions = await storage.getMonitoringSessions();
+      const agents = await storage.getUsers();
       
       // Calcular métricas gerais
       const totalEvaluations = evaluations.length;
@@ -183,7 +183,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/companies", isAuthenticated, async (req, res) => {
-    const companies = await storage.getAllCompanies();
+    const companies = await storage.getCompanies();
     res.json(companies);
   });
 
@@ -193,8 +193,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/users", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const users = await storage.getUsersByCompany(companyId);
+    const users = await storage.getUsers();
     res.json(users);
   });
 
@@ -204,8 +203,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const campaigns = await storage.getCampaignsByCompany(companyId);
+    const campaigns = await storage.getCampaigns();
     res.json(campaigns);
   });
 
@@ -215,8 +213,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/evaluation-criteria", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const criteria = await storage.getEvaluationCriteriaByCompany(companyId);
+    const criteria = await storage.getEvaluationCriteria();
     res.json(criteria);
   });
 
@@ -226,8 +223,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/monitoring-sessions", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const sessions = await storage.getMonitoringSessionsByCompany(companyId);
+    const sessions = await storage.getMonitoringSessions();
     res.json(sessions);
   });
 
@@ -242,8 +238,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/evaluations", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const evaluations = await storage.getEvaluationsByCompany(companyId);
+    const evaluations = await storage.getEvaluations();
     res.json(evaluations);
   });
 
@@ -258,14 +253,12 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/ranking", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const ranking = await storage.getRankingByCompany(companyId);
+    const ranking = await storage.getRanking();
     res.json(ranking);
   });
 
   app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
-    const companyId = req.user?.companyId;
-    const stats = await storage.getDashboardStats(companyId);
+    const stats = await storage.getDashboardStats();
     res.json(stats);
   });
 
