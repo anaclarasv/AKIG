@@ -599,6 +599,11 @@ export function registerRoutes(app: Express): Server {
 
   app.patch("/api/evaluation-contests/:id", isAuthenticated, async (req: any, res) => {
     try {
+      // Apenas admins e avaliadores podem revisar contestações
+      if (!['admin', 'evaluator'].includes(req.user.role)) {
+        return res.status(403).json({ error: "Acesso negado. Apenas administradores e avaliadores podem revisar contestações." });
+      }
+
       const { status, response } = req.body;
       const contestId = parseInt(req.params.id);
 

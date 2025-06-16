@@ -375,8 +375,8 @@ export default function EvaluationsSimplified() {
           </TabsContent>
         </Tabs>
 
-        {/* Lista de contestações para revisão (apenas para supervisores/avaliadores) */}
-        {['admin', 'supervisor', 'evaluator'].includes(user?.role || '') && contests.length > 0 && (
+        {/* Lista de contestações para revisão (apenas para admins/avaliadores) */}
+        {['admin', 'evaluator'].includes(user?.role || '') && contests.length > 0 && (
           <Card className="mt-8 akig-card-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
