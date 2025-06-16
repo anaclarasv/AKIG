@@ -1102,13 +1102,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session is not a chat or has no content" });
       }
       
-      console.log('Starting improved chat analysis for session:', sessionId);
+      console.log('Starting REAL improved chat analysis for session:', sessionId);
+      console.log('Chat content being analyzed:', session.chatContent);
       
       // Import improved analyzer that detects real problems
       const { ImprovedChatAnalyzer } = await import('./improved-chat-analysis');
       
       // Análise melhorada do chat que detecta problemas reais
       const improvedAnalysis = ImprovedChatAnalyzer.analyzeChatContent(session.chatContent);
+      
+      console.log('RAW Analysis completed:', {
+        sentiment: improvedAnalysis.analysis.overallSentiment,
+        satisfaction: improvedAnalysis.analysis.customerSatisfaction,
+        performance: improvedAnalysis.analysis.agentPerformance,
+        swearWords: improvedAnalysis.metrics.totalSwearWords,
+        maxResponseTime: improvedAnalysis.metrics.maxResponseTime,
+        escalation: improvedAnalysis.analysis.requiresEscalation,
+        criticalIssues: improvedAnalysis.analysis.criticalIssues
+      });
       
       // Log detailed analysis results
       console.log('Improved Analysis Results:', {

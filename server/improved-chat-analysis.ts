@@ -96,8 +96,8 @@ export class ImprovedChatAnalyzer {
       return {
         speaker,
         text,
-        timestamp: new Date().toISOString(),
-        realTime,
+        timestamp: realTime || `${new Date().getHours()}:${new Date().getMinutes().toString().padStart(2, '0')}`,
+        realTime: realTime,
         wordCount: text.split(' ').length,
         sentiment,
         hasSwearing,

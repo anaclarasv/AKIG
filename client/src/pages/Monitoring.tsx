@@ -589,7 +589,7 @@ export default function Monitoring() {
 
               {/* Chat and Email Channels - Conversation Flow */}
               {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
-                <div className="h-96 overflow-hidden">
+                <div className="min-h-[600px] h-auto overflow-y-auto border rounded-lg p-4">
                   {/* Check for any available analysis data */}
                   {selectedSessionData.status === 'completed' && selectedSessionData.transcription?.conversationFlow?.length ? (
                     <ConversationFlow
@@ -608,12 +608,26 @@ export default function Monitoring() {
                           Status: {selectedSessionData.status} | Engine: Manual Analysis
                         </div>
                       </div>
-                      <div className="bg-blue-50 p-3 rounded">
-                        <p className="text-sm text-blue-800 font-medium">Conteúdo Original:</p>
-                        <div className="mt-2 text-xs text-blue-700 max-h-32 overflow-y-auto">
-                          {selectedSessionData.chatContent.split('\n').map((line, i) => (
-                            <div key={i} className="mb-1">{line}</div>
-                          ))}
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium mb-3">Fluxo da Conversa Completo:</p>
+                        <div className="space-y-3 text-sm text-blue-700 max-h-96 overflow-y-auto bg-white p-4 rounded border">
+                          {selectedSessionData.chatContent.split('\n').filter(line => line.trim()).map((line, i) => {
+                            const isClient = line.includes('🟢 Cliente') || line.includes('Cliente –');
+                            const isAgent = line.includes('🔵 Atendente') || line.includes('Atendente –');
+                            
+                            return (
+                              <div key={i} className={`p-2 rounded ${
+                                isClient ? 'bg-green-50 border-l-4 border-green-400' : 
+                                isAgent ? 'bg-blue-50 border-l-4 border-blue-400' : 
+                                'bg-gray-50'
+                              }`}>
+                                <div className="font-medium text-xs mb-1">
+                                  {isClient ? '👤 Cliente' : isAgent ? '🎧 Atendente' : ''}
+                                </div>
+                                <div className="text-sm">{line}</div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
