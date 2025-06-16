@@ -152,7 +152,9 @@ export default function Reports() {
 
   return (
     <div className="max-w-7xl mx-auto py-6 space-y-6">
-      <Header title="Relatórios e Análises" />
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Relatórios e Análises</h1>
+      </div>
 
       {/* Filters Section */}
       <Card className="akig-card-shadow">
@@ -169,10 +171,18 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Período</label>
-              <DatePickerWithRange 
-                value={dateRange}
-                onChange={setDateRange}
-              />
+              <div className="flex gap-2">
+                <input 
+                  type="date" 
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="Data inicial"
+                />
+                <input 
+                  type="date" 
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="Data final"
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -316,7 +326,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={reportData.byCampaign}>
+              <BarChart data={reportData.byCampaign || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -336,7 +346,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={reportData.byEvaluator}>
+              <BarChart data={reportData.byEvaluator || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
