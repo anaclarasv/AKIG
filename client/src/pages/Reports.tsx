@@ -366,7 +366,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={reportData.byPeriod}>
+              <LineChart data={reportData.byPeriod || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="period" />
                 <YAxis />
@@ -386,7 +386,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {reportData.criticalWords.map((word, index) => (
+              {(reportData.criticalWords || []).map((word, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <span className="font-medium">{word.word}</span>
                   <div className="flex items-center gap-2">
@@ -415,7 +415,7 @@ export default function Reports() {
         <CardContent>
           <div className="space-y-4">
             {/* Visual Distribution Bars */}
-            {reportData.scoreDistribution.map((range, index) => (
+            {(reportData.scoreDistribution || []).map((range, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium" style={{ color: range.color }}>
