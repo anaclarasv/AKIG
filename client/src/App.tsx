@@ -11,7 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Monitoring from "@/pages/Monitoring";
 import EvaluationsSimplified from "@/pages/EvaluationsSimplified";
 import Ranking from "@/pages/Ranking";
-import Reports from "@/pages/ReportsFixed";
+
 import Companies from "@/pages/Companies";
 import Users from "@/pages/Users";
 import EvaluationCriteria from "@/pages/EvaluationCriteria";
@@ -83,11 +83,7 @@ function Router() {
               </ProtectedRoute>
             )} />
             <Route path="/ranking" component={Ranking} />
-            <Route path="/reports" component={() => (
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                <Reports />
-              </ProtectedRoute>
-            )} />
+
             <Route path="/campaigns" component={() => (
               <ProtectedRoute allowedRoles={['admin']}>
                 <Campaigns />
