@@ -52,14 +52,7 @@ export default function Ranking() {
     }
   };
 
-  const handlePurchaseReward = async (rewardId: number) => {
-    try {
-      // Implement reward purchase logic
-      console.log(`Purchasing reward ${rewardId}`);
-    } catch (error) {
-      console.error("Error purchasing reward:", error);
-    }
-  };
+
 
   if (rankingLoading) {
     return (
@@ -85,9 +78,8 @@ export default function Ranking() {
       <div className="mt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between">
-            <TabsList className="grid w-auto grid-cols-3">
+            <TabsList className="grid w-auto grid-cols-2">
               <TabsTrigger value="ranking">Ranking</TabsTrigger>
-              <TabsTrigger value="rewards">Loja de Brindes</TabsTrigger>
               <TabsTrigger value="evolution">Evolução</TabsTrigger>
             </TabsList>
 
@@ -247,56 +239,7 @@ export default function Ranking() {
             </div>
           </TabsContent>
 
-          <TabsContent value="rewards" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rewardsLoading ? (
-                [...Array(6)].map((_, i) => (
-                  <Card key={i} className="akig-card-shadow">
-                    <CardContent className="pt-6">
-                      <div className="loading-shimmer h-40 rounded"></div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : rewards?.length ? (
-                rewards.map((reward) => (
-                  <Card key={reward.id} className="akig-card-shadow">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                          <Gift className="w-10 h-10 text-blue-600" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-2">{reward.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {reward.description || "Brinde especial para nossos top performers"}
-                        </p>
-                        <div className="flex items-center justify-center space-x-1 mb-4">
-                          <Coins className="w-5 h-5 text-yellow-500" />
-                          <span className="text-xl font-bold text-yellow-600">{reward.cost}</span>
-                          <span className="text-sm text-muted-foreground">moedas</span>
-                        </div>
-                        <Button 
-                          onClick={() => handlePurchaseReward(reward.id)}
-                          className="w-full akig-bg-primary hover:opacity-90"
-                        >
-                          Resgatar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <Gift className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Nenhum brinde disponível
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Os brindes serão adicionados em breve
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
+
 
           <TabsContent value="evolution" className="mt-6">
             <Card className="akig-card-shadow">
