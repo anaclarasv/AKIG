@@ -343,6 +343,18 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Agents endpoint - busca usuários com role 'agent'
+  app.get("/api/agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const users = await storage.getUsers();
+      const agents = users.filter(user => user.role === 'agent');
+      res.json(agents);
+    } catch (error) {
+      console.error('Erro ao buscar agentes:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   // Campaigns endpoints
   app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
     try {
