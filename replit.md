@@ -125,6 +125,13 @@ AKIG Solutions is a comprehensive intelligent call monitoring and evaluation sys
 
 ```
 Changelog:
+- June 16, 2025. Corrigidos problemas críticos do perfil admin e funcionalidades
+  * Removida seção "Atividades Recentes" da dashboard conforme solicitado
+  * Página de avaliações modificada para apenas visualização (sem edição)
+  * Incluídas avaliações pendentes de tratativa e assinatura
+  * Implementados endpoints CRUD completos para usuários, campanhas e empresas
+  * Corrigidos endpoints de recompensas para funcionamento adequado
+  * Nova página EvaluationsSimplified focada em visualização e contestações
 - June 16, 2025. Sistema de análise de chat corrigido para preservar horários
   * Substituído analyzeChatConversation em simple-text-analysis.ts e text-analysis.ts
   * Agora usa FixedChatAnalyzer que preserva timestamps originais do chat

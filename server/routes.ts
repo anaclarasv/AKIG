@@ -524,7 +524,7 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/reward-requests/pending", isAuthenticated, async (req: any, res) => {
     try {
-      const requests = await storage.getRewardRequests();
+      const requests = await storage.getRewardPurchases();
       res.json(requests.filter((r: any) => r.status === 'pending'));
     } catch (error) {
       console.error('Erro ao buscar solicitações pendentes:', error);
@@ -534,7 +534,7 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/reward-purchases", isAuthenticated, async (req: any, res) => {
     try {
-      const purchase = await storage.createRewardRequest(req.body);
+      const purchase = await storage.createRewardPurchase(req.body);
       res.status(201).json(purchase);
     } catch (error) {
       console.error('Erro ao criar compra:', error);
@@ -544,7 +544,7 @@ export function registerRoutes(app: Express): Server {
 
   app.patch("/api/reward-purchases/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const purchase = await storage.updateRewardRequest(parseInt(req.params.id), req.body);
+      const purchase = await storage.updateRewardPurchase(parseInt(req.params.id), req.body);
       res.json(purchase);
     } catch (error) {
       console.error('Erro ao atualizar compra:', error);

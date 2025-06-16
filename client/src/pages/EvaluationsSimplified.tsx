@@ -118,7 +118,7 @@ export default function EvaluationsSimplified() {
   // Filtrar avaliações com base na aba ativa
   const filteredEvaluations = evaluations.filter((evaluation) => {
     if (activeTab === "all") return true;
-    if (activeTab === "pending") return evaluation.status === "pending" || evaluation.status === "unsigned";
+    if (activeTab === "pending") return evaluation.status === "pending";
     return evaluation.status === activeTab;
   });
 
@@ -196,7 +196,7 @@ export default function EvaluationsSimplified() {
 
   // Contadores para as abas
   const allCount = evaluations.length;
-  const pendingCount = evaluations.filter(e => e.status === "pending" || e.status === "unsigned").length;
+  const pendingCount = evaluations.filter(e => e.status === "pending").length;
   const signedCount = evaluations.filter(e => e.status === "signed").length;
   const contestedCount = evaluations.filter(e => e.status === "contested").length;
 
@@ -292,7 +292,7 @@ export default function EvaluationsSimplified() {
                         <div className="flex items-center space-x-3">
                           <Avatar className="w-10 h-10">
                             <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                              {evaluation.agentId?.substring(0, 2).toUpperCase() || 'AG'}
+                              AG
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -300,7 +300,7 @@ export default function EvaluationsSimplified() {
                               Avaliação #{evaluation.id}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground">
-                              Agente: {evaluation.agentId}
+                              Sessão: #{evaluation.monitoringSessionId}
                             </p>
                           </div>
                         </div>
@@ -458,22 +458,10 @@ export default function EvaluationsSimplified() {
               </div>
             )}
 
-            {selectedEvaluation?.evaluatorComment && (
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Comentário do Avaliador</Label>
-                <p className="text-sm mt-1 p-3 bg-muted rounded-md">
-                  {selectedEvaluation.evaluatorComment}
-                </p>
-              </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-              <div>
-                <strong>Criada em:</strong> {selectedEvaluation && new Date(selectedEvaluation.createdAt).toLocaleString('pt-BR')}
-              </div>
-              <div>
-                <strong>Atualizada em:</strong> {selectedEvaluation && new Date(selectedEvaluation.updatedAt).toLocaleString('pt-BR')}
-              </div>
+
+            <div className="text-xs text-muted-foreground">
+              <strong>Criada em:</strong> {selectedEvaluation && new Date(selectedEvaluation.createdAt).toLocaleString('pt-BR')}
             </div>
           </div>
         </DialogContent>
