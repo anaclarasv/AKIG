@@ -128,6 +128,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: req.body.profileImageUrl || null,
       };
 
+      // Check if email already exists
+      const existingEmailUser = await storage.getUserByEmail(userData.email);
+      if (existingEmailUser) {
+        return res.status(400).json({ 
+          message: "Este email já está em uso. Escolha outro email.",
+          error: "email_already_exists"
+        });
+      }
+
+      // Check if username already exists  
+      const existingUsernameUser = await storage.getUserByUsername(userData.username);
+      if (existingUsernameUser) {
+        return res.status(400).json({ 
+          message: "Este nome de usuário já está em uso. Escolha outro.",
+          error: "username_already_exists"
+        });
+      }
+
       const user = await storage.createUser(userData);
 
       res.status(201).json({
@@ -389,6 +407,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating campaign:", error);
       res.status(500).json({ message: "Failed to create campaign" });
+    }
+  });
+
+  // Delete campaign endpoint
+  app.delete('/api/campaigns/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!['admin', 'supervisor'].includes(user?.role || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const campaignId = parseInt(req.params.id);
+      await storage.deleteCampaign(campaignId);
+      res.json({ message: "Campaign deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      res.status(500).json({ message: "Failed to delete campaign" });
+    }
+  });
+
+  // Delete company endpoint
+  app.delete('/api/companies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can delete companies" });
+      }
+      
+      const companyId = parseInt(req.params.id);
+      await storage.deleteCompany(companyId);
+      res.json({ message: "Company deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      res.status(500).json({ message: "Failed to delete company" });
     }
   });
 
