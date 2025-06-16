@@ -48,13 +48,13 @@ export function registerRoutes(app: Express): Server {
         const agentIncidents = agentEvaluations.filter((evaluation: any) => evaluation.hasCriticalFailure).length;
 
         return {
-          name: agent.name,
-          score: agentScore,
+          name: agent.name || agent.firstName + ' ' + agent.lastName || 'Nome não disponível',
+          score: isNaN(agentScore) ? 0 : Number(agentScore.toFixed(1)),
           evaluations: agentEvaluations.length,
-          approvalRate: agentApprovalRate,
+          approvalRate: isNaN(agentApprovalRate) ? 0 : agentApprovalRate,
           incidents: agentIncidents
         };
-      });
+      }).filter(agent => agent.name && agent.name !== 'Nome não disponível');
 
       // Palavras críticas detectadas (simulação baseada em dados reais)
       const criticalWords = [
@@ -66,14 +66,24 @@ export function registerRoutes(app: Express): Server {
       const reportData = {
         general: {
           totalEvaluations,
-          averageScore: Math.round(averageScore * 10) / 10,
-          approvalRate,
+          averageScore: isNaN(averageScore) ? 0 : Math.round(averageScore * 10) / 10,
+          approvalRate: isNaN(approvalRate) ? 0 : approvalRate,
           criticalIncidents,
           unsignedForms,
           contestedEvaluations
         },
         agentPerformance,
-        criticalWords
+        byPeriod: [],
+        byCampaign: [],
+        byEvaluator: [],
+        criticalWords,
+        scoreDistribution: [
+          { range: "9.0 - 10.0", count: 0, percentage: 0, color: "#22c55e" },
+          { range: "8.0 - 8.9", count: 0, percentage: 0, color: "#84cc16" },
+          { range: "7.0 - 7.9", count: 0, percentage: 0, color: "#eab308" },
+          { range: "6.0 - 6.9", count: 0, percentage: 0, color: "#f97316" },
+          { range: "5.0 - 5.9", count: 0, percentage: 0, color: "#ef4444" }
+        ]
       };
 
       res.json(reportData);
@@ -261,9 +271,24 @@ export function registerRoutes(app: Express): Server {
     res.json(ranking);
   });
 
+  app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
+    const metrics = await storage.getDashboardMetrics();
+    res.json(metrics);
+  });
+
   app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
     const stats = await storage.getDashboardStats();
     res.json(stats);
+  });
+
+  app.get("/api/team-ranking", isAuthenticated, async (req: any, res) => {
+    const teamRanking = await storage.getTeamRanking(req.user.id);
+    res.json(teamRanking);
+  });
+
+  app.get("/api/team-performance", isAuthenticated, async (req: any, res) => {
+    const teamPerformance = await storage.getTeamPerformanceEvolution(req.user.id, 6);
+    res.json(teamPerformance);
   });
 
   const httpServer = createServer(app);
