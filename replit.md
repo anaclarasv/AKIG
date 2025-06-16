@@ -125,6 +125,13 @@ AKIG Solutions is a comprehensive intelligent call monitoring and evaluation sys
 
 ```
 Changelog:
+- June 16, 2025. Sistema de análise de chat corrigido para preservar horários
+  * Substituído analyzeChatConversation em simple-text-analysis.ts e text-analysis.ts
+  * Agora usa FixedChatAnalyzer que preserva timestamps originais do chat
+  * Corrigida detecção de palavrões e sentimento negativo real
+  * Sistema não altera mais horários de 09:45 para 11:20
+  * Detecta corretamente chats com palavrões como negativos em vez de neutros
+  * Identificação precisa de necessidade de escalação em casos críticos
 - June 16, 2025. Sistema de análise de chat completamente reescrito
   * Criado ImprovedChatAnalyzer que detecta problemas reais do atendimento
   * Detecção precisa de palavrões, linguagem ofensiva e escalação

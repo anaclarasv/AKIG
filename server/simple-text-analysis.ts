@@ -178,7 +178,18 @@ function parseConversationFlow(content: string): {
 }
 
 export async function analyzeChatConversation(chatContent: string): Promise<ChatAnalysis> {
-  console.log('Analisando chat com métricas básicas...');
+  console.log('=== USANDO SISTEMA CORRIGIDO - PRESERVA HORÁRIOS ===');
+  
+  // Import e usar o analisador corrigido
+  const { FixedChatAnalyzer } = await import('./fixed-chat-analyzer');
+  const analysis = FixedChatAnalyzer.analyzeChatContent(chatContent);
+  
+  console.log('Análise corrigida:', {
+    sentiment: analysis.analysis.overallSentiment,
+    swearWords: analysis.metrics.totalSwearWords,
+    maxResponseTime: analysis.metrics.maxResponseTime,
+    escalation: analysis.analysis.requiresEscalation
+  });
   
   const messages = chatContent.split('\n').filter(line => line.trim());
   const parsedConversation = parseConversationFlow(chatContent);
@@ -204,25 +215,50 @@ export async function analyzeChatConversation(chatContent: string): Promise<Chat
   );
   
   return {
-    responseTime: agentMessages > 0 ? Math.round(75 + Math.random() * 30) : 0,
-    professionalism: hasCourtesy ? 8 : 6,
-    clarity: avgMessageLength > 10 ? 8 : 6,
-    empathy: hasCourtesy ? 7 : 5,
-    problemResolution: hasResolution ? 8 : 6,
-    overallScore: Math.round((
-      (hasCourtesy ? 8 : 6) + 
-      (avgMessageLength > 10 ? 8 : 6) + 
-      (hasResolution ? 8 : 6)
-    ) / 3),
-    criticalMoments: [],
-    recommendations: [
-      hasCourtesy ? "Boa comunicação interpessoal" : "Pode melhorar a cortesia",
-      hasResolution ? "Problema resolvido adequadamente" : "Verificar se houve resolução"
-    ],
-    keyTopics: extractKeywords(chatContent),
-    sentiment: hasCourtesy && hasResolution ? 0.8 : 0.6,
-    conversationFlow: parsedConversation.flow,
-    speakerAnalysis: parsedConversation.analysis
+    responseTime: analysis.metrics.averageResponseTime,
+    professionalism: analysis.metrics.totalSwearWords > 0 ? 3 : 8,
+    clarity: 7,
+    empathy: analysis.analysis.overallSentiment === 'negative' ? 3 : 7,
+    problemResolution: analysis.analysis.requiresEscalation ? 2 : 7,
+    overallScore: analysis.analysis.serviceQuality === 'critical' ? 2 :
+                 analysis.analysis.serviceQuality === 'poor' ? 4 :
+                 analysis.analysis.serviceQuality === 'average' ? 6 : 8,
+    criticalMoments: analysis.analysis.criticalIssues.map((issue, index) => ({
+      timestamp: index * 60,
+      description: issue,
+      severity: 'high' as const
+    })),
+    recommendations: analysis.analysis.requiresEscalation ? 
+      ['Escalação imediata necessária', 'Treinamento em atendimento'] :
+      ['Manter qualidade do atendimento'],
+    keyTopics: analysis.analysis.criticalIssues.length > 0 ? 
+               analysis.analysis.criticalIssues : extractKeywords(chatContent),
+    sentiment: analysis.analysis.overallSentiment === 'positive' ? 0.8 : 
+              analysis.analysis.overallSentiment === 'negative' ? 0.2 : 0.5,
+    conversationFlow: analysis.conversationFlow.map(msg => ({
+      timestamp: msg.originalTimestamp,
+      speaker: msg.speaker,
+      message: msg.text,
+      sentiment: msg.sentiment === 'positive' ? 0.8 : 
+                msg.sentiment === 'negative' ? 0.1 : 0.5,
+      responseTime: undefined
+    })),
+    speakerAnalysis: {
+      agent: {
+        messageCount: analysis.metrics.agentMessages,
+        avgResponseTime: analysis.metrics.averageResponseTime,
+        sentimentScore: analysis.analysis.agentPerformance === 'excellent' ? 0.9 :
+                       analysis.analysis.agentPerformance === 'poor' ? 0.3 : 0.7,
+        professionalismScore: analysis.metrics.totalSwearWords > 0 ? 0.3 : 0.9
+      },
+      client: {
+        messageCount: analysis.metrics.clientMessages,
+        sentimentScore: analysis.analysis.overallSentiment === 'positive' ? 0.8 : 
+                       analysis.analysis.overallSentiment === 'negative' ? 0.1 : 0.5,
+        satisfactionLevel: analysis.analysis.customerSatisfaction === 'high' ? 9 :
+                          analysis.analysis.customerSatisfaction === 'low' ? 3 : 6
+      }
+    }
   };
 }
 
