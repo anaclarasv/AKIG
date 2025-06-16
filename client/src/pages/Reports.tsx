@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Download, FileText, Filter, TrendingUp, Users, Star, AlertTriangle } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReportData {
   general: {
@@ -16,6 +18,13 @@ interface ReportData {
     unsignedForms: number;
     contestedEvaluations: number;
   };
+  agentPerformance: Array<{
+    name: string;
+    score: number;
+    evaluations: number;
+    approvalRate: number;
+    incidents: number;
+  }>;
   byPeriod: Array<{
     period: string;
     evaluations: number;
@@ -109,38 +118,198 @@ export default function Reports() {
   };
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
-    if (format === 'pdf') {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
+    try {
+      // Buscar dados detalhados das avaliações para o relatório
+      const evaluationsResponse = await apiRequest('GET', '/api/evaluations/detailed');
+      const evaluationsData = await evaluationsResponse.json();
       
-      doc.setFontSize(16);
-      doc.text('Relatório de Monitoria - AKIG Solutions', 20, 20);
+      const sessionsResponse = await apiRequest('GET', '/api/monitoring-sessions/detailed');
+      const sessionsData = await sessionsResponse.json();
       
-      doc.setFontSize(12);
-      doc.text(`Total de Avaliações: ${reportData.general.totalEvaluations}`, 20, 40);
-      doc.text(`Pontuação Média: ${reportData.general.averageScore.toFixed(1)}`, 20, 50);
-      doc.text(`Taxa de Aprovação: ${reportData.general.approvalRate}%`, 20, 60);
+      if (format === 'pdf') {
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        
+        // Cabeçalho do relatório
+        doc.setFontSize(18);
+        doc.text('Relatório Completo de Monitoria', 20, 20);
+        doc.setFontSize(12);
+        doc.text('AKIG Solutions - Sistema de Monitoria de Atendimento', 20, 30);
+        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 40);
+        
+        let yPosition = 60;
+        
+        // Métricas gerais
+        doc.setFontSize(14);
+        doc.text('Métricas Gerais', 20, yPosition);
+        yPosition += 15;
+        
+        doc.setFontSize(10);
+        doc.text(`Total de Avaliações: ${reportData.general.totalEvaluations}`, 20, yPosition);
+        doc.text(`Pontuação Média: ${reportData.general.averageScore.toFixed(1)}`, 20, yPosition + 10);
+        doc.text(`Taxa de Aprovação: ${reportData.general.approvalRate}%`, 20, yPosition + 20);
+        doc.text(`Incidentes Críticos: ${reportData.general.criticalIncidents}`, 20, yPosition + 30);
+        doc.text(`Formulários Pendentes: ${reportData.general.unsignedForms}`, 20, yPosition + 40);
+        doc.text(`Contestações: ${reportData.general.contestedEvaluations}`, 20, yPosition + 50);
+        
+        yPosition += 70;
+        
+        // Performance por agente
+        if (reportData.agentPerformance && reportData.agentPerformance.length > 0) {
+          doc.setFontSize(14);
+          doc.text('Performance por Agente', 20, yPosition);
+          yPosition += 15;
+          
+          doc.setFontSize(10);
+          reportData.agentPerformance.slice(0, 10).forEach((agent: any) => {
+            doc.text(`${agent.name}: ${agent.score.toFixed(1)} (${agent.evaluations} avaliações)`, 20, yPosition);
+            yPosition += 10;
+            if (yPosition > 270) {
+              doc.addPage();
+              yPosition = 20;
+            }
+          });
+        }
+        
+        // Palavras críticas
+        if (reportData.criticalWords && reportData.criticalWords.length > 0) {
+          yPosition += 20;
+          if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          doc.setFontSize(14);
+          doc.text('Palavras Críticas Detectadas', 20, yPosition);
+          yPosition += 15;
+          
+          doc.setFontSize(10);
+          reportData.criticalWords.slice(0, 15).forEach((word: any) => {
+            doc.text(`${word.word}: ${word.count} ocorrências`, 20, yPosition);
+            yPosition += 10;
+            if (yPosition > 270) {
+              doc.addPage();
+              yPosition = 20;
+            }
+          });
+        }
+        
+        doc.save(`relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf`);
+        
+      } else {
+        const { utils, writeFile } = await import('xlsx');
+        const workbook = utils.book_new();
+        
+        // Aba 1: Métricas Gerais
+        const generalData = [
+          ['Métrica', 'Valor'],
+          ['Total de Avaliações', reportData.general.totalEvaluations],
+          ['Pontuação Média', reportData.general.averageScore.toFixed(2)],
+          ['Taxa de Aprovação (%)', reportData.general.approvalRate],
+          ['Incidentes Críticos', reportData.general.criticalIncidents],
+          ['Formulários Não Assinados', reportData.general.unsignedForms],
+          ['Avaliações Contestadas', reportData.general.contestedEvaluations],
+          ['Data do Relatório', new Date().toLocaleDateString('pt-BR')]
+        ];
+        
+        const generalSheet = utils.aoa_to_sheet(generalData);
+        utils.book_append_sheet(workbook, generalSheet, 'Métricas Gerais');
+        
+        // Aba 2: Avaliações Detalhadas
+        if (evaluationsData && evaluationsData.length > 0) {
+          const evaluationsHeaders = [
+            'ID', 'Agente', 'Avaliador', 'Campanha', 'Canal', 'Data', 
+            'Pontuação Final', 'Status', 'Observações', 'Assinado'
+          ];
+          
+          const evaluationsRows = evaluationsData.map((evaluation: any) => [
+            evaluation.id,
+            evaluation.agentName || evaluation.agentId,
+            evaluation.evaluatorName || evaluation.evaluatorId,
+            evaluation.campaignName || 'N/A',
+            evaluation.channelType || 'voice',
+            new Date(evaluation.createdAt).toLocaleDateString('pt-BR'),
+            evaluation.finalScore || 0,
+            evaluation.status || 'pending',
+            evaluation.observations || '',
+            evaluation.agentSignature ? 'Sim' : 'Não'
+          ]);
+          
+          const evaluationsData2D = [evaluationsHeaders, ...evaluationsRows];
+          const evaluationsSheet = utils.aoa_to_sheet(evaluationsData2D);
+          utils.book_append_sheet(workbook, evaluationsSheet, 'Avaliações Detalhadas');
+        }
+        
+        // Aba 3: Performance por Agente
+        if (reportData.agentPerformance && reportData.agentPerformance.length > 0) {
+          const performanceHeaders = ['Agente', 'Pontuação Média', 'Avaliações', 'Aprovação %', 'Incidentes'];
+          const performanceRows = reportData.agentPerformance.map((agent: any) => [
+            agent.name,
+            agent.score.toFixed(2),
+            agent.evaluations,
+            agent.approvalRate || 0,
+            agent.incidents || 0
+          ]);
+          
+          const performanceData2D = [performanceHeaders, ...performanceRows];
+          const performanceSheet = utils.aoa_to_sheet(performanceData2D);
+          utils.book_append_sheet(workbook, performanceSheet, 'Performance Agentes');
+        }
+        
+        // Aba 4: Sessões de Monitoria
+        if (sessionsData && sessionsData.length > 0) {
+          const sessionsHeaders = [
+            'ID', 'Agente', 'Campanha', 'Canal', 'Status', 'Data Criação',
+            'Transcrição', 'Análise IA', 'Tempo Silêncio', 'Palavras Críticas'
+          ];
+          
+          const sessionsRows = sessionsData.map((session: any) => [
+            session.id,
+            session.agentName || session.agentId,
+            session.campaignName || 'N/A',
+            session.channelType,
+            session.status,
+            new Date(session.createdAt).toLocaleDateString('pt-BR'),
+            session.transcriptionText ? 'Sim' : 'Não',
+            session.aiAnalysis ? 'Sim' : 'Não',
+            session.silenceTime || 0,
+            session.criticalWordsCount || 0
+          ]);
+          
+          const sessionsData2D = [sessionsHeaders, ...sessionsRows];
+          const sessionsSheet = utils.aoa_to_sheet(sessionsData2D);
+          utils.book_append_sheet(workbook, sessionsSheet, 'Sessões Monitoria');
+        }
+        
+        // Aba 5: Palavras Críticas
+        if (reportData.criticalWords && reportData.criticalWords.length > 0) {
+          const wordsHeaders = ['Palavra/Termo', 'Ocorrências', 'Última Detecção'];
+          const wordsRows = reportData.criticalWords.map((word: any) => [
+            word.word,
+            word.count,
+            word.lastDetected || 'N/A'
+          ]);
+          
+          const wordsData2D = [wordsHeaders, ...wordsRows];
+          const wordsSheet = utils.aoa_to_sheet(wordsData2D);
+          utils.book_append_sheet(workbook, wordsSheet, 'Palavras Críticas');
+        }
+        
+        writeFile(workbook, `relatorio-monitoria-completo-${new Date().toISOString().split('T')[0]}.xlsx`);
+      }
       
-      doc.save('relatorio-monitoria.pdf');
-    } else {
-      const { utils, writeFile } = await import('xlsx');
-      const workbook = utils.book_new();
+      toast({
+        title: "Relatório exportado",
+        description: `Relatório ${format.toUpperCase()} gerado com dados completos das avaliações`,
+      });
       
-      // General metrics sheet
-      const generalData = [
-        ['Métrica', 'Valor'],
-        ['Total de Avaliações', reportData.general.totalEvaluations],
-        ['Pontuação Média', reportData.general.averageScore],
-        ['Taxa de Aprovação (%)', reportData.general.approvalRate],
-        ['Incidentes Críticos', reportData.general.criticalIncidents],
-        ['Formulários Não Assinados', reportData.general.unsignedForms],
-        ['Avaliações Contestadas', reportData.general.contestedEvaluations]
-      ];
-      
-      const generalSheet = utils.aoa_to_sheet(generalData);
-      utils.book_append_sheet(workbook, generalSheet, 'Métricas Gerais');
-      
-      writeFile(workbook, 'relatorio-monitoria.xlsx');
+    } catch (error) {
+      console.error('Erro ao exportar relatório:', error);
+      toast({
+        title: "Erro na exportação",
+        description: "Não foi possível gerar o relatório. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 

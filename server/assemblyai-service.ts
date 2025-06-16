@@ -34,6 +34,28 @@ export interface AIAnalysis {
   }>;
   recommendations: string[];
   score: number;
+  silenceAnalysis: {
+    totalSilenceTime: number;
+    silencePeriods: Array<{
+      startTime: number;
+      endTime: number;
+      duration: number;
+    }>;
+    averageSilenceDuration: number;
+  };
+  criticalWordsFound: Array<{
+    word: string;
+    count: number;
+    timestamps: number[];
+  }>;
+  responseTimeAnalysis: {
+    averageResponseTime: number;
+    maxResponseTime: number;
+    responseTimesBySegment: Array<{
+      segmentId: string;
+      responseTime: number;
+    }>;
+  };
 }
 
 const CRITICAL_WORDS = [
@@ -129,7 +151,7 @@ export async function transcribeAudioWithAssemblyAI(audioFilePath: string): Prom
 }
 
 export function analyzeTranscription(transcriptionResult: TranscriptionResult): AIAnalysis {
-  const { text, segments } = transcriptionResult;
+  const { text, segments, duration } = transcriptionResult;
   
   // Sentiment analysis
   const positiveWords = ['obrigado', 'satisfeito', 'excelente', 'ótimo', 'bom', 'perfeito'];
@@ -173,6 +195,75 @@ export function analyzeTranscription(transcriptionResult: TranscriptionResult): 
       ) ? 'high' as const : 'medium' as const
     }));
   
+  // Analyze silence periods
+  const silencePeriods = [];
+  let totalSilenceTime = 0;
+  
+  for (let i = 0; i < segments.length - 1; i++) {
+    const currentEnd = segments[i].endTime;
+    const nextStart = segments[i + 1].startTime;
+    const silenceDuration = nextStart - currentEnd;
+    
+    if (silenceDuration > 2) { // Silence longer than 2 seconds
+      silencePeriods.push({
+        startTime: currentEnd,
+        endTime: nextStart,
+        duration: silenceDuration
+      });
+      totalSilenceTime += silenceDuration;
+    }
+  }
+  
+  const averageSilenceDuration = silencePeriods.length > 0 
+    ? totalSilenceTime / silencePeriods.length 
+    : 0;
+  
+  // Analyze critical words
+  const criticalWordsFound = [];
+  CRITICAL_WORDS.forEach(word => {
+    const regex = new RegExp(word, 'gi');
+    const matches = text.match(regex);
+    if (matches) {
+      const timestamps = [];
+      segments.forEach(segment => {
+        if (segment.text.toLowerCase().includes(word.toLowerCase())) {
+          timestamps.push(segment.startTime);
+        }
+      });
+      
+      criticalWordsFound.push({
+        word,
+        count: matches.length,
+        timestamps
+      });
+    }
+  });
+  
+  // Analyze response times between speakers
+  const responseTimesBySegment = [];
+  let totalResponseTime = 0;
+  let responseCount = 0;
+  
+  for (let i = 1; i < segments.length; i++) {
+    const previousSpeaker = segments[i - 1].speaker;
+    const currentSpeaker = segments[i].speaker;
+    
+    if (previousSpeaker !== currentSpeaker) {
+      const responseTime = segments[i].startTime - segments[i - 1].endTime;
+      responseTimesBySegment.push({
+        segmentId: segments[i].id,
+        responseTime
+      });
+      totalResponseTime += responseTime;
+      responseCount++;
+    }
+  }
+  
+  const averageResponseTime = responseCount > 0 ? totalResponseTime / responseCount : 0;
+  const maxResponseTime = responseTimesBySegment.length > 0 
+    ? Math.max(...responseTimesBySegment.map(r => r.responseTime))
+    : 0;
+  
   // Generate recommendations
   const recommendations = [];
   if (sentiment < 0.5) {
@@ -184,18 +275,39 @@ export function analyzeTranscription(transcriptionResult: TranscriptionResult): 
   if (criticalMoments.length > 3) {
     recommendations.push('Supervisão mais próxima necessária para este tipo de chamada');
   }
+  if (averageResponseTime > 5) {
+    recommendations.push('Reduzir tempo de resposta entre falas');
+  }
+  if (totalSilenceTime > duration * 0.3) {
+    recommendations.push('Reduzir períodos de silêncio excessivo');
+  }
   if (recommendations.length === 0) {
     recommendations.push('Atendimento dentro dos padrões esperados');
   }
   
-  const score = Math.round(sentiment * 10);
+  // Calculate overall score with new metrics
+  let score = Math.round(sentiment * 10);
+  score -= Math.min(3, Math.floor(totalSilenceTime / duration * 10));
+  score -= Math.min(2, Math.floor(averageResponseTime));
+  score = Math.max(0, Math.min(10, score));
   
   return {
     sentiment,
     keyTopics,
     criticalMoments,
     recommendations,
-    score
+    score,
+    silenceAnalysis: {
+      totalSilenceTime,
+      silencePeriods,
+      averageSilenceDuration
+    },
+    criticalWordsFound,
+    responseTimeAnalysis: {
+      averageResponseTime,
+      maxResponseTime,
+      responseTimesBySegment
+    }
   };
 }
 
