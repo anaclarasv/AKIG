@@ -347,9 +347,10 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/agents", isAuthenticated, async (req: any, res) => {
     try {
       const users = await storage.getUsers();
-      const agents = users.filter(user => user.role === 'agent');
+      const agents = users.filter(user => user.role === 'agent' && user.isActive);
+      console.log('Agentes encontrados:', agents.length);
       res.json(agents);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar agentes:', error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
