@@ -118,78 +118,56 @@ export default function Reports() {
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
     try {
-      if (format === 'pdf') {
-        const { jsPDF } = await import('jspdf');
-        const doc = new jsPDF();
-        
-        // Header
-        doc.setFontSize(18);
-        doc.text('Relatório Completo de Monitoria', 20, 20);
-        doc.setFontSize(12);
-        doc.text('AKIG Solutions - Sistema de Monitoria', 20, 30);
-        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 40);
-        
-        let yPosition = 60;
-        
-        // General metrics
-        doc.setFontSize(14);
-        doc.text('Métricas Gerais', 20, yPosition);
-        yPosition += 15;
-        
-        doc.setFontSize(10);
-        doc.text(`Total de Avaliações: ${reportData.general.totalEvaluations}`, 20, yPosition);
-        doc.text(`Pontuação Média: ${reportData.general.averageScore.toFixed(1)}`, 20, yPosition + 10);
-        doc.text(`Taxa de Aprovação: ${reportData.general.approvalRate}%`, 20, yPosition + 20);
-        doc.text(`Incidentes Críticos: ${reportData.general.criticalIncidents}`, 20, yPosition + 30);
-        
-        doc.save(`relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf`);
-        
-      } else {
-        const { utils, writeFile } = await import('xlsx');
-        const workbook = utils.book_new();
-        
-        // General metrics sheet
-        const generalData = [
-          ['Métrica', 'Valor'],
-          ['Total de Avaliações', reportData.general.totalEvaluations],
-          ['Pontuação Média', reportData.general.averageScore.toFixed(2)],
-          ['Taxa de Aprovação (%)', reportData.general.approvalRate],
-          ['Incidentes Críticos', reportData.general.criticalIncidents],
-          ['Formulários Não Assinados', reportData.general.unsignedForms],
-          ['Avaliações Contestadas', reportData.general.contestedEvaluations]
-        ];
-        
-        const generalSheet = utils.aoa_to_sheet(generalData);
-        utils.book_append_sheet(workbook, generalSheet, 'Métricas Gerais');
-        
-        // Agent performance sheet
-        if (reportData.agentPerformance.length > 0) {
-          const performanceHeaders = ['Agente', 'Pontuação Média', 'Avaliações', 'Aprovação %'];
-          const performanceRows = reportData.agentPerformance.map(agent => [
-            agent.name,
-            agent.score.toFixed(2),
-            agent.evaluations,
-            agent.approvalRate || 0
-          ]);
-          
-          const performanceData = [performanceHeaders, ...performanceRows];
-          const performanceSheet = utils.aoa_to_sheet(performanceData);
-          utils.book_append_sheet(workbook, performanceSheet, 'Performance Agentes');
-        }
-        
-        writeFile(workbook, `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.xlsx`);
+      const params = new URLSearchParams();
+      if (dateRange?.from) {
+        params.append('startDate', dateRange.from.toISOString());
       }
+      if (dateRange?.to) {
+        params.append('endDate', dateRange.to.toISOString());
+      }
+      if (selectedCampaign && selectedCampaign !== 'all') {
+        params.append('campaign', selectedCampaign);
+      }
+      if (selectedEvaluator && selectedEvaluator !== 'all') {
+        params.append('evaluator', selectedEvaluator);
+      }
+
+      const url = `/api/reports/export/${format}?${params.toString()}`;
       
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      const fileName = format === 'pdf' 
+        ? `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.pdf`
+        : `relatorio-monitoria-${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
       toast({
         title: "Relatório exportado",
-        description: `Relatório ${format.toUpperCase()} gerado com dados completos`,
+        description: `Relatório ${format.toUpperCase()} gerado com dados reais do banco de dados`,
       });
       
     } catch (error) {
       console.error('Erro ao exportar relatório:', error);
       toast({
         title: "Erro na exportação",
-        description: "Não foi possível gerar o relatório",
+        description: "Não foi possível gerar o relatório. Verifique sua conexão.",
         variant: "destructive",
       });
     }
