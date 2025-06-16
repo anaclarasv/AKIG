@@ -891,17 +891,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let stdout = '';
         let stderr = '';
         
-        pythonProcess.stdout.on('data', (data) => {
+        pythonProcess.stdout?.on('data', (data: any) => {
           stdout += data.toString();
         });
         
-        pythonProcess.stderr.on('data', (data) => {
+        pythonProcess.stderr?.on('data', (data: any) => {
           stderr += data.toString();
           console.log('AssemblyAI progress:', data.toString().trim());
         });
         
         const transcriptionResult = await new Promise((resolve, reject) => {
-          pythonProcess.on('close', (code) => {
+          pythonProcess.on('close', (code: any) => {
             if (code === 0) {
               try {
                 const result = JSON.parse(stdout);
@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          pythonProcess.on('error', (error) => {
+          pythonProcess.on('error', (error: any) => {
             reject(new Error(`Failed to start AssemblyAI transcriber: ${error.message}`));
           });
           

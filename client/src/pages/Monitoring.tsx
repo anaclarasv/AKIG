@@ -699,11 +699,11 @@ export default function Monitoring() {
               {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
                 <div className="min-h-[600px] h-auto overflow-y-auto border rounded-lg p-4">
                   {/* Check for any available analysis data */}
-                  {selectedSessionData.status === 'completed' && selectedSessionData.transcription?.conversationFlow?.length ? (
+                  {selectedSessionData.status === 'completed' && (selectedSessionData.transcription as any)?.conversationFlow?.length ? (
                     <ConversationFlow
-                      messages={selectedSessionData.transcription.conversationFlow}
+                      messages={(selectedSessionData.transcription as any).conversationFlow}
                       channelType={selectedSessionData.channelType}
-                      speakerAnalysis={selectedSessionData.transcription.speakerAnalysis}
+                      speakerAnalysis={(selectedSessionData.transcription as any).speakerAnalysis}
                     />
                   ) : selectedSessionData.status === 'completed' && selectedSessionData.chatContent ? (
                     <div className="space-y-4 p-4">
