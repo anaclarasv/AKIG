@@ -601,17 +601,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Endpoint para aprovar solicitação de resgate
+  app.post("/api/reward-requests/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const { notes } = req.body;
+      const requestId = parseInt(req.params.id);
+      const purchase = await storage.approveRewardRequest(requestId, req.user.id, notes);
+      res.json(purchase);
+    } catch (error) {
+      console.error('Erro ao aprovar solicitação:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Endpoint para rejeitar solicitação de resgate
+  app.post("/api/reward-requests/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const { rejectionReason } = req.body;
+      const requestId = parseInt(req.params.id);
+      const purchase = await storage.rejectRewardRequest(requestId, req.user.id, rejectionReason);
+      res.json(purchase);
+    } catch (error) {
+      console.error('Erro ao rejeitar solicitação:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   app.post("/api/reward-purchases", isAuthenticated, async (req: any, res) => {
     try {
-      const purchaseData = {
-        ...req.body,
-        userId: req.user.id
-      };
-      const purchase = await storage.requestReward(purchaseData);
+      const { rewardId } = req.body;
+      const purchase = await storage.purchaseReward(req.user.id, rewardId);
       res.status(201).json(purchase);
     } catch (error) {
       console.error('Erro ao criar compra:', error);
-      res.status(500).json({ error: "Erro interno do servidor" });
+      if (error.message === 'Insufficient virtual coins') {
+        res.status(400).json({ error: "Moedas virtuais insuficientes" });
+      } else if (error.message === 'User or reward not found') {
+        res.status(404).json({ error: "Usuário ou recompensa não encontrada" });
+      } else {
+        res.status(500).json({ error: "Erro interno do servidor" });
+      }
     }
   });
 
