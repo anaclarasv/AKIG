@@ -106,8 +106,20 @@ export interface IStorage {
     activeAgents: number;
     activeAgentsChange: number;
   }>;
+
+  getDashboardStats(): Promise<any>;
+  getUsers(): Promise<User[]>;
   
   // Ranking operations
+  getRanking(): Promise<Array<{
+    userId: string;
+    firstName: string;
+    lastName: string;
+    averageScore: number;
+    virtualCoins: number;
+    rank: number;
+  }>>;
+
   getUserRanking(companyId?: number): Promise<Array<{
     userId: string;
     firstName: string;
@@ -236,6 +248,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await this.getAllUsers();
   }
 
   async updateUser(id: string, userData: Partial<InsertUser>): Promise<User> {
@@ -873,6 +889,21 @@ export class DatabaseStorage implements IStorage {
       activeAgents,
       activeAgentsChange,
     };
+  }
+
+  async getDashboardStats(): Promise<any> {
+    return await this.getDashboardMetrics();
+  }
+
+  async getRanking(): Promise<Array<{
+    userId: string;
+    firstName: string;
+    lastName: string;
+    averageScore: number;
+    virtualCoins: number;
+    rank: number;
+  }>> {
+    return await this.getUserRanking();
   }
 
   async getUserRanking(companyId?: number): Promise<Array<{
