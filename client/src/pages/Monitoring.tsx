@@ -12,12 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, Volume2, Download, Upload, Plus, MoreVertical, Trash2, Archive } from "lucide-react";
+import { Play, Pause, Volume2, Download, Upload, Plus, MoreVertical, Trash2, Archive, ArrowLeft, CheckCircle, AlertCircle, XCircle, MessageSquare, Mail, Phone, Calendar, Building2, Hash, Clock, Brain, ClipboardList } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
-import { User } from "@/types";
-import type { MonitoringSession, Campaign } from "@/types";
+import type { User, MonitoringSession, Campaign } from "@/types";
 import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
 import ConversationFlow from "@/components/monitoring/ConversationFlow";
 
@@ -62,7 +61,7 @@ export default function Monitoring() {
     queryKey: ['/api/campaigns'],
   });
 
-  const { data: agents } = useQuery<User[]>({
+  const { data: agents } = useQuery<UserType[]>({
     queryKey: ['/api/agents'],
   });
 
@@ -457,94 +456,125 @@ export default function Monitoring() {
           }}
         />
         
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Audio Player and Controls - Only for voice channel */}
-          {selectedSessionData.channelType === 'voice' && (
-            <Card className="lg:col-span-1 akig-card-shadow">
-              <CardHeader>
-                <CardTitle>Controles de Áudio</CardTitle>
+        <div className="mt-8">
+          {selectedSessionData.channelType === 'voice' ? (
+            // Voice channel: Show audio controls and evaluation side by side
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+              {/* Audio Player and Controls */}
+              <Card className="xl:col-span-1 akig-card-shadow">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Volume2 className="w-5 h-5 text-blue-600" />
+                    Controles de Áudio
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {selectedSessionData.audioUrl && (
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <audio 
+                          controls 
+                          className="w-full"
+                          preload="metadata"
+                        >
+                          <source src={`/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`} type="audio/mpeg" />
+                          Seu navegador não suporta o elemento de áudio.
+                        </audio>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm bg-blue-50 p-3 rounded-lg">
+                        <span className="text-blue-700 font-medium">Duração:</span>
+                        <span className="font-semibold text-blue-800">
+                          {selectedSessionData.duration ? 
+                            `${Math.floor(selectedSessionData.duration / 60)}:${String(selectedSessionData.duration % 60).padStart(2, '0')}` 
+                            : 'Calculando...'}
+                        </span>
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="w-full hover:bg-blue-50 border-blue-200"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = `/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`;
+                          link.download = `audio_sessao_${selectedSession}.mp3`;
+                          link.click();
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar Áudio
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {selectedSessionData.aiAnalysis && (
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-purple-600" />
+                        Análise IA
+                      </h4>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                          <p className="text-red-600 font-bold text-lg text-center">
+                            {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
+                          </p>
+                          <p className="text-xs text-red-700 text-center font-medium">Palavras Críticas</p>
+                        </div>
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <p className="text-amber-600 font-bold text-lg text-center">
+                            {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
+                          </p>
+                          <p className="text-xs text-amber-700 text-center font-medium">Silêncio Total</p>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-blue-600 font-bold text-lg text-center">
+                            {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
+                          </p>
+                          <p className="text-xs text-blue-700 text-center font-medium">Tom Médio</p>
+                        </div>
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-green-600 font-bold text-lg text-center">
+                            {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
+                          </p>
+                          <p className="text-xs text-green-700 text-center font-medium">Sentimento</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Monitoring Evaluation Form */}
+              <Card className="xl:col-span-2 akig-card-shadow">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-green-600" />
+                    Ficha de Monitoria
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            // Chat/Email channel: Show only evaluation form with full width
+            <Card className="akig-card-shadow">
+              <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
+                <CardTitle className="flex items-center gap-3">
+                  {selectedSessionData.channelType === 'chat' ? (
+                    <MessageSquare className="w-6 h-6 text-blue-600" />
+                  ) : (
+                    <Mail className="w-6 h-6 text-purple-600" />
+                  )}
+                  <span className="text-xl">Ficha de Monitoria - {selectedSessionData.channelType === 'chat' ? 'Chat' : 'E-mail'}</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedSessionData.audioUrl && (
-                  <div className="space-y-4">
-                    <audio 
-                      controls 
-                      className="w-full"
-                      preload="metadata"
-                    >
-                      <source src={`/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`} type="audio/mpeg" />
-                      Seu navegador não suporta o elemento de áudio.
-                    </audio>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Duração:</span>
-                      <span className="font-medium">
-                        {selectedSessionData.duration ? 
-                          `${Math.floor(selectedSessionData.duration / 60)}:${String(selectedSessionData.duration % 60).padStart(2, '0')}` 
-                          : 'Calculando...'}
-                      </span>
-                    </div>
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = `/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`;
-                        link.download = `audio_sessao_${selectedSession}.mp3`;
-                        link.click();
-                      }}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Baixar Áudio
-                    </Button>
-                  </div>
-                )}
-                
-                {selectedSessionData.aiAnalysis && (
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Análise IA</h4>
-                    <div className="grid grid-cols-2 gap-2 text-center">
-                      <div className="p-2 bg-red-50 rounded">
-                        <p className="text-red-600 font-semibold text-sm">
-                          {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
-                        </p>
-                        <p className="text-xs text-red-700">Palavras Críticas</p>
-                      </div>
-                      <div className="p-2 bg-amber-50 rounded">
-                        <p className="text-amber-600 font-semibold text-sm">
-                          {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
-                        </p>
-                        <p className="text-xs text-amber-700">Silêncio Total</p>
-                      </div>
-                      <div className="p-2 bg-blue-50 rounded">
-                        <p className="text-blue-600 font-semibold text-sm">
-                          {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
-                        </p>
-                        <p className="text-xs text-blue-700">Tom Médio</p>
-                      </div>
-                      <div className="p-2 bg-green-50 rounded">
-                        <p className="text-green-600 font-semibold text-sm">
-                          {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
-                        </p>
-                        <p className="text-xs text-green-700">Sentimento</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              <CardContent className="pt-6">
+                <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
               </CardContent>
             </Card>
           )}
-
-          {/* Monitoring Evaluation Form */}
-          <Card className={`akig-card-shadow ${selectedSessionData.channelType === 'voice' ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-            <CardHeader>
-              <CardTitle>Ficha de Monitoria</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
-            </CardContent>
-          </Card>
         </div>
 
         {/* Content Display - Voice, Chat, or Email */}
