@@ -1,452 +1,184 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/layout/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+import { SafeSelect, SelectItem } from "@/components/ui/safe-select";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Pause, Volume2, Download, Upload, Plus, MoreVertical, Trash2, Archive, ArrowLeft, CheckCircle, AlertCircle, XCircle, MessageSquare, Mail, Phone, Calendar, Building2, Hash, Clock, Brain, ClipboardList } from "lucide-react";
+import { 
+  Plus, Phone, MessageSquare, Mail, Eye, MoreVertical, Download, Archive, Trash2,
+  ClipboardList, CheckCircle, AlertCircle, XCircle, Brain, Volume2, Play,
+  ArrowLeft, User, Building2, Calendar, Clock
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
-import { safeAnalysisValue, formatScore, formatDuration } from "@/lib/safeAccess";
-import type { User, MonitoringSession, Campaign } from "@/types";
-import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
+import Header from "@/components/layout/Header";
 import ConversationFlow from "@/components/monitoring/ConversationFlow";
+import MonitoringEvaluationForm from "@/components/monitoring/MonitoringEvaluationForm";
+
+interface MonitoringSession {
+  id: number;
+  agentId: string;
+  campaignId: number;
+  channelType: 'voice' | 'chat' | 'email';
+  status: 'pending' | 'completed' | 'processing' | 'in_progress';
+  audioUrl?: string;
+  chatContent?: string;
+  emailContent?: string;
+  transcription?: any;
+  aiAnalysis?: any;
+  duration: number;
+  createdAt: string;
+}
+
+interface Agent {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface Campaign {
+  id: number;
+  name: string;
+}
 
 export default function Monitoring() {
-  const [selectedSession, setSelectedSession] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [chatContent, setChatContent] = useState("");
-  const [emailContent, setEmailContent] = useState("");
-  const [chatFile, setChatFile] = useState<File | null>(null);
-  const [emailFile, setEmailFile] = useState<File | null>(null);
-  const [chatInputMode, setChatInputMode] = useState<'manual' | 'file'>('manual');
-  const [emailInputMode, setEmailInputMode] = useState<'manual' | 'file'>('manual');
-  const [transcriptionProgress, setTranscriptionProgress] = useState<{[key: number]: number}>({});
-  const [processingStatuses, setProcessingStatuses] = useState<{[key: number]: string}>({});
-  const [formData, setFormData] = useState({
-    agentId: "",
-    campaignId: "",
-    channelType: "voice" as "voice" | "chat" | "email",
-  });
-  const [showEvaluationForm, setShowEvaluationForm] = useState(false);
-
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Check if user can create new monitoring sessions - only evaluators and admins
-  const canCreateMonitoring = user?.role === 'admin' || user?.role === 'evaluator';
   
-  // Check if user can view all sessions or only their own
-  const canViewAllSessions = user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'evaluator';
+  const [selectedSession, setSelectedSession] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    channelType: 'all'
+  });
+  const [createFormData, setCreateFormData] = useState({
+    agentId: '',
+    campaignId: null as number | null,
+    channelType: '' as 'voice' | 'chat' | 'email' | ''
+  });
+  const [processingStatuses, setProcessingStatuses] = useState<Record<number, string>>({});
+  const [transcriptionProgress, setTranscriptionProgress] = useState<Record<number, number>>({});
 
-  const { data: sessions, isLoading } = useQuery<MonitoringSession[]>({
+  // Fetch monitoring sessions
+  const { data: monitoringSessions, isLoading } = useQuery<MonitoringSession[]>({
     queryKey: ['/api/monitoring-sessions'],
-    refetchInterval: selectedSession ? 2000 : false, // Poll every 2 seconds when viewing a session
-    staleTime: 0, // Always consider data stale
-    gcTime: 0, // Don't cache data
   });
 
+  // Fetch agents
+  const { data: agents } = useQuery<Agent[]>({
+    queryKey: ['/api/agents'],
+  });
+
+  // Fetch campaigns
   const { data: campaigns } = useQuery<Campaign[]>({
     queryKey: ['/api/campaigns'],
   });
 
-  const { data: agents } = useQuery<User[]>({
-    queryKey: ['/api/agents'],
-  });
-
-  const uploadMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      return await apiRequest('POST', '/api/monitoring-sessions', data);
-    },
-    onSuccess: async (response) => {
-      const newSession = await response.json();
-      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-      setIsUploadDialogOpen(false);
-      setAudioFile(null);
-      setChatContent("");
-      setEmailContent("");
-      setChatFile(null);
-      setEmailFile(null);
-      setChatInputMode('manual');
-      setEmailInputMode('manual');
-      setFormData({ agentId: "", campaignId: "", channelType: "voice" });
-      
-      // Automatically select the new session to show transcription progress
-      if (newSession?.id) {
-        setSelectedSession(newSession.id);
-      }
-      
-      const channelLabels = {
-        voice: "Áudio enviado com sucesso! Transcrição em andamento...",
-        chat: "Chat enviado com sucesso! Análise em andamento...",
-        email: "E-mail enviado com sucesso! Análise em andamento..."
-      };
-      
-      toast({
-        title: "Sucesso",
-        description: channelLabels[formData.channelType],
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro",
-        description: "Falha ao enviar áudio. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete session mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (sessionId: number) => {
-      return await apiRequest('DELETE', `/api/monitoring-sessions/${sessionId}`);
+  // Create monitoring session mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/monitoring-sessions', data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
+      setShowCreateModal(false);
+      setCreateFormData({ agentId: '', campaignId: null, channelType: '' });
       toast({
         title: "Sucesso",
-        description: "Monitoria excluída com sucesso!",
+        description: "Sessão de monitoria criada com sucesso",
       });
     },
     onError: (error: any) => {
-      console.error('Delete error:', error);
       toast({
         title: "Erro",
-        description: error.message || "Falha ao excluir monitoria. Tente novamente.",
+        description: error.message || "Erro ao criar sessão de monitoria",
         variant: "destructive",
       });
     },
   });
 
-  // Archive session mutation
-  const archiveMutation = useMutation({
-    mutationFn: async (sessionId: number) => {
-      return await apiRequest('PATCH', `/api/monitoring-sessions/${sessionId}/archive`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-      toast({
-        title: "Sucesso",
-        description: "Monitoria arquivada com sucesso!",
-      });
-    },
-    onError: (error: any) => {
-      console.error('Archive error:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Falha ao arquivar monitoria. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Chat analysis mutation
-  const chatAnalysisMutation = useMutation({
-    mutationFn: async (sessionId: number) => {
-      return await apiRequest('POST', `/api/monitoring-sessions/${sessionId}/analyze-chat`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-      toast({
-        title: "Análise Concluída",
-        description: "A análise do chat foi processada com sucesso!",
-      });
-    },
-    onError: (error: any) => {
-      console.error('Chat analysis error:', error);
-      toast({
-        title: "Erro na análise",
-        description: error.message || "Falha ao analisar chat. Tente novamente.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handler functions with confirmation
-  const handleDeleteSession = (sessionId: number) => {
-    if (window.confirm("Tem certeza que deseja excluir esta monitoria? Esta ação não pode ser desfeita.")) {
-      deleteMutation.mutate(sessionId);
-    }
-  };
-
-  const handleArchiveSession = (sessionId: number) => {
-    if (window.confirm("Tem certeza que deseja arquivar esta monitoria?")) {
-      archiveMutation.mutate(sessionId);
-    }
-  };
-
-  // Enhanced transcription mutation with progress monitoring
+  // Transcription mutation
   const transcribingMutation = useMutation({
     mutationFn: async (sessionId: number) => {
-      setProcessingStatuses(prev => ({ ...prev, [sessionId]: "processing" }));
-      setTranscriptionProgress(prev => ({ ...prev, [sessionId]: 0 }));
-      
-      const response = await apiRequest("POST", `/api/monitoring-sessions/${sessionId}/transcribe`);
-      const result = await response.json();
-      
-      // Start polling for progress if processing
-      if (result.status === "processing") {
-        pollTranscriptionStatus(sessionId);
-      }
-      
-      return result;
+      const response = await apiRequest('POST', `/api/monitoring-sessions/${sessionId}/transcribe`);
+      return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
       toast({
-        title: "Transcrição Iniciada",
-        description: "Processamento em segundo plano iniciado. Você pode reproduzir o áudio enquanto aguarda.",
+        title: "Sucesso",
+        description: "Processamento iniciado com sucesso",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Erro na transcrição",
-        description: "Falha ao iniciar transcrição. Tente novamente.",
+        title: "Erro",
+        description: error.message || "Erro ao iniciar processamento",
         variant: "destructive",
       });
     },
   });
 
-  // Function to poll transcription status with real-time updates
-  const pollTranscriptionStatus = async (sessionId: number) => {
-    const maxAttempts = 30; // 1 minute maximum
-    let attempts = 0;
-    
-    const poll = async () => {
-      try {
-        const response = await apiRequest("GET", `/api/monitoring-sessions/${sessionId}/transcription-status`);
-        const status = await response.json();
-        
-        if (status.progress !== undefined) {
-          setTranscriptionProgress(prev => ({ ...prev, [sessionId]: status.progress }));
-        }
-        
-        if (status.status === "completed") {
-          setProcessingStatuses(prev => ({ ...prev, [sessionId]: "completed" }));
-          setTranscriptionProgress(prev => ({ ...prev, [sessionId]: 100 }));
-          queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-          
-          toast({
-            title: "Transcrição Concluída",
-            description: "A transcrição foi processada com sucesso e está disponível para análise!",
-          });
-          return;
-        }
-        
-        if (status.status === "error") {
-          setProcessingStatuses(prev => ({ ...prev, [sessionId]: "error" }));
-          toast({
-            title: "Erro na Transcrição",
-            description: "Falha no processamento. Tente novamente.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // Continue polling if still processing
-        if (status.status === "processing" && attempts < maxAttempts) {
-          attempts++;
-          setTimeout(poll, 2000); // Poll every 2 seconds
-        }
-      } catch (error) {
-        console.error("Error polling transcription status:", error);
-      }
-    };
-    
-    poll();
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createFormData.agentId || !createFormData.campaignId || !createFormData.channelType) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate(createFormData);
   };
 
   const handleStartTranscription = (sessionId: number) => {
     transcribingMutation.mutate(sessionId);
   };
 
-  const handleNewMonitoring = () => {
-    setIsUploadDialogOpen(true);
+  // Filter sessions
+  const filteredSessions = monitoringSessions?.filter(session => {
+    const statusMatch = filters.status === 'all' || session.status === filters.status;
+    const channelMatch = filters.channelType === 'all' || session.channelType === filters.channelType;
+    return statusMatch && channelMatch;
+  }) || [];
+
+  // Format duration
+  const formatDuration = (seconds: number): string => {
+    if (!seconds) return '--';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Function to automatically select agent based on campaign
-  const handleCampaignChange = (campaignId: string) => {
-    setFormData({ ...formData, campaignId });
-    
-    // Find the selected campaign to get its company
-    const selectedCampaign = campaigns?.find(c => c.id.toString() === campaignId);
-    if (selectedCampaign && agents) {
-      // Find agents from the same company as the campaign
-      const companyAgents = agents.filter(agent => agent.companyId === selectedCampaign.companyId);
-      
-      // Automatically select the first available agent
-      if (companyAgents.length > 0) {
-        setFormData(prev => ({ 
-          ...prev, 
-          campaignId, 
-          agentId: companyAgents[0].id 
-        }));
-      }
+  // Safe analysis value access
+  const safeAnalysisValue = (session: MonitoringSession, key: string, defaultValue: number = 0): number => {
+    try {
+      return session.aiAnalysis?.[key] ?? defaultValue;
+    } catch {
+      return defaultValue;
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Accept any audio file or files with audio extensions
-      const isAudioFile = file.type.startsWith('audio/') || 
-                         /\.(mp3|wav|flac|aac|ogg|webm|m4a|mp4|amr|3gp|aiff)$/i.test(file.name);
-      
-      if (isAudioFile) {
-        console.log('File selected:', file.name, file.type, file.size);
-        setAudioFile(file);
-      } else {
-        toast({
-          title: "Erro",
-          description: "Por favor, selecione um arquivo de áudio válido.",
-          variant: "destructive",
-        });
-      }
-    }
+  // Format score
+  const formatScore = (score: number): string => {
+    return score ? score.toFixed(1) : '0.0';
   };
 
-  const handleChatFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        setChatFile(file);
-        
-        // Read file content and populate chat content
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target?.result as string;
-          setChatContent(content);
-        };
-        reader.readAsText(file);
-        
-        toast({
-          title: "Arquivo carregado",
-          description: `Arquivo ${file.name} carregado com sucesso.`,
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Por favor, selecione um arquivo TXT válido.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
+  // Get selected session data
+  const selectedSessionData = selectedSession 
+    ? monitoringSessions?.find(s => s.id === selectedSession)
+    : null;
 
-  const handleEmailFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-        setEmailFile(file);
-        
-        // Read file content and populate email content
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target?.result as string;
-          setEmailContent(content);
-        };
-        reader.readAsText(file);
-        
-        toast({
-          title: "Arquivo carregado",
-          description: `Arquivo ${file.name} carregado com sucesso.`,
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Por favor, selecione um arquivo TXT válido.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleSubmit = () => {
-    // Validate based on channel type
-    const hasRequiredContent = 
-      (formData.channelType === 'voice' && audioFile) ||
-      (formData.channelType === 'chat' && chatContent.trim()) ||
-      (formData.channelType === 'email' && emailContent.trim());
-    
-    if (!hasRequiredContent || !formData.agentId || !formData.campaignId) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const uploadData = new FormData();
-    uploadData.append('agentId', formData.agentId);
-    uploadData.append('campaignId', formData.campaignId);
-    uploadData.append('channelType', formData.channelType);
-
-    if (formData.channelType === 'voice' && audioFile) {
-      uploadData.append('audio', audioFile);
-    } else if (formData.channelType === 'chat') {
-      uploadData.append('chatContent', chatContent);
-    } else if (formData.channelType === 'email') {
-      uploadData.append('emailContent', emailContent);
-    }
-
-    uploadMutation.mutate(uploadData);
-  };
-
-  const togglePlayback = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-green-100 text-green-800">Concluída</Badge>;
-      case "in_progress":
-        return <Badge className="bg-blue-100 text-blue-800">Em andamento</Badge>;
-      case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Header 
-          title="Monitorias"
-          subtitle="Sessões de monitoramento de atendimento"
-        />
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="akig-card-shadow">
-              <CardContent className="pt-6">
-                <div className="loading-shimmer h-32 rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Get selected session data with safe property access
-  const selectedSessionData = sessions?.find(s => s.id === selectedSession);
-
-  // If a session is selected, show detailed view
+  // Show session details if selected
   if (selectedSession && selectedSessionData) {
     return (
-      <div className="p-6">
+      <>
         <Header 
           title={`Monitoria #${selectedSession}`}
           subtitle={`Status: ${selectedSessionData.status === 'pending' ? 'Transcrição em andamento' : 'Concluída'}`}
@@ -456,33 +188,51 @@ export default function Monitoring() {
           }}
         />
         
-        <div className="mt-8">
-          {selectedSessionData.channelType === 'voice' ? (
-            // Voice channel: Show audio controls and evaluation side by side
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-              {/* Audio Player and Controls */}
-              <Card className="xl:col-span-1 akig-card-shadow">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2">
-                    <Volume2 className="w-5 h-5 text-blue-600" />
-                    Controles de Áudio
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+        <div className="mt-8 space-y-8">
+          {/* Top Section - Transcription/Content Display */}
+          <Card className="akig-card-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-purple-600" />
+                {selectedSessionData.channelType === 'voice' ? 'Transcrição e Análise' : 
+                 selectedSessionData.channelType === 'chat' ? 'Análise de Chat' : 'Análise de E-mail'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {selectedSessionData.channelType === 'voice' ? (
+                // Voice channel content
+                <div className="space-y-6">
+                  {/* Audio Controls */}
                   {selectedSessionData.audioUrl && (
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <audio 
-                          controls 
-                          className="w-full"
-                          preload="metadata"
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <Volume2 className="h-4 w-4" />
+                          Controles de Áudio
+                        </Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = `/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`;
+                            link.download = `audio_sessao_${selectedSession}.mp3`;
+                            link.click();
+                          }}
                         >
-                          <source src={`/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`} type="audio/mpeg" />
-                          Seu navegador não suporta o elemento de áudio.
-                        </audio>
+                          <Download className="h-4 w-4 mr-1" />
+                          Baixar
+                        </Button>
                       </div>
-                      
-                      <div className="flex items-center justify-between text-sm bg-blue-50 p-3 rounded-lg">
+                      <audio 
+                        controls 
+                        className="w-full"
+                        preload="metadata"
+                      >
+                        <source src={`/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`} type="audio/mpeg" />
+                        Seu navegador não suporta o elemento de áudio.
+                      </audio>
+                      <div className="flex items-center justify-between text-sm bg-blue-50 p-3 rounded-lg mt-3">
                         <span className="text-blue-700 font-medium">Duração:</span>
                         <span className="font-semibold text-blue-800">
                           {selectedSessionData.duration ? 
@@ -490,49 +240,36 @@ export default function Monitoring() {
                             : 'Calculando...'}
                         </span>
                       </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        className="w-full hover:bg-blue-50 border-blue-200"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = `/uploads/${selectedSessionData.audioUrl?.split('/').pop()}`;
-                          link.download = `audio_sessao_${selectedSession}.mp3`;
-                          link.click();
-                        }}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar Áudio
-                      </Button>
                     </div>
                   )}
                   
+                  {/* AI Analysis Display */}
                   {selectedSessionData.aiAnalysis && (
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-purple-600" />
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
                         Análise IA
                       </h4>
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-3 bg-white rounded border">
                           <p className="text-red-600 font-bold text-lg text-center">
                             {safeAnalysisValue(selectedSessionData, 'criticalWordsCount')}
                           </p>
                           <p className="text-xs text-red-700 text-center font-medium">Palavras Críticas</p>
                         </div>
-                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="p-3 bg-white rounded border">
                           <p className="text-amber-600 font-bold text-lg text-center">
                             {Math.round(safeAnalysisValue(selectedSessionData, 'totalSilenceTime'))}s
                           </p>
                           <p className="text-xs text-amber-700 text-center font-medium">Silêncio Total</p>
                         </div>
-                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="p-3 bg-white rounded border">
                           <p className="text-blue-600 font-bold text-lg text-center">
                             {formatScore(safeAnalysisValue(selectedSessionData, 'averageToneScore'))}
                           </p>
                           <p className="text-xs text-blue-700 text-center font-medium">Tom Médio</p>
                         </div>
-                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="p-3 bg-white rounded border">
                           <p className="text-green-600 font-bold text-lg text-center">
                             {formatScore(safeAnalysisValue(selectedSessionData, 'sentimentScore'))}
                           </p>
@@ -541,689 +278,343 @@ export default function Monitoring() {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-
-              {/* Monitoring Evaluation Form */}
-              <Card className="xl:col-span-2 akig-card-shadow">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-green-600" />
-                    Ficha de Monitoria
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            // Chat/Email channel: Show only evaluation form with full width
-            <Card className="akig-card-shadow">
-              <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
-                <CardTitle className="flex items-center gap-3">
-                  {selectedSessionData.channelType === 'chat' ? (
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
-                  ) : (
-                    <Mail className="w-6 h-6 text-purple-600" />
-                  )}
-                  <span className="text-xl">Ficha de Monitoria - {selectedSessionData.channelType === 'chat' ? 'Chat' : 'E-mail'}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Content Display - Voice, Chat, or Email */}
-        <div className="mt-6">
-          <Card className="akig-card-shadow">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>
-                  {selectedSessionData.channelType === 'voice' ? 'Transcrição com IA Local' : 
-                   selectedSessionData.channelType === 'chat' ? 'Análise de Chat' : 'Análise de E-mail'}
-                </CardTitle>
-                {(selectedSessionData.status === 'in_progress' || processingStatuses[selectedSessionData.id] === 'processing') && (
-                  <div className="space-y-2 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-muted-foreground">
-                        {selectedSessionData.channelType === 'voice' ? 'Processando com Whisper local...' : 'Analisando com IA...'}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={transcriptionProgress[selectedSessionData.id] || 0} 
-                      className="w-full"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {transcriptionProgress[selectedSessionData.id] || 0}% concluído
-                    </span>
-                  </div>
-                )}
-              </div>
-              <Button 
-                onClick={() => handleStartTranscription(selectedSessionData.id)}
-                disabled={transcribingMutation.isPending || processingStatuses[selectedSessionData.id] === 'processing'}
-                size="sm"
-                variant="outline"
-              >
-                {(transcribingMutation.isPending || processingStatuses[selectedSessionData.id] === 'processing') ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    {selectedSessionData.channelType === 'voice' ? 'Transcrevendo...' : 'Analisando...'}
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    {selectedSessionData.transcription?.segments?.length || selectedSessionData.chatAnalysis?.conversationFlow?.length ? 
-                      (selectedSessionData.channelType === 'voice' ? 'Retranscrever' : 'Reanalisar') : 
-                      (selectedSessionData.channelType === 'voice' ? 'Transcrever Agora' : 'Analisar Agora')}
-                  </>
-                )}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Voice Channel - Transcription */}
-              {selectedSessionData.channelType === 'voice' && (
-                <div className="h-96 overflow-y-auto space-y-3">
-                  {selectedSessionData.transcription?.segments?.length ? (
-                    selectedSessionData.transcription.segments.map((segment, index) => (
-                      <div 
-                        key={segment.id || index} 
-                        className={`p-3 rounded-lg ${
-                          segment.speaker === 'agent' 
-                            ? 'bg-blue-50 border-l-4 border-blue-400' 
-                            : 'bg-orange-50 border-l-4 border-orange-400'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className={`text-xs font-medium ${
-                            segment.speaker === 'agent' ? 'text-blue-700' : 'text-orange-700'
-                          }`}>
-                            {segment.speaker === 'agent' ? 'Atendente' : 'Cliente'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {Math.floor(segment.startTime / 60)}:{String(Math.floor(segment.startTime % 60)).padStart(2, '0')}
-                          </span>
-                        </div>
-                        <p className="text-sm">{segment.text}</p>
-                        {segment.criticalWords && segment.criticalWords.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {segment.criticalWords.map((word, i) => (
-                              <Badge key={i} variant="destructive" className="text-xs">
-                                {word}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : selectedSessionData.status === 'pending' ? (
-                    <div className="text-center py-8">
-                      <div className="animate-pulse space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                        <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
-                      </div>
-                      <p className="text-muted-foreground mt-4">Aguardando transcrição...</p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">Nenhuma transcrição disponível</p>
-                      <Button 
-                        onClick={() => handleStartTranscription(selectedSessionData.id)}
-                        className="mt-4"
-                        disabled={transcribingMutation.isPending}
-                      >
-                        {transcribingMutation.isPending ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Transcrevendo...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Iniciar Transcrição
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              )}
-
-              {/* Chat and Email Channels - Conversation Flow */}
-              {(selectedSessionData.channelType === 'chat' || selectedSessionData.channelType === 'email') && (
-                <div className="min-h-[600px] h-auto overflow-y-auto border rounded-lg p-4">
-                  {/* Check for any available analysis data */}
+              ) : (
+                // Chat/Email channel content
+                <div className="min-h-[400px] h-auto overflow-y-auto border rounded-lg p-4">
                   {selectedSessionData.status === 'completed' && (selectedSessionData.transcription as any)?.conversationFlow?.length ? (
                     <ConversationFlow
                       messages={(selectedSessionData.transcription as any).conversationFlow}
                       channelType={selectedSessionData.channelType}
                       speakerAnalysis={(selectedSessionData.transcription as any).speakerAnalysis}
                     />
-                  ) : selectedSessionData.status === 'completed' && selectedSessionData.chatContent ? (
+                  ) : selectedSessionData.status === 'completed' ? (
                     <div className="space-y-4 p-4">
                       <h4 className="font-medium text-green-600">Análise Concluída</h4>
                       <div className="bg-green-50 p-4 rounded-lg">
                         <p className="text-sm text-green-800">
-                          Chat analisado com sucesso usando sistema manual baseado em regras práticas.
+                          A análise foi processada com sucesso. Use a ficha de monitoria abaixo para avaliar o atendimento.
                         </p>
-                        <div className="mt-2 text-xs text-green-600">
-                          Status: {selectedSessionData.status} | Engine: Manual Analysis
-                        </div>
                       </div>
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium mb-3">Fluxo da Conversa Completo:</p>
-                        <div className="space-y-3 text-sm text-blue-700 max-h-96 overflow-y-auto bg-white p-4 rounded border">
-                          {selectedSessionData.chatContent.split('\n').filter(line => line.trim()).map((line, i) => {
-                            const isClient = line.includes('🟢 Cliente') || line.includes('Cliente –');
-                            const isAgent = line.includes('🔵 Atendente') || line.includes('Atendente –');
-                            
-                            return (
-                              <div key={i} className={`p-2 rounded ${
-                                isClient ? 'bg-green-50 border-l-4 border-green-400' : 
-                                isAgent ? 'bg-blue-50 border-l-4 border-blue-400' : 
-                                'bg-gray-50'
-                              }`}>
-                                <div className="font-medium text-xs mb-1">
-                                  {isClient ? '👤 Cliente' : isAgent ? '🎧 Atendente' : ''}
-                                </div>
-                                <div className="text-sm">{line}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : selectedSessionData.status === 'pending' ? (
-                    <div className="text-center py-8">
-                      <div className="animate-pulse space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                        <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
-                      </div>
-                      <p className="text-muted-foreground mt-4">
-                        Aguardando análise do {selectedSessionData.channelType === 'chat' ? 'chat' : 'e-mail'}...
-                      </p>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">
-                        Nenhuma análise de {selectedSessionData.channelType === 'chat' ? 'chat' : 'e-mail'} disponível
-                      </p>
-                      <Button 
-                        onClick={() => {
-                          if (selectedSessionData.channelType === 'chat') {
-                            chatAnalysisMutation.mutate(selectedSessionData.id);
-                          } else {
-                            handleStartTranscription(selectedSessionData.id);
-                          }
-                        }}
-                        className="mt-4"
-                        disabled={chatAnalysisMutation.isPending || transcribingMutation.isPending}
-                      >
-                        {(chatAnalysisMutation.isPending || transcribingMutation.isPending) ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Analisando...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4 mr-2" />
-                            Iniciar Análise
-                          </>
-                        )}
-                      </Button>
+                    <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                      <Brain className="h-12 w-12 mb-2 opacity-50" />
+                      <p className="text-center">Aguardando processamento do conteúdo</p>
                     </div>
                   )}
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Bottom Section - Monitoring Evaluation Form */}
+          <Card className="akig-card-shadow">
+            <CardHeader className="pb-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-t-lg">
+              <CardTitle className="flex items-center gap-3">
+                <ClipboardList className="w-6 h-6 text-green-600" />
+                <span className="text-xl">Ficha de Monitoria - {selectedSessionData.channelType === 'voice' ? 'Voz' : selectedSessionData.channelType === 'chat' ? 'Chat' : 'E-mail'}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="container mx-auto p-6 space-y-6">
       <Header 
-        title="Monitorias"
-        subtitle="Sessões de monitoramento de atendimento"
-        action={canCreateMonitoring ? {
+        title="Sistema de Monitoria"
+        subtitle="Gerencie e avalie sessões de atendimento multicanal"
+        action={{
           label: "Nova Monitoria",
-          onClick: handleNewMonitoring
-        } : undefined}
+          onClick: () => setShowCreateModal(true)
+        }}
       />
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {sessions?.map((session) => (
-          <Card key={session.id} className="akig-card-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Sessão #{session.id}</CardTitle>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(session.status)}
-                  {(user?.role === 'admin' || user?.role === 'supervisor') && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleArchiveSession(session.id)}
-                          disabled={archiveMutation.isPending}
-                        >
-                          <Archive className="mr-2 h-4 w-4" />
-                          Arquivar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteSession(session.id)}
-                          disabled={deleteMutation.isPending}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Criada em: {new Date(session.createdAt).toLocaleString('pt-BR')}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Duração:</span>
-                  <span className="font-medium">
-                    {session.duration ? `${Math.floor(session.duration / 60)}:${String(session.duration % 60).padStart(2, '0')}` : 'N/A'}
-                  </span>
-                </div>
-                
-                {session.aiAnalysis && (
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-red-50 rounded">
-                      <p className="text-red-600 font-semibold text-sm">
-                        {safeAnalysisValue(session, 'criticalWordsCount')}
-                      </p>
-                      <p className="text-xs text-red-700">Críticas</p>
-                    </div>
-                    <div className="p-2 bg-amber-50 rounded">
-                      <p className="text-amber-600 font-semibold text-sm">
-                        {safeAnalysisValue(session, 'totalSilenceTime')}s
-                      </p>
-                      <p className="text-xs text-amber-700">Silêncio</p>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded">
-                      <p className="text-blue-600 font-semibold text-sm">
-                        {formatScore(safeAnalysisValue(session, 'averageToneScore'))}
-                      </p>
-                      <p className="text-xs text-blue-700">Tom</p>
-                    </div>
-                  </div>
-                )}
-
-                {session.audioUrl && (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={togglePlayback}
-                        className="w-8 h-8 p-0"
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      </Button>
-                      <Volume2 className="w-4 h-4 text-muted-foreground" />
-                      <Progress value={33} className="flex-1" />
-                      <span className="text-xs text-muted-foreground">1:23 / 3:45</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2 pt-2">
-                  {/* Botão de Avaliar para evaluators/admin e botão Ver para agentes */}
-                  {session.transcription && (
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setSelectedSession(session.id);
-                        setShowEvaluationForm(true);
-                      }}
-                    >
-                      {(user?.role === 'evaluator' || user?.role === 'admin') ? 'Avaliar' : 'Ver Avaliação'}
-                    </Button>
-                  )}
-                  
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {(!sessions || sessions.length === 0) && (
-        <Card className="mt-6 akig-card-shadow">
-          <CardContent className="pt-6 text-center">
-            <div className="py-12">
-              <Volume2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                Nenhuma monitoria encontrada
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {canCreateMonitoring 
-                  ? "Comece criando sua primeira sessão de monitoramento"
-                  : "Aguarde que uma monitoria seja criada"
-                }
-              </p>
-              {canCreateMonitoring && (
-                <Button onClick={handleNewMonitoring} className="akig-bg-primary hover:opacity-90">
-                  Criar Nova Monitoria
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+      {/* Create Monitoring Session Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Nova Monitoria Multicanal</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Nova Monitoria
+            </DialogTitle>
             <DialogDescription>
-              Crie uma sessão de monitoramento para análise de atendimento por voz, chat ou e-mail.
+              Selecione o agente e canal para iniciar uma nova sessão de monitoria
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="channelType">Tipo de Canal *</Label>
-              <Select value={formData.channelType} onValueChange={(value: "voice" | "chat" | "email") => setFormData({ ...formData, channelType: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de canal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="voice">📞 Atendimento por Voz</SelectItem>
-                  <SelectItem value="chat">💬 Chat Online</SelectItem>
-                  <SelectItem value="email">✉️ E-mail</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <form onSubmit={handleCreateSession} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="agentId">Agente *</Label>
+                <SafeSelect
+                  value={createFormData.agentId}
+                  onValueChange={(value) => setCreateFormData(prev => ({ ...prev, agentId: value }))}
+                  required
+                  placeholder="Selecione um agente..."
+                  emptyState="Nenhum agente encontrado"
+                >
+                  {agents?.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.firstName} {agent.lastName}
+                    </SelectItem>
+                  ))}
+                </SafeSelect>
+              </div>
 
-            <div>
-              <Label htmlFor="campaign">Campanha *</Label>
-              <Select value={formData.campaignId} onValueChange={handleCampaignChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma campanha" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="space-y-2">
+                <Label htmlFor="campaignId">Campanha *</Label>
+                <SafeSelect
+                  value={createFormData.campaignId?.toString() || ''}
+                  onValueChange={(value) => setCreateFormData(prev => ({ ...prev, campaignId: parseInt(value) }))}
+                  required
+                  placeholder="Selecione uma campanha..."
+                  emptyState="Nenhuma campanha encontrada"
+                >
                   {campaigns?.map((campaign) => (
                     <SelectItem key={campaign.id} value={campaign.id.toString()}>
                       {campaign.name}
                     </SelectItem>
                   ))}
-                  {(!campaigns || campaigns.length === 0) && (
-                    <SelectItem value="placeholder" disabled>
-                      Nenhuma campanha encontrada
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                </SafeSelect>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="channelType">Canal *</Label>
+                <SafeSelect
+                  value={createFormData.channelType}
+                  onValueChange={(value: 'voice' | 'chat' | 'email') => setCreateFormData(prev => ({ ...prev, channelType: value }))}
+                  required
+                  placeholder="Selecione o canal..."
+                  emptyState="Nenhum canal disponível"
+                >
+                  <SelectItem value="voice">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Voz
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="chat">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Chat
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="email">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      E-mail
+                    </div>
+                  </SelectItem>
+                </SafeSelect>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="agent">Agente *</Label>
-              <Select value={formData.agentId} onValueChange={(value) => setFormData({ ...formData, agentId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Agente será selecionado automaticamente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(() => {
-                    const selectedCampaign = campaigns?.find(c => c.id.toString() === formData.campaignId);
-                    const availableAgents = agents?.filter(agent => 
-                      selectedCampaign ? agent.companyId === selectedCampaign.companyId : true
-                    ) || [];
-                    
-                    return availableAgents.length > 0 ? (
-                      availableAgents.map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.firstName} {agent.lastName} ({agent.email})
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="placeholder" disabled>
-                        {formData.campaignId ? "Nenhum agente disponível para esta empresa" : "Selecione uma campanha primeiro"}
-                      </SelectItem>
-                    );
-                  })()}
-                </SelectContent>
-              </Select>
-              {formData.agentId && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Agente selecionado automaticamente baseado na empresa da campanha
-                </p>
-              )}
+            <div className="flex justify-between space-x-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createMutation.isPending}
+                className="flex-1"
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Monitoria
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Monitoring Sessions Table */}
+      <Card className="akig-card-shadow">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5" />
+            Sessões de Monitoria
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              ({monitoringSessions?.length || 0} sessões)
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="statusFilter" className="text-sm font-medium">Status</Label>
+                <SafeSelect
+                  value={filters.status}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                  placeholder="Todos os status"
+                  emptyState="Nenhum status disponível"
+                >
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="completed">Concluída</SelectItem>
+                  <SelectItem value="processing">Processando</SelectItem>
+                </SafeSelect>
+              </div>
+              
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="channelFilter" className="text-sm font-medium">Canal</Label>
+                <SafeSelect
+                  value={filters.channelType}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, channelType: value }))}
+                  placeholder="Todos os canais"
+                  emptyState="Nenhum canal disponível"
+                >
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="voice">Voz</SelectItem>
+                  <SelectItem value="chat">Chat</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                </SafeSelect>
+              </div>
             </div>
             
-            {/* Dynamic content based on channel type */}
-            {formData.channelType === 'voice' && (
-              <div>
-                <Label htmlFor="audio">Arquivo de Áudio *</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="audio"
-                    type="file"
-                    accept=".mp3,.wav,.flac,.aac,.ogg,.webm,.m4a,.mp4,.amr,.3gp,.aiff,audio/*"
-                    onChange={handleFileChange}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-                  />
-                  <Upload className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Formatos suportados: MP3, WAV, FLAC, AAC, OGG, WEBM, M4A, AMR, AIFF (máx. 100MB)
+            {/* Sessions Table */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Carregando sessões...</span>
+              </div>
+            ) : filteredSessions.length === 0 ? (
+              <div className="text-center py-8">
+                <ClipboardList className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhuma sessão encontrada</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Comece criando uma nova sessão de monitoria.
                 </p>
-                {audioFile && (
-                  <p className="text-sm text-green-600 mt-1">
-                    ✓ Arquivo selecionado: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(1)}MB)
-                  </p>
-                )}
-              </div>
-            )}
-
-            {formData.channelType === 'chat' && (
-              <div className="space-y-4">
-                <Label htmlFor="chat">Conversa de Chat *</Label>
-                
-                {/* Toggle between manual input and file upload - FIXED */}
-                <div className="flex items-center space-x-4 mb-3 bg-gray-50 p-2 rounded-lg">
-                  <Button
-                    type="button"
-                    variant={chatInputMode === 'manual' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setChatInputMode('manual')}
-                    className="flex-1"
-                  >
-                    ✏️ Digitar Manualmente
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={chatInputMode === 'file' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setChatInputMode('file')}
-                    className="flex-1"
-                  >
-                    📁 Upload de Arquivo TXT
+                <div className="mt-6">
+                  <Button onClick={() => setShowCreateModal(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Monitoria
                   </Button>
                 </div>
-
-                {chatInputMode === 'manual' ? (
-                  <div>
-                    <textarea
-                      id="chat"
-                      value={chatContent}
-                      onChange={(e) => setChatContent(e.target.value)}
-                      placeholder="Cole aqui a conversa do chat...
-
-Exemplo:
-[10:30] Cliente: Olá, preciso de ajuda com meu pedido
-[10:31] Agente: Olá! Claro, vou te ajudar. Qual o número do seu pedido?
-[10:32] Cliente: É o pedido #12345"
-                      className="w-full h-40 p-3 border rounded-md resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Cole a conversa completa incluindo horários e identificação de quem está falando
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="file"
-                        accept=".txt"
-                        onChange={handleChatFileChange}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                      <Upload className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Faça upload de um arquivo TXT contendo a conversa completa do chat
-                    </p>
-                    {chatFile && (
-                      <p className="text-sm text-green-600 mt-1">
-                        ✓ Arquivo selecionado: {chatFile.name} ({(chatFile.size / 1024).toFixed(1)}KB)
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {chatContent.trim() && (
-                  <p className="text-sm text-green-600 mt-1">
-                    ✓ Conversa inserida ({chatContent.length} caracteres)
-                  </p>
-                )}
               </div>
-            )}
-
-            {formData.channelType === 'email' && (
-              <div className="space-y-4">
-                <Label htmlFor="email">Thread de E-mail *</Label>
-                
-                {/* Toggle between manual input and file upload - FIXED */}
-                <div className="flex items-center space-x-4 mb-3 bg-gray-50 p-2 rounded-lg">
-                  <Button
-                    type="button"
-                    variant={emailInputMode === 'manual' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEmailInputMode('manual')}
-                    className="flex-1"
-                  >
-                    ✏️ Digitar Manualmente
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={emailInputMode === 'file' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEmailInputMode('file')}
-                    className="flex-1"
-                  >
-                    📁 Upload de Arquivo TXT
-                  </Button>
-                </div>
-
-                {emailInputMode === 'manual' ? (
-                  <div>
-                    <textarea
-                      id="email"
-                      value={emailContent}
-                      onChange={(e) => setEmailContent(e.target.value)}
-                      placeholder="Cole aqui o thread completo de e-mails...
-
-Exemplo:
-De: cliente@email.com
-Para: suporte@empresa.com
-Assunto: Problema com produto
-Data: 15/06/2025 10:30
-
-Olá,
-Estou com um problema no meu produto...
-
----
-
-De: suporte@empresa.com
-Para: cliente@email.com
-Assunto: Re: Problema com produto
-Data: 15/06/2025 11:15
-
-Olá,
-Obrigado pelo contato..."
-                      className="w-full h-48 p-3 border rounded-md resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Inclua cabeçalhos completos (De, Para, Assunto, Data) e todo o conteúdo das mensagens
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="file"
-                        accept=".txt"
-                        onChange={handleEmailFileChange}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                      />
-                      <Upload className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Faça upload de um arquivo TXT contendo o thread completo de e-mails
-                    </p>
-                    {emailFile && (
-                      <p className="text-sm text-green-600 mt-1">
-                        ✓ Arquivo selecionado: {emailFile.name} ({(emailFile.size / 1024).toFixed(1)}KB)
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {emailContent.trim() && (
-                  <p className="text-sm text-green-600 mt-1">
-                    ✓ E-mail inserido ({emailContent.length} caracteres)
-                  </p>
-                )}
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Agente</TableHead>
+                      <TableHead>Campanha</TableHead>
+                      <TableHead>Canal</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Duração</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSessions.map((session) => (
+                      <TableRow key={session.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">#{session.id}</TableCell>
+                        <TableCell>
+                          {agents?.find(a => a.id === session.agentId)?.firstName || 'N/A'} {agents?.find(a => a.id === session.agentId)?.lastName || ''}
+                        </TableCell>
+                        <TableCell>
+                          {campaigns?.find(c => c.id === session.campaignId)?.name || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {session.channelType === 'voice' && <Phone className="h-4 w-4 text-blue-600" />}
+                            {session.channelType === 'chat' && <MessageSquare className="h-4 w-4 text-green-600" />}
+                            {session.channelType === 'email' && <Mail className="h-4 w-4 text-purple-600" />}
+                            <span className="capitalize">
+                              {session.channelType === 'voice' ? 'Voz' : 
+                               session.channelType === 'chat' ? 'Chat' : 'E-mail'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            session.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : session.status === 'processing'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {session.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                            {session.status === 'processing' && <AlertCircle className="h-3 w-3 mr-1" />}
+                            {session.status === 'pending' && <XCircle className="h-3 w-3 mr-1" />}
+                            {session.status === 'completed' ? 'Concluída' : 
+                             session.status === 'processing' ? 'Processando' : 'Pendente'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(session.createdAt).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell>
+                          {formatDuration(session.duration)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedSession(session.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => setSelectedSession(session.id)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Visualizar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Baixar Dados
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Archive className="h-4 w-4 mr-2" />
+                                  Arquivar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={uploadMutation.isPending}
-              className="akig-bg-primary hover:opacity-90"
-            >
-              {uploadMutation.isPending ? "Enviando..." : 
-                formData.channelType === 'voice' ? "Enviar Áudio" :
-                formData.channelType === 'chat' ? "Enviar Chat" : "Enviar E-mail"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }
