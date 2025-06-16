@@ -125,6 +125,15 @@ AKIG Solutions is a comprehensive intelligent call monitoring and evaluation sys
 
 ```
 Changelog:
+- June 16, 2025. Sistema limpo e preparado para deploy em produção
+  * Removidos todos os dados de teste: 61 sessões, 17 avaliações, 74 respostas
+  * Limpas 8 contestações, 3 resgates de recompensas e 11 usuários de teste
+  * Mantidos apenas usuários essenciais: admin, supervisor, evaluator
+  * Arquivos de upload de teste removidos completamente
+  * Criados guias de deploy para Vercel, Railway e Render (opções gratuitas)
+  * AssemblyAI restaurado e funcionando com transcrições reais
+  * Endpoint /api/monitoring-forms/active criado para ficha de monitoria
+  * Sistema pronto para deploy gratuito com dados limpos
 - June 16, 2025. Varredura completa do sistema - todos os problemas corrigidos
   * Corrigidas permissões de acesso à página de monitoria (admin, supervisor, evaluator)
   * Criado endpoint /api/agents - 7 agentes carregando corretamente
