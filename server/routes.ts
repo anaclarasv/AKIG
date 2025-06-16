@@ -213,7 +213,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/evaluation-criteria", isAuthenticated, async (req: any, res) => {
-    const criteria = await storage.getEvaluationCriteria();
+    const criteria = await storage.getEvaluationCriteria(req.user.companyId);
     res.json(criteria);
   });
 
@@ -233,7 +233,11 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/monitoring-sessions/:id", isAuthenticated, async (req, res) => {
-    const session = await storage.getMonitoringSession(parseInt(req.params.id));
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid session ID" });
+    }
+    const session = await storage.getMonitoringSession(id);
     res.json(session);
   });
 
