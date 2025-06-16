@@ -32,7 +32,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -42,12 +42,16 @@ function Router() {
     );
   }
 
+  // Debug authentication state
+  console.log('Auth state:', { isAuthenticated, user, isLoading });
+
   if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/demo-evaluation" component={SimpleTestForm} />
+        <Route path="/monitoring" component={Landing} />
         <Route component={NotFound} />
       </Switch>
     );
