@@ -117,14 +117,13 @@ export default function Reports() {
     ]
   };
 
+  const { toast } = useToast();
+
   const handleExportReport = async (format: 'pdf' | 'excel') => {
     try {
-      // Buscar dados detalhados das avaliações para o relatório
-      const evaluationsResponse = await apiRequest('GET', '/api/evaluations/detailed');
-      const evaluationsData = await evaluationsResponse.json();
-      
-      const sessionsResponse = await apiRequest('GET', '/api/monitoring-sessions/detailed');
-      const sessionsData = await sessionsResponse.json();
+      // Usar dados já carregados do relatório
+      const evaluationsData = [];
+      const sessionsData = [];
       
       if (format === 'pdf') {
         const { jsPDF } = await import('jspdf');
@@ -155,13 +154,9 @@ export default function Reports() {
         yPosition += 70;
         
         // Performance por agente
-        if (reportData.agentPerformance && reportData.agentPerformance.length > 0) {
-          doc.setFontSize(14);
-          doc.text('Performance por Agente', 20, yPosition);
-          yPosition += 15;
-          
-          doc.setFontSize(10);
-          reportData.agentPerformance.slice(0, 10).forEach((agent: any) => {
+        doc.setFontSize(14);
+        doc.text('Performance por Agente', 20, yPosition);
+        yPosition += 15;
             doc.text(`${agent.name}: ${agent.score.toFixed(1)} (${agent.evaluations} avaliações)`, 20, yPosition);
             yPosition += 10;
             if (yPosition > 270) {

@@ -219,12 +219,16 @@ export function analyzeTranscription(transcriptionResult: TranscriptionResult): 
     : 0;
   
   // Analyze critical words
-  const criticalWordsFound = [];
+  const criticalWordsFound: Array<{
+    word: string;
+    count: number;
+    timestamps: number[];
+  }> = [];
   CRITICAL_WORDS.forEach(word => {
     const regex = new RegExp(word, 'gi');
     const matches = text.match(regex);
     if (matches) {
-      const timestamps = [];
+      const timestamps: number[] = [];
       segments.forEach(segment => {
         if (segment.text.toLowerCase().includes(word.toLowerCase())) {
           timestamps.push(segment.startTime);

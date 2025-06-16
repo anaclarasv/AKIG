@@ -11,7 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Monitoring from "@/pages/Monitoring";
 import EvaluationsFixed from "@/pages/EvaluationsFixed";
 import Ranking from "@/pages/Ranking";
-import Reports from "@/pages/Reports";
+import Reports from "@/pages/ReportsFixed";
 import Companies from "@/pages/Companies";
 import Users from "@/pages/Users";
 import EvaluationCriteria from "@/pages/EvaluationCriteria";
