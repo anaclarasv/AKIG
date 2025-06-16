@@ -79,8 +79,6 @@ export async function transcribeAudioWithAssemblyAI(audioFilePath: string): Prom
     const config = {
       audio_url: uploadUrl,
       speaker_labels: true,
-      auto_highlights: true,
-      sentiment_analysis: true,
       punctuate: true,
       format_text: true,
       language_code: 'pt'

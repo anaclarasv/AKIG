@@ -1076,6 +1076,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Monitoring forms endpoints
+  app.get("/api/monitoring-forms/active", isAuthenticated, async (req: any, res) => {
+    try {
+      const activeForm = await storage.getActiveMonitoringForm();
+      
+      if (!activeForm) {
+        return res.status(404).json({ error: "Nenhuma ficha de monitoria ativa encontrada" });
+      }
+
+      res.json(activeForm);
+    } catch (error) {
+      console.error('Erro ao buscar ficha de monitoria ativa:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
