@@ -486,23 +486,13 @@ export function registerRoutes(app: Express): Server {
       const audioPath = `uploads/${session.audioUrl.split('/').pop()}`;
       
       try {
-        // Primeira tentativa: OpenAI Whisper API
-        let transcriptionResult;
-        let aiAnalysis;
+        // Usar AssemblyAI para transcrição real do áudio
+        const { transcribeAudioWithAssemblyAI, analyzeTranscription } = await import('./assemblyai-service');
         
-        try {
-          const { OpenAITranscriber } = await import('./openai-transcription');
-          transcriptionResult = await OpenAITranscriber.transcribeAudio(audioPath);
-          aiAnalysis = OpenAITranscriber.analyzeTranscription(transcriptionResult);
-          console.log('Transcrição realizada com OpenAI Whisper API');
-        } catch (openaiError: any) {
-          console.log('OpenAI indisponível, usando sistema de fallback:', openaiError.message);
-          
-          // Fallback: Sistema local melhorado
-          transcriptionResult = await AudioTranscription.transcribeAudio(audioPath);
-          aiAnalysis = AudioTranscription.analyzeTranscription(transcriptionResult);
-          console.log('Transcrição realizada com sistema local');
-        }
+        const transcriptionResult = await transcribeAudioWithAssemblyAI(audioPath);
+        const aiAnalysis = analyzeTranscription(transcriptionResult);
+        
+        console.log('Transcrição realizada com AssemblyAI - texto detectado:', transcriptionResult.text.length > 0 ? 'SIM' : 'NÃO');
 
         // Atualizar sessão com resultados
         await storage.updateMonitoringSession(sessionId, {
