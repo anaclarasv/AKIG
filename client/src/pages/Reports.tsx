@@ -326,14 +326,22 @@ export default function Reports() {
     <div className="max-w-7xl mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Relatórios e Análises</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={() => handleExportReport('pdf')} className="bg-red-600 hover:bg-red-700">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar PDF
+            <FileText className="h-4 w-4 mr-2" />
+            PDF Frontend
           </Button>
           <Button onClick={() => handleExportReport('excel')} className="bg-green-600 hover:bg-green-700">
             <Download className="h-4 w-4 mr-2" />
-            Exportar Excel
+            Excel Frontend
+          </Button>
+          <Button onClick={() => window.open('/api/relatorio/pdf', '_blank')} className="bg-blue-600 hover:bg-blue-700">
+            <FileText className="h-4 w-4 mr-2" />
+            PDF Profissional
+          </Button>
+          <Button onClick={() => window.open('/api/relatorio/excel', '_blank')} variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+            <Download className="h-4 w-4 mr-2" />
+            Excel Profissional
           </Button>
         </div>
       </div>

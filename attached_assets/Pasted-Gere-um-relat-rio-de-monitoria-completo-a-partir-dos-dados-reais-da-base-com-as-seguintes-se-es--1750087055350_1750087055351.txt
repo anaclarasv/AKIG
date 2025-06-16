@@ -1,0 +1,114 @@
+Gere um relatório de monitoria completo a partir dos dados reais da base, com as seguintes seções:
+
+Métricas Gerais (total de avaliações, média, taxa de aprovação, etc.)
+
+Tabela de performance por agente (nome, média, aprovados, reprovados, %)
+Exporte em PDF com PDFKit e Excel com ExcelJS.
+Use o modelo abaixo como base:
+
+📦 Código relatorioController.js
+javascript
+Copiar
+Editar
+const PDFDocument = require('pdfkit');
+const ExcelJS = require('exceljs');
+const fs = require('fs');
+const path = require('path');
+
+// Exemplo de dados simulados – aqui você usará os dados reais do banco
+const metricas = {
+  totalAvaliacoes: 18,
+  mediaPontuacao: 84.3,
+  taxaAprovacao: '78%',
+  incidentesCriticos: 2,
+  formulariosPendentes: 3,
+  contestacoes: 1
+};
+
+const agentes = [
+  { nome: 'João Silva', avaliacoes: 6, media: 87.5, aprovados: 5, reprovados: 1, taxa: '83%' },
+  { nome: 'Maria Oliveira', avaliacoes: 4, media: 91.0, aprovados: 4, reprovados: 0, taxa: '100%' },
+  { nome: 'Ana Santos', avaliacoes: 5, media: 70.2, aprovados: 3, reprovados: 2, taxa: '60%' },
+  { nome: 'Carlos Ferreira', avaliacoes: 3, media: 88.0, aprovados: 3, reprovados: 0, taxa: '100%' }
+];
+
+// Função para gerar PDF
+function gerarPDF(res) {
+  const doc = new PDFDocument();
+  const filePath = path.join(__dirname, '../public/relatorio-monitoria.pdf');
+  doc.pipe(fs.createWriteStream(filePath));
+
+  doc.fontSize(20).text('Relatório Completo de Monitoria');
+  doc.moveDown();
+  doc.fontSize(12).text('AKIG Solutions - Sistema de Monitoria');
+  doc.text(`Gerado em: ${new Date().toLocaleDateString()}`);
+  doc.moveDown();
+
+  doc.fontSize(14).text('Métricas Gerais', { underline: true });
+  Object.entries(metricas).forEach(([key, value]) => {
+    doc.text(`${key.replace(/([A-Z])/g, ' $1')}: ${value}`);
+  });
+
+  doc.moveDown();
+  doc.fontSize(14).text('Performance por Agente', { underline: true });
+  agentes.forEach((a) => {
+    doc.text(`${a.nome}: ${a.media} (Aprov.: ${a.aprovados}, Reprov.: ${a.reprovados}, Taxa: ${a.taxa})`);
+  });
+
+  doc.moveDown();
+  doc.fontSize(14).text('Observações Gerais', { underline: true });
+  doc.fontSize(12).text(
+    '- A maior parte das avaliações foram positivas.\n' +
+    '- 2 incidentes críticos identificados e encaminhados.\n' +
+    '- Reforçar acompanhamento com Ana Santos.'
+  );
+
+  doc.end();
+  doc.on('finish', () => {
+    res.download(filePath);
+  });
+}
+
+// Função para gerar Excel
+async function gerarExcel(res) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet1 = workbook.addWorksheet('Métricas Gerais');
+  const sheet2 = workbook.addWorksheet('Performance por Agente');
+
+  sheet1.addRow(['Métrica', 'Valor']);
+  Object.entries(metricas).forEach(([key, value]) => {
+    sheet1.addRow([key.replace(/([A-Z])/g, ' $1'), value]);
+  });
+
+  sheet2.addRow(['Nome', 'Avaliações', 'Média', 'Aprovados', 'Reprovados', 'Taxa de Aprovação']);
+  agentes.forEach((a) => {
+    sheet2.addRow([a.nome, a.avaliacoes, a.media, a.aprovados, a.reprovados, a.taxa]);
+  });
+
+  const filePath = path.join(__dirname, '../public/relatorio-monitoria.xlsx');
+  await workbook.xlsx.writeFile(filePath);
+  res.download(filePath);
+}
+
+// Exportando funções
+module.exports = {
+  gerarPDF,
+  gerarExcel
+};
+🛠️ Rotas no routes/relatorio.js (exemplo):
+javascript
+Copiar
+Editar
+const express = require('express');
+const router = express.Router();
+const { gerarPDF, gerarExcel } = require('../controllers/relatorioController');
+
+router.get('/pdf', gerarPDF);
+router.get('/excel', gerarExcel);
+
+module.exports = router;
+✅ Resultado
+Acessando /relatorio/pdf → você baixa o PDF real.
+
+Acessando /relatorio/excel → você baixa a planilha real.
+

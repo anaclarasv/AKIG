@@ -9,6 +9,7 @@ import { transcribeAudioWithAssemblyAI, analyzeTranscription, getTranscriptionSt
 import { AudioTranscription } from "./audio-transcription";
 import { FixedChatAnalyzer } from "./fixed-chat-analyzer";
 import { ReportGenerator } from "./report-generator";
+import { gerarPDF, gerarExcel } from "./report-controller";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -631,6 +632,10 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  // Novos endpoints de relatórios com PDFKit e ExcelJS
+  app.get("/api/relatorio/pdf", isAuthenticated, gerarPDF);
+  app.get("/api/relatorio/excel", isAuthenticated, gerarExcel);
 
   // Endpoints de exportação de relatórios
   app.get("/api/reports/export/pdf", isAuthenticated, async (req: any, res) => {
