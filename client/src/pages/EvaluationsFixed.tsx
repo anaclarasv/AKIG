@@ -21,11 +21,9 @@ export default function EvaluationsFixed() {
   const [selectedContest, setSelectedContest] = useState<any>(null);
   const [contestReason, setContestReason] = useState("");
   const [contestResponse, setContestResponse] = useState("");
-  const [editComment, setEditComment] = useState("");
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isContestDialogOpen, setIsContestDialogOpen] = useState(false);
   const [isContestReviewDialogOpen, setIsContestReviewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -125,31 +123,7 @@ export default function EvaluationsFixed() {
     },
   });
 
-  // Mutation for editing evaluation comments
-  const editEvaluationMutation = useMutation({
-    mutationFn: async ({ evaluationId, comment }: { evaluationId: number; comment: string }) => {
-      const response = await apiRequest("PATCH", `/api/evaluations/${evaluationId}`, {
-        supervisorComment: comment
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Comentário atualizado",
-        description: "O comentário foi atualizado com sucesso.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/evaluations'] });
-      setIsEditDialogOpen(false);
-      setEditComment("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao editar",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const filteredEvaluations = evaluations.filter((evaluation) => {
     if (activeTab === "all") return true;
@@ -170,11 +144,7 @@ export default function EvaluationsFixed() {
     setIsContestDialogOpen(true);
   };
 
-  const handleEditEvaluation = (evaluation: Evaluation) => {
-    setSelectedEvaluation(evaluation);
-    setEditComment(evaluation.supervisorComment || "");
-    setIsEditDialogOpen(true);
-  };
+
 
   const handleReviewContest = (contest: any) => {
     setSelectedContest(contest);
@@ -200,14 +170,7 @@ export default function EvaluationsFixed() {
     }
   };
 
-  const handleSubmitEdit = () => {
-    if (selectedEvaluation && editComment.trim()) {
-      editEvaluationMutation.mutate({
-        evaluationId: selectedEvaluation.id,
-        comment: editComment.trim()
-      });
-    }
-  };
+
 
   const getStatusIcon = (status: string) => {
     switch (status) {

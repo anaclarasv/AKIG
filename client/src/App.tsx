@@ -9,7 +9,7 @@ import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import Monitoring from "@/pages/Monitoring";
-import EvaluationsFixed from "@/pages/EvaluationsFixed";
+import EvaluationsSimplified from "@/pages/EvaluationsSimplified";
 import Ranking from "@/pages/Ranking";
 import Reports from "@/pages/ReportsFixed";
 import Companies from "@/pages/Companies";
@@ -66,7 +66,7 @@ function Router() {
                 <Monitoring />
               </ProtectedRoute>
             )} />
-            <Route path="/evaluations" component={EvaluationsFixed} />
+            <Route path="/evaluations" component={EvaluationsSimplified} />
             <Route path="/my-evaluations" component={() => (
               <ProtectedRoute allowedRoles={['agent']}>
                 <MyEvaluations />
