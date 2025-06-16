@@ -1102,13 +1102,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session is not a chat or has no content" });
       }
       
-      console.log('Starting manual chat analysis for session:', sessionId);
+      console.log('Starting improved chat analysis for session:', sessionId);
       
-      // Import manual analyzer
-      const { ManualChatAnalyzer } = await import('./manual-chat-analysis');
+      // Import improved analyzer that detects real problems
+      const { ImprovedChatAnalyzer } = await import('./improved-chat-analysis');
       
-      // Análise manual do chat
-      const manualAnalysis = ManualChatAnalyzer.analyzeChatContent(session.chatContent);
+      // Análise melhorada do chat que detecta problemas reais
+      const improvedAnalysis = ImprovedChatAnalyzer.analyzeChatContent(session.chatContent);
       
       // Prepare transcription result
       const transcriptionResult = {

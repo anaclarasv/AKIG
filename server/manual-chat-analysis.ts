@@ -41,22 +41,26 @@ export interface ManualChatAnalysis {
 export class ManualChatAnalyzer {
   private static problemKeywords = [
     'problema', 'erro', 'falha', 'bug', 'não funciona', 'quebrado', 'defeito',
-    'reclamação', 'dificuldade', 'ajuda', 'suporte', 'cancelar', 'reembolso'
+    'reclamação', 'dificuldade', 'ajuda', 'suporte', 'cancelar', 'reembolso',
+    'duplicidade', 'cobrado', 'cobrança', 'demora', 'esperando', 'alguém vivo'
   ];
 
   private static solutionKeywords = [
     'solução', 'resolver', 'corrigir', 'consertar', 'atualizar', 'reinstalar',
-    'configurar', 'orientar', 'explicar', 'ensinar', 'guiar', 'ajustar'
+    'configurar', 'orientar', 'explicar', 'ensinar', 'guiar', 'ajustar',
+    'vou verificar', 'já vou', 'vou resolver', 'providenciar'
   ];
 
   private static positiveKeywords = [
     'obrigado', 'obrigada', 'agradeço', 'perfeito', 'ótimo', 'excelente',
-    'resolvido', 'funcionou', 'certo', 'correto', 'bom', 'satisfeito'
+    'resolvido', 'funcionou', 'certo', 'correto', 'bom', 'satisfeito',
+    'bom dia', 'boa tarde', 'boa noite', 'olá', 'tudo bem'
   ];
 
   private static negativeKeywords = [
     'péssimo', 'ruim', 'terrível', 'horrível', 'insatisfeito', 'descontente',
-    'irritado', 'furioso', 'decepcionado', 'frustrado', 'não resolve'
+    'irritado', 'furioso', 'decepcionado', 'frustrado', 'não resolve',
+    'merda', 'pqp', 'porra', 'bosta', 'caralho', 'lixo', 'poste'
   ];
 
   /**
