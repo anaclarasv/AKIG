@@ -118,34 +118,154 @@ export default function Reports() {
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
     try {
-      const params = new URLSearchParams();
-      if (dateRange?.from) {
-        params.append('startDate', dateRange.from.toISOString());
-      }
-      if (dateRange?.to) {
-        params.append('endDate', dateRange.to.toISOString());
-      }
-      if (selectedCampaign && selectedCampaign !== 'all') {
-        params.append('campaign', selectedCampaign);
-      }
-      if (selectedEvaluator && selectedEvaluator !== 'all') {
-        params.append('evaluator', selectedEvaluator);
+      // Usar dados reais da API atual para gerar relatório
+      if (!fetchedReportData) {
+        toast({
+          title: "Erro na exportação",
+          description: "Dados não carregados. Aguarde alguns segundos e tente novamente.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Abrir em nova aba para download
-      const url = `/api/reports/export/${format}?${params.toString()}`;
-      window.open(url, '_blank');
+      if (format === 'pdf') {
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+        
+        // Cabeçalho
+        doc.setFontSize(20);
+        doc.text('AKIG Solutions - Relatório de Monitoria', 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 30, { align: 'center' });
+        
+        let yPosition = 50;
+        
+        // Métricas gerais usando dados REAIS da API
+        doc.setFontSize(16);
+        doc.text('Métricas Gerais (Dados Reais do Sistema)', 20, yPosition);
+        yPosition += 15;
+        
+        doc.setFontSize(11);
+        const realMetrics = [
+          ['Total de Avaliações:', fetchedReportData.general.totalEvaluations.toString()],
+          ['Pontuação Média:', `${fetchedReportData.general.averageScore.toFixed(2)}/10`],
+          ['Taxa de Aprovação:', `${fetchedReportData.general.approvalRate.toFixed(1)}%`],
+          ['Incidentes Críticos:', fetchedReportData.general.criticalIncidents.toString()],
+          ['Formulários Pendentes:', fetchedReportData.general.unsignedForms.toString()],
+          ['Contestações Pendentes:', fetchedReportData.general.contestedEvaluations.toString()]
+        ];
+        
+        realMetrics.forEach(([label, value]) => {
+          doc.text(label, 25, yPosition);
+          doc.text(value, 120, yPosition);
+          yPosition += 8;
+        });
+        
+        yPosition += 15;
+        
+        // Performance por agente usando dados REAIS
+        if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
+          doc.setFontSize(16);
+          doc.text('Performance por Agente (Dados Reais)', 20, yPosition);
+          yPosition += 15;
+          
+          doc.setFontSize(10);
+          doc.text('Nome', 20, yPosition);
+          doc.text('Avaliações', 80, yPosition);
+          doc.text('Média', 120, yPosition);
+          doc.text('Aprovação', 150, yPosition);
+          doc.text('Incidentes', 180, yPosition);
+          yPosition += 10;
+          
+          fetchedReportData.agentPerformance.slice(0, 20).forEach((agent) => {
+            if (yPosition > 270) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            doc.text(agent.name.substring(0, 20), 20, yPosition);
+            doc.text(agent.evaluations?.toString() || '0', 80, yPosition);
+            doc.text(agent.score?.toFixed(1) || '0', 120, yPosition);
+            doc.text(`${agent.approvalRate || 0}%`, 150, yPosition);
+            doc.text((agent.incidents || 0).toString(), 180, yPosition);
+            yPosition += 7;
+          });
+        }
+        
+        // Rodapé
+        doc.setFontSize(8);
+        doc.text('AKIG Solutions - Dados Extraídos do Sistema Real', 105, 285, { align: 'center' });
+        
+        doc.save(`relatorio-monitoria-real-${new Date().toISOString().split('T')[0]}.pdf`);
+        
+      } else {
+        // Excel com dados REAIS
+        const { utils, writeFile } = await import('xlsx');
+        const workbook = utils.book_new();
+        
+        // Aba 1: Métricas Gerais REAIS
+        const realGeneralData = [
+          ['Métrica', 'Valor Real do Sistema'],
+          ['Total de Avaliações', fetchedReportData.general.totalEvaluations],
+          ['Pontuação Média', fetchedReportData.general.averageScore.toFixed(2)],
+          ['Taxa de Aprovação (%)', fetchedReportData.general.approvalRate.toFixed(1)],
+          ['Incidentes Críticos', fetchedReportData.general.criticalIncidents],
+          ['Formulários Pendentes', fetchedReportData.general.unsignedForms],
+          ['Contestações Pendentes', fetchedReportData.general.contestedEvaluations],
+          [''],
+          ['Dados extraídos em:', new Date().toLocaleString('pt-BR')],
+          ['Fonte:', 'Sistema AKIG Solutions - Dados Reais']
+        ];
+        
+        const realGeneralSheet = utils.aoa_to_sheet(realGeneralData);
+        utils.book_append_sheet(workbook, realGeneralSheet, 'Métricas Reais');
+        
+        // Aba 2: Performance Agentes REAIS
+        if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
+          const agentHeaders = ['Nome Agente', 'Total Avaliações', 'Pontuação Média', 'Taxa Aprovação (%)', 'Incidentes'];
+          const agentData = [
+            agentHeaders,
+            ...fetchedReportData.agentPerformance.map(agent => [
+              agent.name,
+              agent.evaluations || 0,
+              agent.score?.toFixed(2) || '0.00',
+              agent.approvalRate || 0,
+              agent.incidents || 0
+            ])
+          ];
+          
+          const agentSheet = utils.aoa_to_sheet(agentData);
+          utils.book_append_sheet(workbook, agentSheet, 'Performance Real');
+        }
+        
+        // Aba 3: Palavras Críticas REAIS
+        if (fetchedReportData.criticalWords && fetchedReportData.criticalWords.length > 0) {
+          const wordsHeaders = ['Palavra Crítica', 'Frequência Real', 'Tendência'];
+          const wordsData = [
+            wordsHeaders,
+            ...fetchedReportData.criticalWords.map(word => [
+              word.word,
+              word.frequency,
+              word.trend
+            ])
+          ];
+          
+          const wordsSheet = utils.aoa_to_sheet(wordsData);
+          utils.book_append_sheet(workbook, wordsSheet, 'Palavras Críticas');
+        }
+        
+        writeFile(workbook, `relatorio-monitoria-real-${new Date().toISOString().split('T')[0]}.xlsx`);
+      }
 
       toast({
-        title: "Exportação iniciada",
-        description: `Relatório ${format.toUpperCase()} será baixado em breve com dados reais`,
+        title: "Relatório exportado com sucesso",
+        description: `Relatório ${format.toUpperCase()} gerado com dados reais extraídos do sistema`,
       });
       
     } catch (error) {
       console.error('Erro ao exportar relatório:', error);
       toast({
         title: "Erro na exportação",
-        description: "Não foi possível gerar o relatório.",
+        description: "Não foi possível gerar o relatório com dados reais.",
         variant: "destructive",
       });
     }

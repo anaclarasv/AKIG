@@ -610,19 +610,24 @@ export function registerRoutes(app: Express): Server {
       const unsignedForms = filteredEvaluations.filter(evaluation => evaluation.status === 'pending').length;
       const contestedEvaluations = contests.filter(contest => contest.status === 'pending').length;
 
-      // Buscar sessões de monitoria para obter agentId
+      // Buscar sessões de monitoria e usuários para obter dados reais dos agentes
       const sessions = await storage.getMonitoringSessions();
+      const users = await storage.getUsers();
       
-      // Performance por agente
+      // Performance por agente usando dados reais
       const agentStats = new Map();
       filteredEvaluations.forEach(evaluation => {
         // Encontrar a sessão correspondente para obter o agentId
         const session = sessions.find(s => s.id === evaluation.monitoringSessionId);
-        const agentId = session?.agentId || 'Não identificado';
+        const agentId = session?.agentId || 'nao_identificado';
+        
+        // Buscar nome real do agente
+        const agent = users.find(u => u.id === agentId);
+        const agentName = agent ? `${agent.firstName} ${agent.lastName}` : `Agente ${agentId}`;
         
         if (!agentStats.has(agentId)) {
           agentStats.set(agentId, {
-            name: `Agente ${agentId}`,
+            name: agentName,
             totalEvaluations: 0,
             totalScore: 0,
             approvedCount: 0,
@@ -634,8 +639,18 @@ export function registerRoutes(app: Express): Server {
         stats.totalEvaluations++;
 
         if (evaluation.scores && typeof evaluation.scores === 'object') {
-          const scores = Object.values(evaluation.scores as Record<string, number>);
-          const validScores = scores.filter(score => typeof score === 'number' && score >= 0);
+          const scoresObj = evaluation.scores as Record<string, any>;
+          let validScores: number[] = [];
+          
+          // Lidar com diferentes formatos de scores
+          Object.values(scoresObj).forEach(scoreValue => {
+            if (typeof scoreValue === 'number' && scoreValue >= 0) {
+              validScores.push(scoreValue);
+            } else if (typeof scoreValue === 'object' && scoreValue.score !== undefined) {
+              validScores.push(scoreValue.score);
+            }
+          });
+          
           if (validScores.length > 0) {
             const avgScore = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
             stats.totalScore += avgScore;
