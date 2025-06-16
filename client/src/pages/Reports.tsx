@@ -118,24 +118,28 @@ export default function Reports() {
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
     try {
-      // Debug: verificar dados antes da exportação
-      console.log('Dados para exportação:', fetchedReportData);
+      // Buscar dados frescos da API para garantir que são reais
+      const response = await fetch('/api/reports/data');
+      if (!response.ok) {
+        throw new Error('Falha ao buscar dados atualizados');
+      }
+      const freshData = await response.json();
       
-      // Usar dados reais da API atual para gerar relatório
-      if (!fetchedReportData) {
-        console.error('Dados não carregados para exportação');
+      console.log('Dados frescos da API para exportação:', freshData);
+      
+      if (!freshData || !freshData.general) {
         toast({
           title: "Erro na exportação",
-          description: "Dados não carregados. Aguarde alguns segundos e tente novamente.",
+          description: "Não foi possível obter dados atualizados do sistema.",
           variant: "destructive",
         });
         return;
       }
       
-      console.log('Iniciando exportação', format, 'com dados:', {
-        totalEvals: fetchedReportData.general.totalEvaluations,
-        avgScore: fetchedReportData.general.averageScore,
-        agentsCount: fetchedReportData.agentPerformance?.length || 0
+      console.log('Exportando', format, 'com dados atualizados:', {
+        totalEvals: freshData.general.totalEvaluations,
+        avgScore: freshData.general.averageScore,
+        agentsCount: freshData.agentPerformance?.length || 0
       });
 
       if (format === 'pdf') {
@@ -159,12 +163,12 @@ export default function Reports() {
         
         doc.setFontSize(12);
         const realMetrics = [
-          `Total de Avaliações: ${fetchedReportData.general.totalEvaluations}`,
-          `Pontuação Média: ${fetchedReportData.general.averageScore.toFixed(1)}`,
-          `Taxa de Aprovação: ${fetchedReportData.general.approvalRate}%`,
-          `Incidentes Críticos: ${fetchedReportData.general.criticalIncidents}`,
-          `Formulários Pendentes: ${fetchedReportData.general.unsignedForms}`,
-          `Contestações em Análise: ${fetchedReportData.general.contestedEvaluations}`
+          `Total de Avaliações: ${freshData.general.totalEvaluations}`,
+          `Pontuação Média: ${freshData.general.averageScore.toFixed(1)}`,
+          `Taxa de Aprovação: ${freshData.general.approvalRate}%`,
+          `Incidentes Críticos: ${freshData.general.criticalIncidents}`,
+          `Formulários Pendentes: ${freshData.general.unsignedForms}`,
+          `Contestações em Análise: ${freshData.general.contestedEvaluations}`
         ];
         
         realMetrics.forEach((metric) => {
@@ -175,7 +179,7 @@ export default function Reports() {
         yPosition += 15;
         
         // 👥 Performance por Agente - tabela estruturada
-        if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
+        if (freshData.agentPerformance && freshData.agentPerformance.length > 0) {
           doc.setFontSize(16);
           doc.text('👥 Performance por Agente', 20, yPosition);
           yPosition += 15;
@@ -195,7 +199,7 @@ export default function Reports() {
           yPosition += 5;
           
           // Dados dos agentes
-          fetchedReportData.agentPerformance.slice(0, 15).forEach((agent) => {
+          freshData.agentPerformance.slice(0, 15).forEach((agent) => {
             if (yPosition > 260) {
               doc.addPage();
               yPosition = 20;
@@ -223,10 +227,10 @@ export default function Reports() {
         
         doc.setFontSize(11);
         const observacoes = [
-          `A maior parte das ${fetchedReportData.general.totalEvaluations} avaliações foram positivas.`,
-          `${fetchedReportData.general.criticalIncidents} incidentes críticos foram identificados e encaminhados.`,
-          `Taxa geral de aprovação está em ${fetchedReportData.general.approvalRate}%.`,
-          `Acompanhar ${fetchedReportData.general.unsignedForms} formulários pendentes de assinatura.`
+          `A maior parte das ${freshData.general.totalEvaluations} avaliações foram positivas.`,
+          `${freshData.general.criticalIncidents} incidentes críticos foram identificados e encaminhados.`,
+          `Taxa geral de aprovação está em ${freshData.general.approvalRate}%.`,
+          `Acompanhar ${freshData.general.unsignedForms} formulários pendentes de assinatura.`
         ];
         
         observacoes.forEach((obs) => {
@@ -252,23 +256,23 @@ export default function Reports() {
         // Planilha 1: Métricas Gerais (conforme modelo)
         const metricsData = [
           ['Métrica', 'Valor'],
-          ['Total de Avaliações', fetchedReportData.general.totalEvaluations],
-          ['Pontuação Média', fetchedReportData.general.averageScore.toFixed(1)],
-          ['Taxa de Aprovação', `${fetchedReportData.general.approvalRate}%`],
-          ['Incidentes Críticos', fetchedReportData.general.criticalIncidents],
-          ['Formulários Pendentes', fetchedReportData.general.unsignedForms],
-          ['Contestações', fetchedReportData.general.contestedEvaluations]
+          ['Total de Avaliações', freshData.general.totalEvaluations],
+          ['Pontuação Média', freshData.general.averageScore.toFixed(1)],
+          ['Taxa de Aprovação', `${freshData.general.approvalRate}%`],
+          ['Incidentes Críticos', freshData.general.criticalIncidents],
+          ['Formulários Pendentes', freshData.general.unsignedForms],
+          ['Contestações', freshData.general.contestedEvaluations]
         ];
         
         const metricsSheet = utils.aoa_to_sheet(metricsData);
         utils.book_append_sheet(workbook, metricsSheet, 'Métricas Gerais');
         
         // Planilha 2: Performance por Agente (conforme modelo)
-        if (fetchedReportData.agentPerformance && fetchedReportData.agentPerformance.length > 0) {
+        if (freshData.agentPerformance && freshData.agentPerformance.length > 0) {
           const agentHeaders = ['Nome', 'Avaliações', 'Média', 'Aprovados', 'Reprovados', 'Taxa de Aprovação'];
           const agentData = [
             agentHeaders,
-            ...fetchedReportData.agentPerformance.map(agent => {
+            ...freshData.agentPerformance.map(agent => {
               const aprovados = Math.round((agent.evaluations || 0) * (agent.approvalRate || 0) / 100);
               const reprovados = (agent.evaluations || 0) - aprovados;
               
