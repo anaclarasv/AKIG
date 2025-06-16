@@ -277,6 +277,10 @@ export class DatabaseStorage implements IStorage {
     return updatedCompany;
   }
 
+  async deleteCompany(id: number): Promise<void> {
+    await db.delete(companies).where(eq(companies.id, id));
+  }
+
   async getCampaigns(companyId?: number): Promise<Campaign[]> {
     if (companyId) {
       return await db.select().from(campaigns).where(and(
@@ -304,6 +308,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(campaigns.id, id))
       .returning();
     return updatedCampaign;
+  }
+
+  async deleteCampaign(id: number): Promise<void> {
+    await db.delete(campaigns).where(eq(campaigns.id, id));
   }
 
   async getMonitoringSessions(companyId?: number, agentId?: string, includeArchived: boolean = false): Promise<MonitoringSession[]> {
@@ -1279,7 +1287,7 @@ export class DatabaseStorage implements IStorage {
         rewardId: rewardPurchases.rewardId,
         cost: rewardPurchases.cost,
         status: rewardPurchases.status,
-        requestedAt: rewardPurchases.purchasedAt,
+        requestedAt: rewardPurchases.createdAt,
         userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`,
         userEmail: users.email,
         rewardName: rewards.name,
@@ -1289,7 +1297,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(rewardPurchases.userId, users.id))
       .innerJoin(rewards, eq(rewardPurchases.rewardId, rewards.id))
       .where(eq(rewardPurchases.status, 'pending'))
-      .orderBy(sql`reward_purchases.purchased_at DESC`);
+      .orderBy(sql`reward_purchases.created_at DESC`);
 
     return requests;
   }

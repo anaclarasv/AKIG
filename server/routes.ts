@@ -146,7 +146,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const user = await storage.createUser(userData);
+      const user = await storage.createUser({
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: userData.role,
+        companyId: userData.companyId,
+        supervisorId: userData.supervisorId,
+        virtualCoins: userData.virtualCoins,
+        isActive: userData.isActive,
+        profileImageUrl: userData.profileImageUrl
+      });
 
       res.status(201).json({
         id: user.id,
@@ -821,12 +833,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             speakerAnalysis: chatAnalysis.speakerAnalysis
           };
 
-          // Update session with analysis results
+          // Update session with analysis results but keep status as "pending" until evaluation is completed
           await storage.updateMonitoringSession(sessionId, {
             transcription: transcriptionResult,
             aiAnalysis: aiAnalysis,
             duration: chatMetrics.duration * 60,
-            status: "completed"
+            status: "pending"
           });
 
           console.log('Chat analysis completed for session:', sessionId);
