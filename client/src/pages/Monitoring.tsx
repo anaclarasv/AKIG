@@ -540,7 +540,7 @@ export default function Monitoring() {
               <CardTitle>Ficha de Monitoria</CardTitle>
             </CardHeader>
             <CardContent>
-              <MonitoringEvaluationForm sessionId={selectedSession} />
+              <MonitoringEvaluationForm monitoringSessionId={selectedSession} />
             </CardContent>
           </Card>
         </div>
@@ -752,37 +752,6 @@ export default function Monitoring() {
               )}
             </CardContent>
           </Card>
-
-          {/* Dynamic Evaluation Form */}
-          {showEvaluationForm && selectedSessionData.transcription && (
-            <Card className="lg:col-span-3 akig-card-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Ficha de Monitoria Dinâmica</CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowEvaluationForm(false)}
-                  >
-                    Fechar Ficha
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <MonitoringEvaluationForm 
-                  monitoringSessionId={selectedSessionData.id}
-                  onEvaluationSaved={(evaluationId) => {
-                    toast({
-                      title: "Avaliação salva",
-                      description: `Ficha de monitoria #${evaluationId} criada com sucesso.`,
-                    });
-                    setShowEvaluationForm(false);
-                    queryClient.invalidateQueries({ queryKey: ['/api/monitoring-sessions'] });
-                  }}
-                />
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     );
