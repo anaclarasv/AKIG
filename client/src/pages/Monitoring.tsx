@@ -614,7 +614,7 @@ export default function Monitoring() {
                   placeholder="Selecione um agente..."
                   emptyState="Nenhum agente encontrado"
                 >
-                  {agents?.map((agent) => (
+                  {agents?.filter(agent => agent.id && agent.id.trim() !== '').map((agent) => (
                     <SelectItem key={agent.id} value={agent.id}>
                       {agent.firstName} {agent.lastName}
                     </SelectItem>

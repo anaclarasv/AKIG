@@ -192,7 +192,7 @@ export default function Reports() {
                   <SelectValue placeholder="Todas as campanhas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as campanhas</SelectItem>
+                  <SelectItem value="all">Todas as campanhas</SelectItem>
                   <SelectItem value="vendas">Vendas Digitais</SelectItem>
                   <SelectItem value="suporte">Suporte Técnico</SelectItem>
                   <SelectItem value="retencao">Retenção</SelectItem>
@@ -207,7 +207,7 @@ export default function Reports() {
                   <SelectValue placeholder="Todos os avaliadores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os avaliadores</SelectItem>
+                  <SelectItem value="all">Todos os avaliadores</SelectItem>
                   <SelectItem value="joao">João Avaliador</SelectItem>
                   <SelectItem value="ana">Ana Avaliadora</SelectItem>
                   <SelectItem value="pedro">Pedro Avaliador</SelectItem>
