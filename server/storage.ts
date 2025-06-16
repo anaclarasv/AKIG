@@ -77,6 +77,11 @@ export interface IStorage {
   // Monitoring evaluation operations
   updateMonitoringEvaluation(id: number, updates: any): Promise<any>;
   
+  // Evaluation contest operations
+  getEvaluationContests(): Promise<any[]>;
+  createEvaluationContest(contest: any): Promise<any>;
+  updateEvaluationContest(id: number, updates: any): Promise<any>;
+  
   // Evaluation criteria operations
   getEvaluationCriteria(companyId: number): Promise<EvaluationCriteria[]>;
   createEvaluationCriteria(criteria: InsertEvaluationCriteria): Promise<EvaluationCriteria>;
@@ -1631,8 +1636,50 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Evaluation contest operations
+  async getEvaluationContests(): Promise<any[]> {
+    try {
+      const contests = await db.select().from(evaluationContests);
+      return contests;
+    } catch (error) {
+      console.error('Error fetching evaluation contests:', error);
+      return [];
+    }
+  }
 
+  async createEvaluationContest(contest: any): Promise<any> {
+    try {
+      const [newContest] = await db.insert(evaluationContests).values({
+        evaluationId: contest.evaluationId,
+        agentId: contest.requesterId,
+        reason: contest.reason,
+        status: contest.status || 'pending'
+      }).returning();
+      return newContest;
+    } catch (error) {
+      console.error('Error creating evaluation contest:', error);
+      throw error;
+    }
+  }
 
+  async updateEvaluationContest(id: number, updates: any): Promise<any> {
+    try {
+      const [updatedContest] = await db
+        .update(evaluationContests)
+        .set({
+          status: updates.status,
+          response: updates.response,
+          reviewerId: updates.reviewerId,
+          reviewedAt: updates.reviewedAt
+        })
+        .where(eq(evaluationContests.id, id))
+        .returning();
+      return updatedContest;
+    } catch (error) {
+      console.error('Error updating evaluation contest:', error);
+      throw error;
+    }
+  }
 
 }
 

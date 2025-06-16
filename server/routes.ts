@@ -291,6 +291,62 @@ export function registerRoutes(app: Express): Server {
     res.json(teamPerformance);
   });
 
+  // Contest evaluation endpoints
+  app.post("/api/evaluation-contests", isAuthenticated, async (req: any, res) => {
+    try {
+      const { evaluationId, reason } = req.body;
+      
+      if (!evaluationId || !reason) {
+        return res.status(400).json({ error: "ID da avaliação e motivo são obrigatórios" });
+      }
+
+      const contest = await storage.createEvaluationContest({
+        evaluationId: parseInt(evaluationId),
+        requesterId: req.user.id,
+        reason: reason.trim(),
+        status: 'pending'
+      });
+
+      res.status(201).json(contest);
+    } catch (error) {
+      console.error('Erro ao criar contestação:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/evaluation-contests", isAuthenticated, async (req: any, res) => {
+    try {
+      const contests = await storage.getEvaluationContests();
+      res.json(contests);
+    } catch (error) {
+      console.error('Erro ao buscar contestações:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.patch("/api/evaluation-contests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { status, response } = req.body;
+      const contestId = parseInt(req.params.id);
+
+      if (!status || !response) {
+        return res.status(400).json({ error: "Status e resposta são obrigatórios" });
+      }
+
+      const updatedContest = await storage.updateEvaluationContest(contestId, {
+        status,
+        response: response.trim(),
+        reviewerId: req.user.id,
+        reviewedAt: new Date()
+      });
+
+      res.json(updatedContest);
+    } catch (error) {
+      console.error('Erro ao atualizar contestação:', error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
