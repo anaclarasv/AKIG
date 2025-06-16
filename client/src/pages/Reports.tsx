@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,43 +32,44 @@ export default function Reports() {
     queryKey: ['/api/dashboard/metrics'],
   });
 
-  // Mock data for reports - in real app this would come from API with filters
-  const reportData = {
+  // Fetch real report data from database
+  const { data: fetchedReportData, isLoading: isLoadingReportData } = useQuery({
+    queryKey: ["/api/reports/data", { 
+      startDate: dateRange?.from?.toISOString(), 
+      endDate: dateRange?.to?.toISOString(), 
+      campaign: selectedCampaign, 
+      evaluator: selectedEvaluator 
+    }],
+    enabled: true
+  });
+
+  // Show loading state while fetching data
+  if (isLoadingReportData) {
+    return (
+      <div className="max-w-7xl mx-auto py-6 space-y-6">
+        <Header title="Relatórios e Análises" />
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-2">Carregando dados dos relatórios...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Use real report data from API, with fallback structure
+  const reportData = fetchedReportData || {
     general: {
-      totalEvaluations: 247,
-      averageScore: 8.2,
-      approvalRate: 85,
-      criticalIncidents: 12,
-      unsignedForms: 7,
-      contestedEvaluations: 3
+      totalEvaluations: 0,
+      averageScore: 0,
+      approvalRate: 0,
+      criticalIncidents: 0,
+      unsignedForms: 0,
+      contestedEvaluations: 0
     },
-    byPeriod: [
-      { period: "Jan 2024", evaluations: 45, avgScore: 8.1, criticalIncidents: 2 },
-      { period: "Fev 2024", evaluations: 52, avgScore: 8.3, criticalIncidents: 1 },
-      { period: "Mar 2024", evaluations: 48, avgScore: 8.0, criticalIncidents: 3 }
-    ],
-    byCampaign: [
-      { name: "Vendas Digitais", evaluations: 89, avgScore: 8.5, criticalIncidents: 4 },
-      { name: "Suporte Técnico", evaluations: 76, avgScore: 7.8, criticalIncidents: 5 },
-      { name: "Retenção", evaluations: 82, avgScore: 8.1, criticalIncidents: 3 }
-    ],
-    byEvaluator: [
-      { name: "João Avaliador", evaluations: 95, avgScore: 8.3, consistency: 92 },
-      { name: "Ana Avaliadora", evaluations: 87, avgScore: 8.1, consistency: 88 },
-      { name: "Pedro Avaliador", evaluations: 65, avgScore: 8.0, consistency: 85 }
-    ],
-    criticalWords: [
-      { word: "absurdo", frequency: 8, trend: "+2" },
-      { word: "incompetente", frequency: 5, trend: "-1" },
-      { word: "ridículo", frequency: 3, trend: "0" }
-    ],
-    scoreDistribution: [
-      { range: "9.0 - 10.0", count: 45, percentage: 32.6, color: "#22c55e" },
-      { range: "8.0 - 8.9", count: 38, percentage: 27.5, color: "#84cc16" },
-      { range: "7.0 - 7.9", count: 28, percentage: 20.3, color: "#eab308" },
-      { range: "6.0 - 6.9", count: 19, percentage: 13.8, color: "#f97316" },
-      { range: "5.0 - 5.9", count: 8, percentage: 5.8, color: "#ef4444" }
-    ]
+    byPeriod: [],
+    byCampaign: [],
+    byEvaluator: [],
+    criticalWords: []
   };
 
   const handleExportReport = async (format: 'pdf' | 'excel') => {
