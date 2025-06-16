@@ -534,8 +534,20 @@ export default function Monitoring() {
             </CardContent>
           </Card>
 
-          {/* Content Display - Voice, Chat, or Email */}
+          {/* Monitoring Evaluation Form */}
           <Card className="lg:col-span-2 akig-card-shadow">
+            <CardHeader>
+              <CardTitle>Ficha de Monitoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MonitoringEvaluationForm sessionId={selectedSession} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content Display - Voice, Chat, or Email */}
+        <div className="mt-6">
+          <Card className="akig-card-shadow">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>
