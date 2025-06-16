@@ -426,7 +426,7 @@ export function registerRoutes(app: Express): Server {
         channelType,
         status: 'pending',
         duration: 0,
-        createdAt: new Date().toISOString()
+        createdAt: new Date()
       };
 
       // Handle file upload for voice
