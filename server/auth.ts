@@ -30,10 +30,10 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Session store setup
+  // Session store setup com a correção aqui: connectionString
   const PostgresSessionStore = connectPg(session);
   const sessionStore = new PostgresSessionStore({
-    conString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL,  // CORREÇÃO AQUI
     createTableIfMissing: true,
     tableName: 'sessions'
   });
@@ -44,9 +44,9 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: false, // Set true em produção com HTTPS
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas
     }
   };
 
@@ -80,7 +80,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Public registration for initial admin setup
+  // Registro público para setup inicial do admin
   app.post("/api/register", async (req, res, next) => {
     try {
       const { username, email, password, firstName, lastName, role, companyId } = req.body;
