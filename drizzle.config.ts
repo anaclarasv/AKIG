@@ -5,10 +5,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  out: "./migrations",
-  schema: "./shared/schema.ts",
-  dialect: "postgresql",
+  schema: "./shared/schema.ts", // Caminho para seu schema Drizzle
+  out: "./migrations",          // Pasta onde as migrations serão salvas
+  dialect: "postgresql",        // Tipo do banco (Render usa PostgreSQL)
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL, // URL pega da env do Render
   },
 });
